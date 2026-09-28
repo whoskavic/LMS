@@ -15,6 +15,7 @@ Dokumen ini merangkum semua fitur yang sudah diimplementasikan pada Admin Panel 
 | Backend | Tidak ada |
 | Role | Admin (operator), Dosen, Mahasiswa |
 | Jumlah halaman | 13 (1 login + 1 template + 11 halaman aplikasi) |
+| Repository | https://github.com/whoskavic/LMS |
 
 ---
 
@@ -159,7 +160,7 @@ lms/
 | 3 | Form input/edit + validasi JS | ✅ Course, User, Modul, Quiz, Nilai, Password |
 | 3 | Laporan / detail (cetak / rangkuman) | ✅ Reports + Detail Course |
 | 3 | Interaktivitas client-side | ✅ Lihat bagian 4 |
-| 3 | Upload ke GitHub / Vercel | ⏳ Belum — lihat bagian 10 |
+| 3 | Upload ke GitHub / Vercel | ✅ GitHub: [whoskavic/LMS](https://github.com/whoskavic/LMS) · Vercel: opsional, lihat bagian 10 |
 
 ---
 
@@ -172,15 +173,21 @@ lms/
 
 ---
 
-## 10. Deploy ke GitHub & Vercel
+## 10. Repository & Deploy
+
+Source code: **https://github.com/whoskavic/LMS**
+
+Menjalankan dari repository:
 
 ```bash
-git init
-git add .
-git commit -m "Learnova LMS — Milestone 1-3"
-git branch -M main
-git remote add origin https://github.com/<username>/<repo>.git
-git push -u origin main
+git clone https://github.com/whoskavic/LMS.git
+cd LMS
+# buka index.html di browser (atau pakai Live Server)
 ```
 
-Vercel: **Add New → Project → Import** repository di atas, framework **Other**, tanpa build command. Situs langsung bisa dibuka karena seluruh aplikasi berupa file statis.
+Deploy ke Vercel (opsional, agar bisa diakses lewat link publik saat demo):
+
+1. Masuk ke vercel.com dengan akun GitHub.
+2. **Add New → Project → Import** repository `whoskavic/LMS`.
+3. Framework Preset **Other**, tanpa build command dan output directory.
+4. Klik **Deploy**. Aplikasi langsung jalan karena seluruhnya file statis.
