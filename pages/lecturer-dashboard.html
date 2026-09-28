@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecturer Dashboard | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body data-role="lecturer">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+        <span class="brand-name">Learnova</span>
+        <button class="icon-btn sidebar__close" type="button" data-sidebar-close aria-label="Close menu"><i data-icon="x"></i></button>
+      </div>
+
+      <p class="sidebar__label">Workspace</p>
+      <nav aria-label="Main menu">
+        <ul class="nav">
+          <!-- Admin (operator) -->
+          <li data-nav-role="admin"><a class="nav__link" href="dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
+          <!-- Dosen -->
+          <li data-nav-role="lecturer"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <!-- Mahasiswa -->
+          <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>Dashboard</span></a></li>
+          <!-- Semua role -->
+          <li data-nav-role="admin lecturer student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar__user">
+        <span class="avatar avatar--dark" aria-hidden="true" data-avatar></span>
+        <div class="user-meta">
+          <p class="user-meta__name" data-user-name>User</p>
+          <p class="user-meta__role" data-user-title></p>
+        </div>
+        <button class="icon-btn icon-btn--danger" type="button" data-logout aria-label="Sign out" title="Sign out"><i data-icon="logout"></i></button>
+      </div>
+    </aside>
+
+    <div class="overlay" data-sidebar-close></div>
+
+    <!-- ============ AREA UTAMA ============ -->
+    <div class="main">
+
+      <!-- Header / Topbar -->
+      <header class="topbar">
+        <button class="icon-btn topbar__menu" type="button" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu"><i data-icon="menu"></i></button>
+
+        <form class="search" role="search">
+          <i data-icon="search" class="icon--sm"></i>
+          <label class="visually-hidden" for="global-search">Search</label>
+          <input class="search__input" id="global-search" type="search" placeholder="Search courses, students, or reports..." autocomplete="off">
+        </form>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+          <div class="dropdown">
+            <button class="icon-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications"><i data-icon="bell"></i><span class="dot"></span></button>
+            <div class="dropdown__menu" hidden>
+              <p class="dropdown__title">Notifications</p>
+              <ul data-notifications></ul>
+            </div>
+          </div>
+          <span class="topbar__user" data-user-name>User</span>
+          <a class="avatar" href="profile.html" aria-label="Open profile" data-avatar></a>
+        </div>
+      </header>
+
+      <main class="content" id="main">
+        <section class="page-header">
+          <div>
+            <p class="page-header__eyebrow">Lecturer portal · Fall 2026</p>
+            <h1 class="page-header__title">Lecturer Dashboard</h1>
+            <p class="page-header__subtitle">Welcome back, <span data-user-name>Lecturer</span></p>
+          </div>
+          <div class="page-header__actions">
+            <a class="btn btn--outline" href="data-master.html"><i data-icon="book" class="icon--sm"></i>My courses</a>
+            <a class="btn btn--primary" href="form.html"><i data-icon="plus" class="icon--sm"></i>New course</a>
+          </div>
+        </section>
+
+        <section class="grid grid--4" aria-label="Summary">
+          <article class="card stat-card">
+            <p class="stat-card__label">My courses</p>
+            <i data-icon="book" class="stat-card__icon"></i>
+            <p class="stat-card__value" id="stat-courses">0</p>
+            <p class="stat-card__meta" id="meta-courses"></p>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Students</p>
+            <i data-icon="users" class="stat-card__icon"></i>
+            <p class="stat-card__value" id="stat-students">0</p>
+            <p class="stat-card__meta">Across all active courses</p>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Average progress</p>
+            <i data-icon="layers" class="stat-card__icon"></i>
+            <p class="stat-card__value" id="stat-progress">0%</p>
+            <div class="progress"><div class="progress__bar" id="stat-progress-bar"></div></div>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Average quiz score</p>
+            <i data-icon="quiz" class="stat-card__icon"></i>
+            <p class="stat-card__value" id="stat-quiz">–</p>
+            <p class="stat-card__meta" id="meta-quiz"></p>
+          </article>
+        </section>
+
+        <section class="card mt-5">
+          <header class="card__header">
+            <h2 class="card__title">Progress &amp; quiz score per course</h2>
+            <p class="card__subtitle">Average of enrolled students</p>
+          </header>
+          <div class="chart-box">
+            <canvas id="course-chart" role="img" aria-label="Bar chart of average progress and quiz score for each of your courses"></canvas>
+          </div>
+        </section>
+
+        <section class="grid grid--2-1">
+          <article class="card">
+            <header class="card__header card__header--split">
+              <h2 class="card__title">My courses</h2>
+              <a class="btn btn--link" href="data-master.html">Manage</a>
+            </header>
+            <ul class="row-list" id="course-list"></ul>
+          </article>
+          <article class="card">
+            <header class="card__header">
+              <h2 class="card__title">Recent quiz attempts</h2>
+            </header>
+            <ul id="attempt-list"></ul>
+          </article>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>&copy; 2026 Learnova LMS</p>
+        <p>Pemrograman Web 2 &middot; Mock data</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="../assets/js/vendor/chart.umd.min.js"></script>
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/pages/lecturer-dashboard.js"></script>
+</body>
+</html>

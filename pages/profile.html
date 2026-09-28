@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body data-role="admin lecturer student">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+        <span class="brand-name">Learnova</span>
+        <button class="icon-btn sidebar__close" type="button" data-sidebar-close aria-label="Close menu"><i data-icon="x"></i></button>
+      </div>
+
+      <p class="sidebar__label">Workspace</p>
+      <nav aria-label="Main menu">
+        <ul class="nav">
+          <!-- Admin (operator) -->
+          <li data-nav-role="admin"><a class="nav__link" href="dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
+          <!-- Dosen -->
+          <li data-nav-role="lecturer"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <!-- Mahasiswa -->
+          <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>Dashboard</span></a></li>
+          <!-- Semua role -->
+          <li data-nav-role="admin lecturer student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar__user">
+        <span class="avatar avatar--dark" aria-hidden="true" data-avatar></span>
+        <div class="user-meta">
+          <p class="user-meta__name" data-user-name>User</p>
+          <p class="user-meta__role" data-user-title></p>
+        </div>
+        <button class="icon-btn icon-btn--danger" type="button" data-logout aria-label="Sign out" title="Sign out"><i data-icon="logout"></i></button>
+      </div>
+    </aside>
+
+    <div class="overlay" data-sidebar-close></div>
+
+    <!-- ============ AREA UTAMA ============ -->
+    <div class="main">
+
+      <!-- Header / Topbar -->
+      <header class="topbar">
+        <button class="icon-btn topbar__menu" type="button" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu"><i data-icon="menu"></i></button>
+
+        <form class="search" role="search">
+          <i data-icon="search" class="icon--sm"></i>
+          <label class="visually-hidden" for="global-search">Search</label>
+          <input class="search__input" id="global-search" type="search" placeholder="Search courses, students, or reports..." autocomplete="off">
+        </form>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+          <div class="dropdown">
+            <button class="icon-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications"><i data-icon="bell"></i><span class="dot"></span></button>
+            <div class="dropdown__menu" hidden>
+              <p class="dropdown__title">Notifications</p>
+              <ul data-notifications></ul>
+            </div>
+          </div>
+          <span class="topbar__user" data-user-name>User</span>
+          <a class="avatar" href="profile.html" aria-label="Open profile" data-avatar></a>
+        </div>
+      </header>
+
+      <main class="content" id="main">
+        <section class="page-header">
+          <div>
+            <p class="page-header__eyebrow">Account</p>
+            <h1 class="page-header__title">Profile &amp; settings</h1>
+            <p class="page-header__subtitle">Update your personal information, password, and appearance</p>
+          </div>
+        </section>
+
+        <div class="grid grid--1-2 grid--start">
+          <aside class="card profile-card" aria-label="Profile summary">
+            <span class="avatar avatar--xl" aria-hidden="true" data-avatar></span>
+            <p class="profile-card__name" data-user-name>User</p>
+            <p class="text-muted" id="profile-email"></p>
+            <p class="mt-5"><span class="badge badge--primary" id="profile-role"></span></p>
+            <dl class="detail-list" id="profile-details"></dl>
+          </aside>
+
+          <div class="stack">
+            <section class="card" aria-labelledby="info-title">
+              <h2 class="card__title card__header" id="info-title">Personal information</h2>
+              <form class="form-stack" id="info-form" novalidate>
+                <div class="field-row">
+                  <div class="field" data-field="name">
+                    <label class="field__label" for="name">Full name <span class="required">*</span></label>
+                    <input class="field__input" id="name" name="name" type="text" maxlength="60" autocomplete="name">
+                    <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+                  <div class="field" data-field="email">
+                    <label class="field__label" for="email">Email</label>
+                    <input class="field__input" id="email" name="email" type="email" readonly aria-describedby="email-hint">
+                    <p class="field__hint" id="email-hint">Contact the administrator to change your email.</p>
+                  </div>
+                </div>
+                <div class="field" data-field="department">
+                  <label class="field__label" for="department">Department / study program <span class="required">*</span></label>
+                  <input class="field__input" id="department" name="department" type="text" maxlength="60">
+                  <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                </div>
+                <div><button class="btn btn--primary" type="submit"><i data-icon="check" class="icon--sm"></i>Save changes</button></div>
+              </form>
+            </section>
+
+            <section class="card" aria-labelledby="password-title">
+              <h2 class="card__title card__header" id="password-title">Change password</h2>
+              <form class="form-stack" id="password-form" novalidate>
+                <div class="field" data-field="current">
+                  <label class="field__label" for="current">Current password <span class="required">*</span></label>
+                  <input class="field__input" id="current" name="current" type="password" autocomplete="current-password">
+                  <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                </div>
+                <div class="field-row">
+                  <div class="field" data-field="next">
+                    <label class="field__label" for="next">New password <span class="required">*</span></label>
+                    <input class="field__input" id="next" name="next" type="password" autocomplete="new-password" aria-describedby="next-hint">
+                    <p class="field__hint" id="next-hint">At least 8 characters, with letters and numbers.</p>
+                    <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+                  <div class="field" data-field="confirm">
+                    <label class="field__label" for="confirm">Confirm new password <span class="required">*</span></label>
+                    <input class="field__input" id="confirm" name="confirm" type="password" autocomplete="new-password">
+                    <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+                </div>
+                <div><button class="btn btn--primary" type="submit"><i data-icon="lock" class="icon--sm"></i>Update password</button></div>
+              </form>
+            </section>
+
+            <section class="card" aria-labelledby="theme-title">
+              <h2 class="card__title card__header" id="theme-title">Appearance</h2>
+              <fieldset class="theme-options" id="theme-options">
+                <legend class="visually-hidden">Theme</legend>
+                <label class="theme-option"><input type="radio" name="theme" value="light"><i data-icon="sun"></i>Light</label>
+                <label class="theme-option"><input type="radio" name="theme" value="dark"><i data-icon="moon"></i>Dark</label>
+                <label class="theme-option"><input type="radio" name="theme" value="system"><i data-icon="settings"></i>System</label>
+              </fieldset>
+            </section>
+
+            <section class="card" aria-labelledby="demo-title">
+              <h2 class="card__title" id="demo-title">Demo tools</h2>
+              <p class="card__subtitle">Restore all courses, users, progress, and grades to the original mock data. Useful before a presentation.</p>
+              <button class="btn btn--outline mt-5" type="button" id="reset-demo"><i data-icon="refresh" class="icon--sm"></i>Reset demo data</button>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>&copy; 2026 Learnova LMS</p>
+        <p>Pemrograman Web 2 &middot; Mock data</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/pages/profile.js"></script>
+</body>
+</html>

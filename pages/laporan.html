@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learning Report | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body data-role="admin">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+        <span class="brand-name">Learnova</span>
+        <button class="icon-btn sidebar__close" type="button" data-sidebar-close aria-label="Close menu"><i data-icon="x"></i></button>
+      </div>
+
+      <p class="sidebar__label">Workspace</p>
+      <nav aria-label="Main menu">
+        <ul class="nav">
+          <!-- Admin (operator) -->
+          <li data-nav-role="admin"><a class="nav__link" href="dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
+          <!-- Dosen -->
+          <li data-nav-role="lecturer"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <!-- Mahasiswa -->
+          <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>Dashboard</span></a></li>
+          <!-- Semua role -->
+          <li data-nav-role="admin lecturer student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar__user">
+        <span class="avatar avatar--dark" aria-hidden="true" data-avatar></span>
+        <div class="user-meta">
+          <p class="user-meta__name" data-user-name>User</p>
+          <p class="user-meta__role" data-user-title></p>
+        </div>
+        <button class="icon-btn icon-btn--danger" type="button" data-logout aria-label="Sign out" title="Sign out"><i data-icon="logout"></i></button>
+      </div>
+    </aside>
+
+    <div class="overlay" data-sidebar-close></div>
+
+    <!-- ============ AREA UTAMA ============ -->
+    <div class="main">
+
+      <!-- Header / Topbar -->
+      <header class="topbar">
+        <button class="icon-btn topbar__menu" type="button" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu"><i data-icon="menu"></i></button>
+
+        <form class="search" role="search">
+          <i data-icon="search" class="icon--sm"></i>
+          <label class="visually-hidden" for="global-search">Search</label>
+          <input class="search__input" id="global-search" type="search" placeholder="Search courses, students, or reports..." autocomplete="off">
+        </form>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+          <div class="dropdown">
+            <button class="icon-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications"><i data-icon="bell"></i><span class="dot"></span></button>
+            <div class="dropdown__menu" hidden>
+              <p class="dropdown__title">Notifications</p>
+              <ul data-notifications></ul>
+            </div>
+          </div>
+          <span class="topbar__user" data-user-name>User</span>
+          <a class="avatar" href="profile.html" aria-label="Open profile" data-avatar></a>
+        </div>
+      </header>
+
+      <main class="content" id="main">
+        <section class="page-header">
+          <div>
+            <p class="page-header__eyebrow">Reports</p>
+            <h1 class="page-header__title">Learning Report</h1>
+            <p class="page-header__subtitle">Student progress, quiz scores, and system activity · <span id="report-date"></span></p>
+          </div>
+          <div class="page-header__actions no-print">
+            <button class="btn btn--outline" type="button" id="export-report"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
+            <button class="btn btn--primary" type="button" id="print-report"><i data-icon="printer" class="icon--sm"></i>Print report</button>
+          </div>
+        </section>
+
+        <section class="grid grid--3" aria-label="Summary">
+          <article class="card stat-card">
+            <p class="stat-card__label">Average progress</p>
+            <p class="stat-card__value" id="avg-progress">0%</p>
+            <div class="progress progress--lg"><div class="progress__bar" id="avg-progress-bar" style="width: 0%"></div></div>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Average quiz score</p>
+            <p class="stat-card__value" id="avg-quiz">0</p>
+            <p class="stat-card__meta" id="quiz-meta"></p>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Completion rate</p>
+            <p class="stat-card__value" id="completion-rate">0%</p>
+            <p class="stat-card__meta" id="completion-meta"></p>
+          </article>
+        </section>
+
+        <section class="grid grid--2">
+          <article class="card">
+            <header class="card__header">
+              <h2 class="card__title">Courses by category</h2>
+              <p class="card__subtitle">All courses in the catalog</p>
+            </header>
+            <div class="chart-box chart-box--sm">
+              <canvas id="category-chart" role="img" aria-label="Doughnut chart of courses per category"></canvas>
+            </div>
+          </article>
+          <article class="card">
+            <header class="card__header">
+              <h2 class="card__title">Average quiz score by course</h2>
+              <p class="card__subtitle">Out of 100</p>
+            </header>
+            <div class="chart-box chart-box--sm">
+              <canvas id="quiz-chart" role="img" aria-label="Bar chart of average quiz score per course"></canvas>
+            </div>
+          </article>
+        </section>
+
+        <section class="card table-card mt-5">
+          <header class="card__header card__header--split">
+            <div>
+              <h2 class="card__title">Student progress &amp; quiz scores</h2>
+              <p class="card__subtitle" id="report-count"></p>
+            </div>
+            <div class="no-print">
+              <label class="visually-hidden" for="report-course">Filter by course</label>
+              <select class="field__input field__input--auto" id="report-course"><option value="">All courses</option></select>
+            </div>
+          </header>
+          <div class="table-wrap">
+            <table class="table table--stack" id="report-table">
+              <caption class="visually-hidden">Student progress and quiz scores</caption>
+              <thead>
+                <tr>
+                  <th scope="col" data-sort="name">Student</th>
+                  <th scope="col" data-sort="course">Course</th>
+                  <th scope="col" data-sort="progress">Progress</th>
+                  <th scope="col" data-sort="quiz">Quiz score</th>
+                  <th scope="col" data-sort="grade">Grade</th>
+                  <th scope="col" data-sort="status">Status</th>
+                </tr>
+              </thead>
+              <tbody id="report-rows"></tbody>
+            </table>
+          </div>
+        </section>
+        <div class="table-footer no-print">
+          <p id="report-summary"></p>
+          <nav class="pagination" id="report-pagination" aria-label="Pagination"></nav>
+        </div>
+
+        <section class="card mt-5">
+          <header class="card__header">
+            <h2 class="card__title">Recent system activity</h2>
+          </header>
+          <ul id="activity-list"></ul>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>&copy; 2026 Learnova LMS</p>
+        <p>Pemrograman Web 2 &middot; Mock data</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="../assets/js/vendor/chart.umd.min.js"></script>
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/pages/laporan.js"></script>
+</body>
+</html>

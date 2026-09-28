@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Course Detail | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body data-role="admin lecturer" data-nav-active="data-master.html">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+        <span class="brand-name">Learnova</span>
+        <button class="icon-btn sidebar__close" type="button" data-sidebar-close aria-label="Close menu"><i data-icon="x"></i></button>
+      </div>
+
+      <p class="sidebar__label">Workspace</p>
+      <nav aria-label="Main menu">
+        <ul class="nav">
+          <!-- Admin (operator) -->
+          <li data-nav-role="admin"><a class="nav__link" href="dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
+          <!-- Dosen -->
+          <li data-nav-role="lecturer"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <!-- Mahasiswa -->
+          <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>Dashboard</span></a></li>
+          <!-- Semua role -->
+          <li data-nav-role="admin lecturer student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar__user">
+        <span class="avatar avatar--dark" aria-hidden="true" data-avatar></span>
+        <div class="user-meta">
+          <p class="user-meta__name" data-user-name>User</p>
+          <p class="user-meta__role" data-user-title></p>
+        </div>
+        <button class="icon-btn icon-btn--danger" type="button" data-logout aria-label="Sign out" title="Sign out"><i data-icon="logout"></i></button>
+      </div>
+    </aside>
+
+    <div class="overlay" data-sidebar-close></div>
+
+    <!-- ============ AREA UTAMA ============ -->
+    <div class="main">
+
+      <!-- Header / Topbar -->
+      <header class="topbar">
+        <button class="icon-btn topbar__menu" type="button" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu"><i data-icon="menu"></i></button>
+
+        <form class="search" role="search">
+          <i data-icon="search" class="icon--sm"></i>
+          <label class="visually-hidden" for="global-search">Search</label>
+          <input class="search__input" id="global-search" type="search" placeholder="Search courses, students, or reports..." autocomplete="off">
+        </form>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+          <div class="dropdown">
+            <button class="icon-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications"><i data-icon="bell"></i><span class="dot"></span></button>
+            <div class="dropdown__menu" hidden>
+              <p class="dropdown__title">Notifications</p>
+              <ul data-notifications></ul>
+            </div>
+          </div>
+          <span class="topbar__user" data-user-name>User</span>
+          <a class="avatar" href="profile.html" aria-label="Open profile" data-avatar></a>
+        </div>
+      </header>
+
+      <main class="content" id="main">
+        <section class="page-header">
+          <div>
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <a href="data-master.html" id="crumb-parent">Courses</a>
+              <span aria-hidden="true">/</span>
+              <span id="crumb-course" aria-current="page">Course</span>
+            </nav>
+            <h1 class="page-header__title"><span id="course-title">Course</span> <span id="course-status"></span></h1>
+            <p class="page-header__subtitle" id="course-meta"></p>
+          </div>
+          <div class="page-header__actions" id="course-actions"></div>
+        </section>
+
+        <div class="tabs__list" role="tablist" aria-label="Course sections">
+          <button class="tabs__tab" type="button" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-tab="overview"><i data-icon="grid" class="icon--sm"></i>Overview</button>
+          <button class="tabs__tab" type="button" role="tab" id="tab-modules" aria-controls="panel-modules" aria-selected="false" data-tab="modules"><i data-icon="layers" class="icon--sm"></i>Modules <span class="tabs__count" data-count="modules">0</span></button>
+          <button class="tabs__tab" type="button" role="tab" id="tab-quizzes" aria-controls="panel-quizzes" aria-selected="false" data-tab="quizzes"><i data-icon="quiz" class="icon--sm"></i>Quizzes <span class="tabs__count" data-count="quizzes">0</span></button>
+          <button class="tabs__tab" type="button" role="tab" id="tab-students" aria-controls="panel-students" aria-selected="false" data-tab="students"><i data-icon="users" class="icon--sm"></i>Students &amp; Grades <span class="tabs__count" data-count="students">0</span></button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <section class="tabs__panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+          <div class="grid grid--4" aria-label="Course summary">
+            <article class="card stat-card">
+              <p class="stat-card__label">Students</p>
+              <p class="stat-card__value" id="ov-students">0</p>
+              <p class="stat-card__meta" id="ov-capacity"></p>
+            </article>
+            <article class="card stat-card">
+              <p class="stat-card__label">Average progress</p>
+              <p class="stat-card__value" id="ov-progress">0%</p>
+              <div class="progress"><div class="progress__bar" id="ov-progress-bar"></div></div>
+            </article>
+            <article class="card stat-card">
+              <p class="stat-card__label">Average quiz score</p>
+              <p class="stat-card__value" id="ov-quiz">–</p>
+              <p class="stat-card__meta">Best attempt per student</p>
+            </article>
+            <article class="card stat-card">
+              <p class="stat-card__label">Completed</p>
+              <p class="stat-card__value" id="ov-completed">0</p>
+              <p class="stat-card__meta">Finished all modules</p>
+            </article>
+          </div>
+
+          <div class="grid grid--2-1">
+            <article class="card">
+              <header class="card__header">
+                <h2 class="card__title">About this course</h2>
+              </header>
+              <p class="text-muted" id="ov-description"></p>
+              <div class="kv-grid mt-5" id="ov-details"></div>
+            </article>
+            <article class="card">
+              <header class="card__header">
+                <h2 class="card__title">Progress distribution</h2>
+                <p class="card__subtitle">Number of students per progress range</p>
+              </header>
+              <div class="chart-box chart-box--sm">
+                <canvas id="progress-chart" role="img" aria-label="Bar chart of students grouped by progress range"></canvas>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Tab: Modules -->
+        <section class="tabs__panel" id="panel-modules" role="tabpanel" aria-labelledby="tab-modules" hidden>
+          <article class="card">
+            <header class="card__header card__header--split">
+              <div>
+                <h2 class="card__title">Course modules</h2>
+                <p class="card__subtitle">Lectures and practice sessions, in learning order</p>
+              </div>
+              <button class="btn btn--primary" type="button" id="add-module" data-owner-only><i data-icon="plus" class="icon--sm"></i>Add module</button>
+            </header>
+            <ul class="row-list" id="module-rows"></ul>
+          </article>
+        </section>
+
+        <!-- Tab: Quizzes -->
+        <section class="tabs__panel" id="panel-quizzes" role="tabpanel" aria-labelledby="tab-quizzes" hidden>
+          <article class="card">
+            <header class="card__header card__header--split">
+              <div>
+                <h2 class="card__title">Quizzes</h2>
+                <p class="card__subtitle">Multiple-choice quizzes taken by students</p>
+              </div>
+              <button class="btn btn--primary" type="button" id="add-quiz" data-owner-only><i data-icon="plus" class="icon--sm"></i>New quiz</button>
+            </header>
+            <ul class="row-list" id="quiz-rows"></ul>
+          </article>
+        </section>
+
+        <!-- Tab: Students & Grades -->
+        <section class="tabs__panel" id="panel-students" role="tabpanel" aria-labelledby="tab-students" hidden>
+          <article class="card table-card">
+            <header class="card__header card__header--split">
+              <div>
+                <h2 class="card__title">Students &amp; grades</h2>
+                <p class="card__subtitle" id="grade-hint">Final score is converted to a letter grade automatically.</p>
+              </div>
+              <div class="page-header__actions">
+                <button class="btn btn--outline" type="button" id="export-grades"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
+                <button class="btn btn--primary" type="button" id="save-grades" data-owner-only disabled><i data-icon="check" class="icon--sm"></i>Save grades</button>
+              </div>
+            </header>
+            <div class="table-wrap">
+              <table class="table table--stack" id="grade-table">
+                <caption class="visually-hidden">Students and grades</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" data-sort="name">Student</th>
+                    <th scope="col" data-sort="progress">Progress</th>
+                    <th scope="col" data-sort="quiz">Quiz score</th>
+                    <th scope="col" data-sort="finalScore">Final score</th>
+                    <th scope="col" data-sort="grade">Grade</th>
+                  </tr>
+                </thead>
+                <tbody id="grade-rows"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>&copy; 2026 Learnova LMS</p>
+        <p>Pemrograman Web 2 &middot; Mock data</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="../assets/js/vendor/chart.umd.min.js"></script>
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/pages/course-detail.js"></script>
+  <script src="../assets/js/pages/course-modules.js"></script>
+  <script src="../assets/js/pages/course-quizzes.js"></script>
+  <script src="../assets/js/pages/course-grades.js"></script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Course Form | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body data-role="lecturer">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+        <span class="brand-name">Learnova</span>
+        <button class="icon-btn sidebar__close" type="button" data-sidebar-close aria-label="Close menu"><i data-icon="x"></i></button>
+      </div>
+
+      <p class="sidebar__label">Workspace</p>
+      <nav aria-label="Main menu">
+        <ul class="nav">
+          <!-- Admin (operator) -->
+          <li data-nav-role="admin"><a class="nav__link" href="dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
+          <!-- Dosen -->
+          <li data-nav-role="lecturer"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="lecturer"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <!-- Mahasiswa -->
+          <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>Dashboard</span></a></li>
+          <!-- Semua role -->
+          <li data-nav-role="admin lecturer student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar__user">
+        <span class="avatar avatar--dark" aria-hidden="true" data-avatar></span>
+        <div class="user-meta">
+          <p class="user-meta__name" data-user-name>User</p>
+          <p class="user-meta__role" data-user-title></p>
+        </div>
+        <button class="icon-btn icon-btn--danger" type="button" data-logout aria-label="Sign out" title="Sign out"><i data-icon="logout"></i></button>
+      </div>
+    </aside>
+
+    <div class="overlay" data-sidebar-close></div>
+
+    <!-- ============ AREA UTAMA ============ -->
+    <div class="main">
+
+      <!-- Header / Topbar -->
+      <header class="topbar">
+        <button class="icon-btn topbar__menu" type="button" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu"><i data-icon="menu"></i></button>
+
+        <form class="search" role="search">
+          <i data-icon="search" class="icon--sm"></i>
+          <label class="visually-hidden" for="global-search">Search</label>
+          <input class="search__input" id="global-search" type="search" placeholder="Search courses, students, or reports..." autocomplete="off">
+        </form>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+          <div class="dropdown">
+            <button class="icon-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications"><i data-icon="bell"></i><span class="dot"></span></button>
+            <div class="dropdown__menu" hidden>
+              <p class="dropdown__title">Notifications</p>
+              <ul data-notifications></ul>
+            </div>
+          </div>
+          <span class="topbar__user" data-user-name>User</span>
+          <a class="avatar" href="profile.html" aria-label="Open profile" data-avatar></a>
+        </div>
+      </header>
+
+      <main class="content" id="main">
+        <section class="page-header">
+          <div>
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <a href="data-master.html">Courses</a>
+              <span aria-hidden="true">/</span>
+              <span id="crumb-current" aria-current="page">Create new course</span>
+            </nav>
+            <h1 class="page-header__title" id="form-title">Create New Course</h1>
+            <p class="page-header__subtitle">Set up course details, schedule, and publishing options.</p>
+          </div>
+          <div class="page-header__actions">
+            <button class="btn btn--outline" type="button" data-action="cancel">Cancel</button>
+            <button class="btn btn--outline" type="submit" form="course-form" data-action="draft">Save draft</button>
+            <button class="btn btn--primary" type="submit" form="course-form" data-action="publish" data-label-edit="Save changes">Submit for approval</button>
+          </div>
+        </section>
+
+        <form class="grid grid--2-1" id="course-form" novalidate>
+          <div class="stack">
+            <section class="card">
+              <h2 class="card__title card__header">Basic information</h2>
+              <div class="form-stack">
+                <div class="field" data-field="title">
+                  <label class="field__label" for="title">Course title <span class="required">*</span></label>
+                  <input class="field__input" id="title" name="title" type="text" maxlength="100" placeholder="e.g. Advanced Product Design Systems" aria-describedby="title-error">
+                  <p class="field__error" id="title-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                </div>
+
+                <div class="field" data-field="description">
+                  <label class="field__label" for="description">Description <span class="required">*</span></label>
+                  <textarea class="field__input" id="description" name="description" maxlength="500" placeholder="What will learners gain from this course?" aria-describedby="description-hint description-error"></textarea>
+                  <p class="field__hint" id="description-hint"><span id="description-count">0</span>/500 characters · minimum 20</p>
+                  <p class="field__error" id="description-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                </div>
+
+                <div class="field-row">
+                  <div class="field" data-field="category">
+                    <label class="field__label" for="category">Category <span class="required">*</span></label>
+                    <select class="field__input" id="category" name="category" aria-describedby="category-error">
+                      <option value="">Select a category</option>
+                    </select>
+                    <p class="field__error" id="category-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+
+                  <div class="field" data-field="semester">
+                    <label class="field__label" for="semester">Semester <span class="required">*</span></label>
+                    <select class="field__input" id="semester" name="semester" aria-describedby="semester-error">
+                      <option value="">Select a semester</option>
+                      <option value="Fall 2026">Fall 2026</option>
+                      <option value="Spring 2027">Spring 2027</option>
+                    </select>
+                    <p class="field__error" id="semester-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2 class="card__title card__header">Schedule &amp; delivery</h2>
+              <div class="form-stack">
+                <div class="field-row">
+                  <div class="field" data-field="duration">
+                    <label class="field__label" for="duration">Duration (weeks) <span class="required">*</span></label>
+                    <input class="field__input" id="duration" name="duration" type="number" min="1" max="52" placeholder="12" aria-describedby="duration-error">
+                    <p class="field__error" id="duration-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+
+                  <div class="field" data-field="startDate">
+                    <label class="field__label" for="startDate">Start date <span class="required">*</span></label>
+                    <input class="field__input" id="startDate" name="startDate" type="date" aria-describedby="startDate-error">
+                    <p class="field__error" id="startDate-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+                </div>
+
+                <div class="field-row">
+                  <div class="field" data-field="code">
+                    <label class="field__label" for="code">Course code <span class="required">*</span></label>
+                    <input class="field__input" id="code" name="code" type="text" maxlength="9" placeholder="DES-405" aria-describedby="code-hint code-error">
+                    <p class="field__hint" id="code-hint">2–5 letters followed by 3 digits</p>
+                    <p class="field__error" id="code-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+
+                  <div class="field" data-field="maxStudents">
+                    <label class="field__label" for="maxStudents">Maximum students <span class="required">*</span></label>
+                    <input class="field__input" id="maxStudents" name="maxStudents" type="number" min="1" max="500" placeholder="60" aria-describedby="maxStudents-error">
+                    <p class="field__error" id="maxStudents-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="stack">
+            <section class="card">
+              <h2 class="card__title card__header">Course thumbnail</h2>
+              <div class="field" data-field="thumbnail">
+                <label class="dropzone" id="dropzone">
+                  <input class="visually-hidden" id="thumbnail" name="thumbnail" type="file" accept="image/png,image/jpeg" aria-describedby="thumbnail-error">
+                  <span class="dropzone__content" id="dropzone-content">
+                    <i data-icon="image" class="icon--lg"></i>
+                    <span class="dropzone__title">Upload thumbnail</span>
+                    <span class="dropzone__hint">PNG or JPG · 16:9 · max 2 MB</span>
+                  </span>
+                </label>
+                <p class="field__error" id="thumbnail-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2 class="card__title card__header">Course settings</h2>
+              <p class="field__hint settings-note" id="approval-note">New courses are reviewed by the administrator before they become visible to students.</p>
+              <label class="switch-row">
+                <span><span class="switch-row__title">Enrollment open</span><span class="switch-row__desc">Students can join</span></span>
+                <input class="switch" type="checkbox" name="enrollmentOpen" checked>
+              </label>
+              <label class="switch-row">
+                <span><span class="switch-row__title">Certificate</span><span class="switch-row__desc">Issue on completion</span></span>
+                <input class="switch" type="checkbox" name="certificate">
+              </label>
+            </section>
+          </div>
+        </form>
+
+        <div class="form-footer">
+          <p class="save-state" id="save-state" aria-live="polite"><i data-icon="check" class="icon--sm"></i><span>All changes saved</span></p>
+          <div class="page-header__actions form-footer__actions">
+            <button class="btn btn--outline" type="button" data-action="cancel">Cancel</button>
+            <button class="btn btn--outline" type="submit" form="course-form" data-action="draft">Save draft</button>
+            <button class="btn btn--primary" type="submit" form="course-form" data-action="publish" data-label-edit="Save changes">Submit for approval</button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>&copy; 2026 Learnova LMS</p>
+        <p>Pemrograman Web 2 &middot; Mock data</p>
+      </footer>
+    </div>
+  </div>
+
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/pages/form.js"></script>
+</body>
+</html>
