@@ -1,8 +1,23 @@
-// Dashboard Mahasiswa — ringkasan, daftar course (grid/table), filter semester & status, nilai akhir
+// Dashboard Student — ringkasan, daftar course (grid/table), filter semester & status, nilai akhir, IPK.
+// Data dari GET /me/enrollments dan GET /me/stats (IPK dihitung server dari nilai akhir instructor).
 
-App.ready(() => {
-  const me = Store.currentUser();
-  let courses = Store.studentCourses(me.id);
+// Enrollment API → bentuk baris dashboard
+const toCourseRow = (e) => ({
+  ...e.course,
+  id: e.course.id,
+  enrollment: e,
+  instructor: e.course.instructorName,
+  modules: e.completedModules,
+  totalModules: e.totalModules,
+  progress: e.progress,
+  learningStatus: e.learningStatus,
+  grade: e.grade,
+  finalScore: e.finalScore,
+});
+
+App.ready(async (me) => {
+  let courses = [];
+  let gpa = null;
   const view = document.getElementById("course-view");
   const semesterSelect = document.getElementById("semester");
   const setText = (id, value) => (document.getElementById(id).textContent = value);
@@ -13,13 +28,24 @@ App.ready(() => {
     return Number(year) * 2 + (season === "Fall" ? 1 : 0);
   };
   function fillSemesters() {
-    const semesters = Utils.unique(courses.map((c) => c.semester)).sort((a, b) => semesterRank(b) - semesterRank(a));
-    semesterSelect.innerHTML = semesters.map((s) => `<option value="${s}">Semester: ${s}</option>`).join("");
+    const semesters = Utils.unique(courses.map((c) => c.semester).filter(Boolean)).sort((a, b) => semesterRank(b) - semesterRank(a));
+    semesterSelect.innerHTML =
+      semesters.map((s) => `<option value="${Utils.escape(s)}">Semester: ${Utils.escape(s)}</option>`).join("") +
+      '<option value="">All semesters</option>';
     return semesters;
   }
-  const semesters = fillSemesters();
 
-  const state = { semester: semesters[0] || "", status: "", q: Utils.params().get("q") || "", view: "grid" };
+  const state = { semester: null, status: "", q: Utils.params().get("q") || "", view: "grid" };
+
+  async function loadData() {
+    const [res, stats] = await Promise.all([Api.enrollments.mine({ pageSize: 200 }), Api.profile.stats()]);
+    courses = res.items.map(toCourseRow);
+    gpa = stats.gpa;
+    const semesters = fillSemesters();
+    if (state.semester && !semesters.includes(state.semester)) state.semester = semesters[0] || "";
+    if (state.semester === null) state.semester = semesters[0] || "";
+    semesterSelect.value = state.semester;
+  }
   document.getElementById("global-search").value = state.q;
 
   const progressBar = (value, label) => `
@@ -33,7 +59,7 @@ App.ready(() => {
   const actionButton = (c) =>
     c.learningStatus === "Completed"
       ? `<button class="btn btn--outline" type="button" data-grade="${c.id}">View final grade</button>${
-          Store.certificateFor(c.enrollment)
+          c.enrollment.certificate
             ? `<button class="btn btn--outline" type="button" data-certificate="${c.id}"><i data-icon="download" class="icon--sm"></i>Certificate</button>`
             : ""
         }`
@@ -42,11 +68,11 @@ App.ready(() => {
   const cardTemplate = (c) => `
     <article class="card course-card">
       <div class="course-card__body">
-        <div class="course-card__thumb" style="background: ${c.color}"></div>
-        <p class="course-card__code">${Utils.escape(c.code)}</p>
+        <div class="course-card__thumb" style="background: ${Utils.escape(c.color || "var(--color-primary-soft)")}"></div>
+        <p class="course-card__code">${Utils.escape(Utils.orDash(c.code))}</p>
         ${statusBadge(c.learningStatus)}
         <h3 class="course-card__title">${Utils.escape(c.title)}</h3>
-        <p class="course-card__instructor">${Utils.escape(c.lecturer)}</p>
+        <p class="course-card__instructor">${Utils.escape(c.instructor)}</p>
         <p class="course-card__meta">${c.progress}% complete<br>${c.modules}/${c.totalModules} modules</p>
         ${progressBar(c.progress, `${c.code} progress`)}
       </div>
@@ -59,7 +85,7 @@ App.ready(() => {
         <table class="table table--stack">
           <caption class="visually-hidden">Enrolled courses</caption>
           <thead>
-            <tr><th scope="col">Course</th><th scope="col">Lecturer</th><th scope="col">Progress</th><th scope="col">Status</th><th scope="col">Grade</th><th scope="col">Action</th></tr>
+            <tr><th scope="col">Course</th><th scope="col">Instructor</th><th scope="col">Progress</th><th scope="col">Status</th><th scope="col">Grade</th><th scope="col">Action</th></tr>
           </thead>
           <tbody>
             ${list
@@ -67,7 +93,7 @@ App.ready(() => {
                 (c) => `
               <tr>
                 <td>${Utils.escape(c.title)}<span class="table__code">${Utils.escape(c.code)}</span></td>
-                <td>${Utils.escape(c.lecturer)}</td>
+                <td>${Utils.escape(c.instructor)}</td>
                 <td><div class="table-progress">${progressBar(c.progress, `${c.code} progress`)}<span>${c.progress}%</span></div></td>
                 <td>${statusBadge(c.learningStatus)}</td>
                 <td>${c.grade ? `<strong>${Utils.escape(c.grade)}</strong>` : "–"}</td>
@@ -83,9 +109,8 @@ App.ready(() => {
   function renderSummary(inSemester) {
     const active = inSemester.filter((c) => c.learningStatus === "Active").length;
     const avgProgress = Math.round(Utils.average(inSemester.map((c) => c.progress)));
-    const gpa = Store.gpa(me.id);
 
-    setText("portal-label", `Student portal · ${state.semester}`);
+    setText("portal-label", state.semester ? `Student portal · ${state.semester}` : "Student portal");
     setText("sum-total", inSemester.length);
     setText("sum-meta", `${active} active · ${inSemester.length - active} completed`);
     setText("sum-progress", `${avgProgress}%`);
@@ -100,20 +125,28 @@ App.ready(() => {
   }
 
   function render() {
-    const inSemester = courses.filter((c) => c.semester === state.semester);
+    const inSemester = state.semester ? courses.filter((c) => c.semester === state.semester) : courses;
     renderSummary(inSemester);
 
     const q = state.q.toLowerCase();
     const list = inSemester
       .filter((c) => !state.status || c.learningStatus === state.status)
-      .filter((c) => !q || [c.title, c.code, c.lecturer].some((v) => v.toLowerCase().includes(q)));
+      .filter((c) => !q || [c.title, c.code, c.instructor].some((v) => (v || "").toLowerCase().includes(q)));
 
     setText("course-count", `${list.length} course${list.length === 1 ? "" : "s"}`);
 
     if (!courses.length) {
-      view.innerHTML = '<div class="card empty">You are not enrolled in any course yet. Click “Browse courses” to join one.</div>';
+      view.innerHTML = '<div class="card"></div>';
+      UI.empty(view.firstElementChild, {
+        title: "You are not enrolled in any course yet",
+        text: "Browse the free catalog and enroll to start learning.",
+        icon: "book",
+        action: { label: "Browse courses", href: "../catalog.html" },
+      });
+      return;
     } else if (!list.length) {
-      view.innerHTML = '<div class="card empty">No courses match your filters.</div>';
+      view.innerHTML = '<div class="card"></div>';
+      UI.empty(view.firstElementChild, { title: "No courses match your filters", icon: "search" });
     } else if (state.view === "table") {
       view.innerHTML = tableTemplate(list);
     } else {
@@ -152,49 +185,46 @@ App.ready(() => {
     });
   });
 
-  // --- Daftar (enroll) course baru ---
+  // --- Daftar (enroll) course baru: course Active yang terbuka & masih ada kursi ---
   document.getElementById("browse-courses").addEventListener("click", () => {
-    const open = Store.openCoursesFor(me.id).sort((a, b) => a.code.localeCompare(b.code));
     UI.modal({
       title: "Browse courses",
       size: "lg",
-      body: open.length
-        ? `<p class="text-muted">Approved courses that are open for enrollment.</p>
-          <ul class="row-list" id="open-courses">
-            ${open
-              .map((c) => {
-                const seats = Store.seatsLeft(c);
-                return `
-              <li>
-                <span class="row-list__order" style="background: ${c.color}" aria-hidden="true"></span>
-                <div class="row-list__main">
-                  <p class="row-list__title">${Utils.escape(c.title)} <span class="table__code">${Utils.escape(c.code)} · ${Utils.escape(Store.lecturerName(c.lecturerId))}</span></p>
-                  <p class="row-list__meta">${Utils.escape(c.semester)} · ${c.duration} weeks · ${seats} seat${seats === 1 ? "" : "s"} left</p>
-                </div>
-                <button class="btn btn--primary" type="button" data-enroll="${c.id}">Enroll</button>
-              </li>`;
-              })
-              .join("")}
-          </ul>`
-        : '<p class="empty">There are no open courses available right now. Check back later or ask your lecturer to add you.</p>',
+      body: '<p class="text-muted">Free courses that are open for enrollment. <a href="../catalog.html">Open the full catalog</a> to search by topic.</p><div id="open-courses"></div>',
       onOpen: (modal) => {
-        modal.querySelector("#open-courses")?.addEventListener("click", (e) => {
+        const box = modal.querySelector("#open-courses");
+        const load = () =>
+          UI.load(
+            box,
+            () => Api.enrollments.open({ sort: "code", pageSize: 50 }),
+            (res) => {
+              box.innerHTML = `<ul class="row-list">${res.items
+                .map((c) => `
+                <li>
+                  <span class="row-list__order" style="background: ${Utils.escape(c.color || "var(--color-primary-soft)")}" aria-hidden="true"></span>
+                  <div class="row-list__main">
+                    <p class="row-list__title">${Utils.escape(c.title)} <span class="table__code">${Utils.escape(Utils.orDash(c.code))} · ${Utils.escape(c.instructorName)}</span></p>
+                    <p class="row-list__meta">${Utils.escape(Utils.orDash(c.semester))} · ${Utils.orDash(c.duration)} weeks · ${c.maxStudents ? `${c.seatsLeft} seat${c.seatsLeft === 1 ? "" : "s"} left` : "open"}</p>
+                  </div>
+                  <button class="btn btn--primary" type="button" data-enroll="${Utils.escape(c.id)}">Enroll</button>
+                </li>`)
+                .join("")}</ul>`;
+            },
+            { label: "Loading open courses…", empty: { title: "No open courses right now", text: "Check back later — new courses are published regularly.", icon: "book" } }
+          );
+        load();
+        box.addEventListener("click", async (e) => {
           const btn = e.target.closest("[data-enroll]");
           if (!btn) return;
-          const result = Store.enrollStudent(me.id, btn.dataset.enroll);
-          if (result.error) return UI.toast(result.error, "error");
-
-          const course = DB.get("courses", btn.dataset.enroll);
-          Store.logActivity(`Enrolled in ${course.code} ${course.title}`);
-          UI.toast(`You are now enrolled in ${course.code}.`);
-          modal.querySelector(".btn[data-modal-close]").click();
-
-          // Muat ulang data dashboard dan tampilkan semester course yang baru diikuti
-          courses = Store.studentCourses(me.id);
-          fillSemesters();
-          state.semester = course.semester;
-          semesterSelect.value = course.semester;
-          render();
+          try {
+            const enrollment = await UI.busy(btn, Api.enrollments.enroll(btn.dataset.enroll));
+            UI.toast(`You are now enrolled in ${enrollment.course.code || enrollment.course.title}.`);
+            modal.querySelector(".btn[data-modal-close]").click();
+            state.semester = enrollment.course.semester;
+            await refresh();
+          } catch (err) {
+            UI.toast(err.message, "error");
+          }
         });
       },
     });
@@ -203,25 +233,24 @@ App.ready(() => {
   // --- Aksi course (event delegation) ---
   view.addEventListener("click", (e) => {
     const certBtn = e.target.closest("[data-certificate]");
-    if (certBtn) return Certificate.download(courses.find((c) => c.id === certBtn.dataset.certificate).enrollment);
+    if (certBtn) return Certificate.download(courses.find((c) => c.id === certBtn.dataset.certificate).enrollment, me);
 
     const continueBtn = e.target.closest("[data-continue]");
     const gradeBtn = e.target.closest("[data-grade]");
     if (!continueBtn && !gradeBtn) return;
 
     const course = courses.find((c) => c.id === (continueBtn || gradeBtn).dataset[continueBtn ? "continue" : "grade"]);
-    const openCourse = () => (location.href = `course.html?id=${course.id}`);
+    const openCourse = () => (location.href = `course.html?id=${encodeURIComponent(course.id)}`);
 
     if (continueBtn) {
-      const next = Store.modulesOf(course.id)[course.modules];
       UI.modal({
         title: course.title,
         body: `
-          <p>Continue where you left off in <strong>${Utils.escape(course.code)}</strong>.</p>
+          <p>Continue where you left off in <strong>${Utils.escape(course.code || course.title)}</strong>.</p>
           <dl class="detail-list">
-            <dt>Next module</dt><dd>${next ? `${course.modules + 1}. ${Utils.escape(next.title)}` : "No modules published yet"}</dd>
+            <dt>Next module</dt><dd>${course.totalModules ? `Module ${Math.min(course.modules + 1, course.totalModules)} of ${course.totalModules}` : "No modules published yet"}</dd>
             <dt>Progress</dt><dd>${course.progress}% · ${course.modules}/${course.totalModules} modules</dd>
-            <dt>Lecturer</dt><dd>${Utils.escape(course.lecturer)}</dd>
+            <dt>Instructor</dt><dd>${Utils.escape(course.instructor)}</dd>
           </dl>`,
         confirmText: "Open module",
         onConfirm: openCourse,
@@ -230,12 +259,12 @@ App.ready(() => {
       UI.modal({
         title: "Final grade",
         body: `
-          <p><strong>${Utils.escape(course.title)}</strong> · ${Utils.escape(course.code)}</p>
+          <p><strong>${Utils.escape(course.title)}</strong> · ${Utils.escape(Utils.orDash(course.code))}</p>
           <dl class="detail-list">
             <dt>Grade</dt><dd>${course.grade ? Utils.escape(course.grade) : "Pending"}</dd>
-            <dt>Final score</dt><dd>${course.finalScore !== null ? `${course.finalScore} / 100` : "Awaiting lecturer review"}</dd>
-            <dt>Lecturer</dt><dd>${Utils.escape(course.lecturer)}</dd>
-            <dt>Semester</dt><dd>${Utils.escape(course.semester)}</dd>
+            <dt>Final score</dt><dd>${course.finalScore !== null ? `${course.finalScore} / 100` : "Awaiting instructor review"}</dd>
+            <dt>Instructor</dt><dd>${Utils.escape(course.instructor)}</dd>
+            <dt>Semester</dt><dd>${Utils.escape(Utils.orDash(course.semester))}</dd>
           </dl>`,
         confirmText: "Review modules",
         cancelText: "Close",
@@ -244,5 +273,15 @@ App.ready(() => {
     }
   });
 
-  render();
+  async function refresh() {
+    UI.loading(view, { label: "Loading your courses…" });
+    try {
+      await loadData();
+      render();
+    } catch (err) {
+      UI.error(view, err, refresh, { title: "Could not load your courses" });
+    }
+  }
+
+  await refresh();
 });

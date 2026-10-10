@@ -9,6 +9,7 @@ from app.common.errors import register_error_handlers
 from app.config import get_settings
 from app.courses.router import router as courses_router
 from app.db import SessionLocal
+from app.enrollments.router import router as enrollments_router
 from app.reports.router import router as reports_router
 from app.users.router import router as users_router
 
@@ -48,5 +49,6 @@ def health() -> dict:
 api.include_router(auth_router)
 api.include_router(users_router)
 api.include_router(courses_router)
+api.include_router(enrollments_router)
 api.include_router(reports_router)
 app.include_router(api)

@@ -4,11 +4,11 @@ const Certificate = {
   WIDTH: 1600,
   HEIGHT: 1130,
 
-  // Gambar sertifikat untuk satu enrollment; mengembalikan canvas
-  async draw(enrollment) {
-    const course = DB.get("courses", enrollment.courseId);
-    const student = DB.get("users", enrollment.studentId);
-    const cert = Store.certificateFor(enrollment);
+  // Gambar sertifikat dari enrollment (bentuk respons API: { course, certificate, grade }) untuk student; mengembalikan canvas.
+  // Nomor sertifikat dibuat & disimpan server (acak, bisa diverifikasi).
+  async draw(enrollment, student) {
+    const course = enrollment?.course;
+    const cert = enrollment?.certificate;
     if (!course || !student || !cert) return null;
     if (document.fonts) await document.fonts.ready;
 
@@ -51,17 +51,18 @@ const Certificate = {
     text(student.name, 480, 700, fit(student.name, 700, 72, w - 360), "#312e81");
     ctx.fillStyle = "#4f46e5";
     ctx.fillRect(w / 2 - 260, 512, 520, 3);
-    text(`NIM ${student.idNumber}`, 560, 400, 22, "#6b7280");
+    if (student.idNumber) text(`NIM ${student.idNumber}`, 560, 400, 22, "#6b7280");
     text("for successfully completing all modules of the course", 640, 400, 26, "#6b7280");
-    const title = `${course.code} · ${course.title}`;
+    const title = course.code ? `${course.code} · ${course.title}` : course.title;
     text(title, 715, 700, fit(title, 700, 42, w - 360), "#111827");
-    text(`${course.semester} · ${course.duration} weeks${enrollment.grade ? ` · Final grade ${enrollment.grade}` : ""}`, 770, 400, 24, "#6b7280");
+    const meta = [course.semester, course.duration ? `${course.duration} weeks` : "", enrollment.grade ? `Final grade ${enrollment.grade}` : ""].filter(Boolean);
+    text(meta.join(" · "), 770, 400, 24, "#6b7280");
 
     // Tanda tangan & tanggal
     const footerY = 930;
     [
       [w / 2 - 380, Utils.formatDate(cert.date, false), "Date of completion"],
-      [w / 2 + 380, Store.lecturerName(course.lecturerId), "Course lecturer"],
+      [w / 2 + 380, course.instructorName, "Course instructor"],
     ].forEach(([x, value, label]) => {
       text(value, footerY - 20, 600, 26, "#111827", x);
       ctx.fillStyle = "#d1d5db";
@@ -72,10 +73,10 @@ const Certificate = {
     return canvas;
   },
 
-  async download(enrollment) {
-    const canvas = await this.draw(enrollment);
+  async download(enrollment, student = App.user) {
+    const canvas = await this.draw(enrollment, student);
     if (!canvas) return UI.toast("Certificate is not available for this course yet.", "error");
-    const { number } = Store.certificateFor(enrollment);
+    const { number } = enrollment.certificate;
     const link = document.createElement("a");
     link.download = `${number.toLowerCase()}-certificate.png`;
     link.href = canvas.toDataURL("image/png");
