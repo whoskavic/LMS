@@ -60,6 +60,11 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         </td>
         <td data-grade-for="${r.id}">${parsed.error ? '<span class="text-danger">Invalid</span>' : gradeCell(parsed.score)}</td>
+        ${
+          canEdit
+            ? `<td><button class="icon-btn icon-btn--sm icon-btn--danger" type="button" data-unenroll="${r.id}" aria-label="Remove ${Utils.escape(r.name)} from course"><i data-icon="trash" class="icon--sm"></i></button></td>`
+            : ""
+        }
       </tr>`;
   }
 
@@ -67,9 +72,103 @@ document.addEventListener("DOMContentLoaded", () => {
     const list = Utils.sortBy(rows(), state.key, state.dir);
     tbody.innerHTML = list.length
       ? list.map(rowTemplate).join("")
-      : '<tr><td class="table__empty" colspan="5">No students are enrolled in this course yet.</td></tr>';
+      : `<tr><td class="table__empty" colspan="${canEdit ? 6 : 5}">No students are enrolled in this course yet.${canEdit ? " Click “Add students” to enroll them." : ""}</td></tr>`;
+    renderIcons(tbody);
     if (saveBtn) saveBtn.disabled = drafts.size === 0;
+    CourseDetail.updateCounts();
   }
+
+  /* ---------- Tambah mahasiswa (dosen pemilik) ---------- */
+  function openEnrollForm() {
+    if (course.status !== "Active") {
+      UI.toast("Students can be added after the course is approved by the administrator.", "error");
+      return;
+    }
+    const seats = Store.seatsLeft(course);
+    if (!seats) return UI.toast("This course is full. Increase the capacity in “Edit course” first.", "error");
+
+    const candidates = DB.where("users", (u) => u.role === "student" && u.status === "Active" && !Store.enrollment(u.id, course.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (!candidates.length) return UI.toast("All active students are already enrolled.", "error");
+
+    UI.modal({
+      title: `Add students to ${course.code}`,
+      size: "lg",
+      confirmText: "Enroll selected",
+      body: `
+        <form class="form-stack" novalidate>
+          <div class="field">
+            <label class="field__label" for="enroll-search">Search student</label>
+            <input class="field__input" id="enroll-search" type="search" placeholder="Name, NIM, or department" autocomplete="off">
+            <p class="field__hint" id="enroll-hint">${seats} seat${seats === 1 ? "" : "s"} left · 0 selected</p>
+          </div>
+          <ul class="pick-list" id="enroll-list">
+            ${candidates
+              .map(
+                (u) => `
+              <li data-search="${Utils.escape(`${u.name} ${u.idNumber} ${u.department}`.toLowerCase())}">
+                <label class="task">
+                  <input type="checkbox" value="${u.id}">
+                  <span>${Utils.escape(u.name)}<span class="table__code">NIM ${Utils.escape(u.idNumber)} · ${Utils.escape(u.department)}</span></span>
+                </label>
+              </li>`
+              )
+              .join("")}
+          </ul>
+        </form>`,
+      onOpen: (modal) => {
+        const hint = modal.querySelector("#enroll-hint");
+        const items = [...modal.querySelectorAll("#enroll-list li")];
+        modal.querySelector("#enroll-search").addEventListener("input", (e) => {
+          const q = e.target.value.trim().toLowerCase();
+          items.forEach((li) => (li.hidden = Boolean(q) && !li.dataset.search.includes(q)));
+        });
+        modal.querySelector("#enroll-list").addEventListener("change", () => {
+          const selected = modal.querySelectorAll("#enroll-list input:checked").length;
+          hint.textContent = `${seats} seat${seats === 1 ? "" : "s"} left · ${selected} selected`;
+          hint.classList.toggle("text-danger", selected > seats);
+        });
+      },
+      onConfirm: (modal) => {
+        const ids = [...modal.querySelectorAll("#enroll-list input:checked")].map((el) => Number(el.value));
+        if (!ids.length) {
+          UI.toast("Select at least one student.", "error");
+          return false;
+        }
+        if (ids.length > seats) {
+          UI.toast(`Only ${seats} seat${seats === 1 ? "" : "s"} left in this course.`, "error");
+          return false;
+        }
+        const added = ids.filter((id) => Store.enrollStudent(id, course.id, { byLecturer: true }).enrollment).length;
+        Store.logActivity(`Enrolled ${added} student${added > 1 ? "s" : ""} in ${course.code} ${course.title}`);
+        UI.toast(`${added} student${added > 1 ? "s" : ""} enrolled in ${course.code}.`);
+        render();
+      },
+    });
+  }
+
+  document.getElementById("add-students")?.addEventListener("click", openEnrollForm);
+
+  // Keluarkan mahasiswa dari course
+  tbody.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-unenroll]");
+    if (!btn) return;
+    const enrollment = DB.get("enrollments", btn.dataset.unenroll);
+    const student = DB.get("users", enrollment.studentId);
+    UI.modal({
+      title: "Remove student?",
+      body: `<p><strong>${Utils.escape(student?.name || "This student")}</strong> will be removed from ${Utils.escape(course.code)}. Their progress, quiz attempts, and grade in this course will be deleted.</p>`,
+      confirmText: "Remove",
+      variant: "danger",
+      onConfirm: () => {
+        DB.remove("enrollments", enrollment.id);
+        drafts.delete(enrollment.id);
+        Store.logActivity(`Removed ${student?.name || "a student"} from ${course.code}`);
+        UI.toast("Student removed from course.");
+        render();
+      },
+    });
+  });
 
   // Ketik nilai → grade huruf langsung berubah
   tbody.addEventListener("input", (e) => {

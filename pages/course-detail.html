@@ -185,6 +185,7 @@
               </div>
               <div class="page-header__actions">
                 <button class="btn btn--outline" type="button" id="export-grades"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
+                <button class="btn btn--outline" type="button" id="add-students" data-owner-only><i data-icon="plus" class="icon--sm"></i>Add students</button>
                 <button class="btn btn--primary" type="button" id="save-grades" data-owner-only disabled><i data-icon="check" class="icon--sm"></i>Save grades</button>
               </div>
             </header>
@@ -198,6 +199,7 @@
                     <th scope="col" data-sort="quiz">Quiz score</th>
                     <th scope="col" data-sort="finalScore">Final score</th>
                     <th scope="col" data-sort="grade">Grade</th>
+                    <th scope="col" data-owner-only><span class="visually-hidden">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody id="grade-rows"></tbody>

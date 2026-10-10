@@ -364,6 +364,42 @@ const Store = {
       .filter(Boolean);
   },
 
+  // Sisa kursi course (kapasitas dikurangi jumlah mahasiswa terdaftar)
+  seatsLeft(course) {
+    return Math.max(0, course.maxStudents - this.enrollmentsOf(course.id).length);
+  },
+
+  // Course yang bisa didaftari sendiri oleh mahasiswa: aktif, enrollment dibuka, masih ada kursi
+  openCoursesFor(studentId) {
+    return DB.where(
+      "courses",
+      (c) => c.status === "Active" && c.enrollmentOpen && !this.enrollment(studentId, c.id) && this.seatsLeft(c) > 0
+    );
+  },
+
+  /**
+   * Daftarkan mahasiswa ke course. Mengembalikan { enrollment } atau { error }.
+   * byLecturer: dosen boleh menambahkan mahasiswa walau pendaftaran mandiri ditutup.
+   */
+  enrollStudent(studentId, courseId, { byLecturer = false } = {}) {
+    const course = DB.get("courses", courseId);
+    const student = DB.get("users", studentId);
+    if (!course || !student || student.role !== "student") return { error: "Course or student not found." };
+    if (course.status !== "Active") return { error: "Only approved (active) courses can accept students." };
+    if (!byLecturer && !course.enrollmentOpen) return { error: "Enrollment for this course is closed." };
+    if (this.enrollment(student.id, course.id)) return { error: `${student.name} is already enrolled.` };
+    if (this.seatsLeft(course) <= 0) return { error: "This course is full." };
+    const enrollment = DB.insert("enrollments", {
+      studentId: student.id,
+      courseId: course.id,
+      completedModules: 0,
+      attempts: [],
+      finalScore: null,
+      grade: null,
+    });
+    return { enrollment };
+  },
+
   // Tandai modul ke-n selesai (hanya modul berikutnya yang bisa diselesaikan)
   completeModule(enrollmentId, number) {
     const enrollment = DB.get("enrollments", enrollmentId);

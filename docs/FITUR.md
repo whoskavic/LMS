@@ -60,13 +60,13 @@ Aturan: admin tidak bisa menonaktifkan/menghapus akunnya sendiri; dosen yang mas
 | **Dashboard** (`lecturer-dashboard.html`) | Kartu jumlah course (per status), mahasiswa, rata-rata progress, rata-rata skor quiz; grafik progress & skor per course; daftar course saya; percobaan quiz terbaru |
 | **My Courses** (`data-master.html`) | Hanya course milik dosen, cari/filter/sortir, Edit, Delete (hanya Draft/Pending/Rejected) |
 | **New Course / Edit** (`form.html`) | Validasi 8 field, kode course unik & otomatis huruf besar, penghitung karakter, preview thumbnail (drag & drop), status perubahan belum tersimpan, **Save draft** atau **Submit for approval** (status Pending) |
-| **Detail Course** (`course-detail.html`) | 4 tab (bisa pakai panah keyboard): **Overview** (statistik, detail, grafik distribusi progress) · **Modules** (tambah/edit modal, urutkan naik/turun, hapus) · **Quizzes** (editor soal pilihan ganda, validasi opsi & kunci jawaban) · **Students & Grades** (isi nilai akhir 0–100, grade huruf otomatis, simpan, export CSV) |
+| **Detail Course** (`course-detail.html`) | 4 tab (bisa pakai panah keyboard): **Overview** (statistik, detail, grafik distribusi progress) · **Modules** (tambah/edit modal, urutkan naik/turun, hapus) · **Quizzes** (editor soal pilihan ganda, validasi opsi & kunci jawaban) · **Students & Grades** (tambah mahasiswa ke course yang sudah Active — cari & pilih banyak sekaligus, cek kapasitas; keluarkan mahasiswa; isi nilai akhir 0–100, grade huruf otomatis, simpan, export CSV) |
 
 ### 🎓 Mahasiswa
 
 | Halaman | Fitur |
 |---|---|
-| **Dashboard** (`student-dashboard.html`) | Ringkasan per semester (total course, progress, IPK dari nilai dosen), tampilan Grid / Table, filter semester & status, pencarian, modal Continue course / View final grade |
+| **Dashboard** (`student-dashboard.html`) | Ringkasan per semester (total course, progress, IPK dari nilai dosen), tampilan Grid / Table, filter semester & status, pencarian, modal Continue course / View final grade, **Browse courses** untuk mendaftar sendiri ke course yang Active, *Enrollment open*, dan masih ada kursi |
 | **Course** (`course.html`) | Daftar modul (selesai / berjalan / terkunci), video demo (simulasi 3 detik), materi dari dosen, checklist tugas latihan, **Mark as complete**, navigasi Previous/Next, daftar quiz dengan skor terbaik, pencarian modul |
 | **Quiz** (`quiz.html`) | Intro (jumlah soal, batas waktu, nilai lulus, sisa percobaan), pengerjaan 1 soal per layar, **timer** hitung mundur (submit otomatis saat habis), navigasi nomor soal, pintasan keyboard (1–4, ← →), konfirmasi submit dengan peringatan soal kosong, hasil (cincin skor, lulus/tidak), **review jawaban** benar/salah, batas percobaan |
 
@@ -169,7 +169,6 @@ lms/
 - Tidak ada backend: data hanya tersimpan di browser yang sedang dipakai, dan hilang bila data situs dihapus.
 - Password disimpan sebagai teks biasa di mock data (hanya untuk demo, bukan praktik keamanan nyata).
 - Video materi hanyalah simulasi, dan thumbnail course hanya berupa preview (tidak disimpan).
-- Mahasiswa belum bisa mendaftar (enroll) course baru sendiri — enrollment berasal dari data seed.
 
 ---
 

@@ -2,7 +2,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   const me = Store.currentUser();
-  const courses = Store.studentCourses(me.id);
+  let courses = Store.studentCourses(me.id);
   const view = document.getElementById("course-view");
   const semesterSelect = document.getElementById("semester");
   const setText = (id, value) => (document.getElementById(id).textContent = value);
@@ -12,8 +12,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const [season, year] = s.split(" ");
     return Number(year) * 2 + (season === "Fall" ? 1 : 0);
   };
-  const semesters = Utils.unique(courses.map((c) => c.semester)).sort((a, b) => semesterRank(b) - semesterRank(a));
-  semesterSelect.innerHTML = semesters.map((s) => `<option value="${s}">Semester: ${s}</option>`).join("");
+  function fillSemesters() {
+    const semesters = Utils.unique(courses.map((c) => c.semester)).sort((a, b) => semesterRank(b) - semesterRank(a));
+    semesterSelect.innerHTML = semesters.map((s) => `<option value="${s}">Semester: ${s}</option>`).join("");
+    return semesters;
+  }
+  const semesters = fillSemesters();
 
   const state = { semester: semesters[0] || "", status: "", q: Utils.params().get("q") || "", view: "grid" };
   document.getElementById("global-search").value = state.q;
@@ -102,7 +106,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText("course-count", `${list.length} course${list.length === 1 ? "" : "s"}`);
 
-    if (!list.length) {
+    if (!courses.length) {
+      view.innerHTML = '<div class="card empty">You are not enrolled in any course yet. Click “Browse courses” to join one.</div>';
+    } else if (!list.length) {
       view.innerHTML = '<div class="card empty">No courses match your filters.</div>';
     } else if (state.view === "table") {
       view.innerHTML = tableTemplate(list);
@@ -139,6 +145,54 @@ document.addEventListener("DOMContentLoaded", () => {
         b.setAttribute("aria-pressed", String(b === btn));
       });
       render();
+    });
+  });
+
+  // --- Daftar (enroll) course baru ---
+  document.getElementById("browse-courses").addEventListener("click", () => {
+    const open = Store.openCoursesFor(me.id).sort((a, b) => a.code.localeCompare(b.code));
+    UI.modal({
+      title: "Browse courses",
+      size: "lg",
+      body: open.length
+        ? `<p class="text-muted">Approved courses that are open for enrollment.</p>
+          <ul class="row-list" id="open-courses">
+            ${open
+              .map((c) => {
+                const seats = Store.seatsLeft(c);
+                return `
+              <li>
+                <span class="row-list__order" style="background: ${c.color}" aria-hidden="true"></span>
+                <div class="row-list__main">
+                  <p class="row-list__title">${Utils.escape(c.title)} <span class="table__code">${Utils.escape(c.code)} · ${Utils.escape(Store.lecturerName(c.lecturerId))}</span></p>
+                  <p class="row-list__meta">${Utils.escape(c.semester)} · ${c.duration} weeks · ${seats} seat${seats === 1 ? "" : "s"} left</p>
+                </div>
+                <button class="btn btn--primary" type="button" data-enroll="${c.id}">Enroll</button>
+              </li>`;
+              })
+              .join("")}
+          </ul>`
+        : '<p class="empty">There are no open courses available right now. Check back later or ask your lecturer to add you.</p>',
+      onOpen: (modal) => {
+        modal.querySelector("#open-courses")?.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-enroll]");
+          if (!btn) return;
+          const result = Store.enrollStudent(me.id, btn.dataset.enroll);
+          if (result.error) return UI.toast(result.error, "error");
+
+          const course = DB.get("courses", btn.dataset.enroll);
+          Store.logActivity(`Enrolled in ${course.code} ${course.title}`);
+          UI.toast(`You are now enrolled in ${course.code}.`);
+          modal.querySelector(".btn[data-modal-close]").click();
+
+          // Muat ulang data dashboard dan tampilkan semester course yang baru diikuti
+          courses = Store.studentCourses(me.id);
+          fillSemesters();
+          state.semester = course.semester;
+          semesterSelect.value = course.semester;
+          render();
+        });
+      },
     });
   });
 
