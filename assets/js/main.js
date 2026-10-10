@@ -232,6 +232,8 @@ const UI = {
    * options: { title, body (HTML), confirmText, cancelText, variant: "primary"|"danger", size: "lg", onConfirm, onOpen }
    * - Tanpa onConfirm → modal informasi dengan satu tombol tutup.
    * - onConfirm(modalEl) mengembalikan false → modal tetap terbuka (mis. validasi form gagal).
+   * - onConfirm boleh async (mengembalikan Promise): tombol konfirmasi busy selama proses,
+   *   modal tertutup bila Promise resolve selain false; bila reject modal tetap terbuka.
    */
   modal({ title, body = "", confirmText = "Confirm", cancelText = "Cancel", variant = "primary", size = "", onConfirm, onOpen }) {
     const previousFocus = document.activeElement;
@@ -261,8 +263,18 @@ const UI = {
     modal.querySelectorAll("[data-modal-close]").forEach((el) => el.addEventListener("click", close));
     const confirmBtn = modal.querySelector("[data-modal-confirm]");
     if (confirmBtn) {
-      confirmBtn.addEventListener("click", () => {
-        if (onConfirm(modal) !== false) close();
+      confirmBtn.addEventListener("click", async () => {
+        const result = onConfirm(modal);
+        if (!result || typeof result.then !== "function") {
+          if (result !== false) close();
+          return;
+        }
+        // onConfirm async: tombol busy selama proses; resolve false / reject → modal tetap terbuka
+        try {
+          if ((await UI.busy(confirmBtn, result)) !== false) close();
+        } catch {
+          // pemanggil yang menampilkan pesan error (toast / error field)
+        }
       });
     }
 
@@ -280,6 +292,121 @@ const UI = {
     const firstField = modal.querySelector("input:not([type=hidden]), select, textarea");
     (firstField || confirmBtn || modal.querySelector("[data-modal-close].btn")).focus();
     return modal;
+  },
+
+  /* ---------- State view: loading / empty / error ----------
+     Dipakai pada container apa pun. Bila container adalah <tbody>, markup dibungkus <tr><td colspan>. */
+  _setState(el, html) {
+    if (el.tagName === "TBODY") {
+      const columns = el.closest("table")?.querySelectorAll("thead th").length || 1;
+      el.innerHTML = `<tr class="state-row"><td colspan="${columns}">${html}</td></tr>`;
+    } else {
+      el.innerHTML = html;
+    }
+    renderIcons(el);
+  },
+
+  /** Tampilkan indikator loading dan tandai container aria-busy. */
+  loading(el, { label = "Loading…" } = {}) {
+    el.setAttribute("aria-busy", "true");
+    UI._setState(
+      el,
+      `<div class="state state--loading" role="status"><span class="spinner" aria-hidden="true"></span><p class="state__text">${Utils.escape(label)}</p></div>`
+    );
+  },
+
+  /**
+   * Empty state. action: { label, href } untuk link, atau { label, onClick } untuk tombol.
+   * icon: nama ikon dari ICONS (default "layers").
+   */
+  empty(el, { title = "Nothing here yet", text = "", action, icon = "layers" } = {}) {
+    el.removeAttribute("aria-busy");
+    const button = !action
+      ? ""
+      : action.href
+        ? `<a class="btn btn--primary" href="${Utils.escape(action.href)}">${Utils.escape(action.label)}</a>`
+        : `<button class="btn btn--outline" type="button" data-state-action>${Utils.escape(action.label)}</button>`;
+    UI._setState(
+      el,
+      `<div class="state state--empty">
+        <span class="state__icon"><i data-icon="${Utils.escape(icon)}"></i></span>
+        <p class="state__title">${Utils.escape(title)}</p>
+        ${text ? `<p class="state__text">${Utils.escape(text)}</p>` : ""}
+        ${button}
+      </div>`
+    );
+    if (action?.onClick) el.querySelector("[data-state-action]").addEventListener("click", action.onClick);
+  },
+
+  /** Error state dari ApiError (atau Error biasa) dengan tombol Retry opsional. */
+  error(el, err, onRetry) {
+    el.removeAttribute("aria-busy");
+    const message = err?.message || "Something went wrong. Please try again.";
+    UI._setState(
+      el,
+      `<div class="state state--error" role="alert">
+        <span class="state__icon"><i data-icon="alert"></i></span>
+        <p class="state__title">Could not load this section</p>
+        <p class="state__text">${Utils.escape(message)}</p>
+        ${onRetry ? '<button class="btn btn--outline" type="button" data-state-retry><i data-icon="refresh" class="icon--sm"></i>Try again</button>' : ""}
+      </div>`
+    );
+    if (onRetry) el.querySelector("[data-state-retry]").addEventListener("click", onRetry);
+  },
+
+  /**
+   * Muat data ke container: loading → render(data) | empty | error (dengan Retry).
+   * options.empty: argumen UI.empty, dipakai bila data kosong (array / { items: [] } / null).
+   * Mengembalikan data, atau undefined bila gagal.
+   */
+  async load(el, loader, render, options = {}) {
+    UI.loading(el, options);
+    try {
+      const data = await loader();
+      el.removeAttribute("aria-busy");
+      const items = Array.isArray(data) ? data : data?.items;
+      if (options.empty && (data == null || (Array.isArray(items) && !items.length))) UI.empty(el, options.empty);
+      else render(data);
+      return data;
+    } catch (err) {
+      UI.error(el, err, () => UI.load(el, loader, render, options));
+      return undefined;
+    }
+  },
+
+  /**
+   * Tombol busy selama task berjalan: disabled + spinner + aria-busy, dipulihkan setelah selesai
+   * (berhasil maupun gagal). task: Promise atau fungsi yang mengembalikan Promise. Hasil/error diteruskan.
+   */
+  async busy(button, task) {
+    if (!button) return typeof task === "function" ? task() : task;
+    const wasDisabled = button.disabled;
+    const spinner = document.createElement("span");
+    spinner.className = "spinner spinner--sm";
+    spinner.setAttribute("aria-hidden", "true");
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-busy");
+    button.prepend(spinner);
+    try {
+      return await (typeof task === "function" ? task() : task);
+    } finally {
+      spinner.remove();
+      button.classList.remove("is-busy");
+      button.removeAttribute("aria-busy");
+      button.disabled = wasDisabled;
+    }
+  },
+
+  /**
+   * Tampilkan error ApiError pada form: pesan per field (err.fields) ke .field[data-field],
+   * fokus ke field pertama yang salah. Mengembalikan true bila ada field yang ditandai.
+   */
+  applyFieldErrors(form, err) {
+    const names = Object.keys(err?.fields || {}).filter((name) => form.querySelector(`[data-field="${name}"]`));
+    names.forEach((name) => UI.fieldError(form, name, err.fields[name]));
+    if (names.length) form.elements[names[0]]?.focus();
+    return names.length > 0;
   },
 
   /**

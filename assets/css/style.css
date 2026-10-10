@@ -1779,6 +1779,77 @@ textarea.field__input {
 @keyframes fade-out { to { opacity: 0; transform: translateY(8px); } }
 @keyframes pop-in { from { opacity: 0; transform: scale(0.96); } }
 @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- State view: loading / empty / error (UI.loading, UI.empty, UI.error) --- */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.state__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+
+.state--error .state__icon {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.state__title {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.state__text {
+  max-width: 420px;
+  font-size: var(--fs-sm);
+}
+
+.state .btn {
+  margin-top: var(--space-2);
+}
+
+.state-row > td {
+  padding: 0;
+}
+
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner--sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  border-color: currentColor;
+  border-top-color: transparent;
+}
+
+.btn.is-busy,
+.btn.is-busy:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
 
 /* 9. HALAMAN LOGIN ======================================================== */
 /* Tata letak ala Udemy: header tipis, ilustrasi di kiri, form di kanan */
