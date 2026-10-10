@@ -69,7 +69,7 @@ const Certificate = {
       ctx.fillRect(x - 170, footerY, 340, 2);
       text(label, footerY + 36, 400, 20, "#6b7280", x);
     });
-    text(`Certificate no. ${cert.number}`, h - 110, 400, 18, "#9ca3af");
+    text(`Certificate no. ${cert.number} · verify at ${location.origin}${location.pathname.replace(/pages\/[^/]*$/, "")}verify.html`, h - 110, 400, 18, "#9ca3af");
     return canvas;
   },
 

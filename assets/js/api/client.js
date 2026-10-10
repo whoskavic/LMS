@@ -64,7 +64,8 @@ const Api = {
    * @param {{ query?: object, body?: object }} [options]
    */
   async request(method, path, { query, body } = {}) {
-    const transport = this.config.transport === "http" ? HttpTransport : LocalTransport;
+    // Transport "local" (MockServer) hanya tersedia bila transport-local.js dimuat (test node / demo offline)
+    const transport = this.config.transport === "local" && typeof LocalTransport !== "undefined" ? LocalTransport : HttpTransport;
     try {
       return await transport.send({ method, path, query: compactQuery(query), body, token: this.session.token() });
     } catch (err) {
@@ -73,6 +74,21 @@ const Api = {
       if (error.status === 401) this.session.clear();
       throw error;
     }
+  },
+
+  /** Unduh file (mis. CSV) dari transport http dengan token; mengembalikan Blob */
+  async download(path, query) {
+    const url = new URL(this.config.baseUrl.replace(/\/$/, "") + path, location.origin);
+    Object.entries(compactQuery(query)).forEach(([key, value]) => url.searchParams.set(key, String(value)));
+    const token = this.session.token();
+    let response;
+    try {
+      response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    } catch {
+      throw new ApiError(0, "NETWORK_ERROR", "Could not reach the server. Check your connection and try again.");
+    }
+    if (!response.ok) throw new ApiError(response.status, `HTTP_${response.status}`, "Download failed.");
+    return response.blob();
   },
 
   get(path, query) {

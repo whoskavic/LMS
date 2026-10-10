@@ -108,7 +108,7 @@
             <p class="stat-card__trend"><i data-icon="arrow-up" class="icon--sm"></i><span id="trend-students"></span></p>
           </article>
           <article class="card stat-card">
-            <p class="stat-card__label">Lecturers</p>
+            <p class="stat-card__label">Instructors</p>
             <i data-icon="user" class="stat-card__icon"></i>
             <p class="stat-card__value" id="stat-lecturers">0</p>
             <p class="stat-card__trend"><i data-icon="arrow-up" class="icon--sm"></i><span id="trend-lecturers"></span></p>
@@ -117,17 +117,17 @@
             <p class="stat-card__label">Pending approvals</p>
             <i data-icon="clock" class="stat-card__icon"></i>
             <p class="stat-card__value" id="stat-pending">0</p>
-            <p class="stat-card__meta">Courses submitted by lecturers</p>
+            <p class="stat-card__meta">Courses submitted by instructors</p>
           </article>
         </section>
 
         <section class="card mt-5">
           <header class="card__header">
             <h2 class="card__title">Student enrollment &amp; completion</h2>
-            <p class="card__subtitle">Jan–Jun 2026</p>
+            <p class="card__subtitle" id="chart-range">Last 6 months</p>
           </header>
           <div class="chart-box">
-            <canvas id="enrollment-chart" role="img" aria-label="Bar chart of monthly enrollments and completions, January to June 2026"></canvas>
+            <canvas id="enrollment-chart" role="img" aria-label="Bar chart of monthly enrollments and completions in the last 6 months"></canvas>
           </div>
         </section>
 
@@ -168,12 +168,9 @@
   </div>
 
   <script src="../assets/js/vendor/chart.umd.min.js"></script>
-  <script src="../assets/js/data.js"></script>
   <script src="../assets/js/domain.js"></script>
-  <script src="../assets/js/store.js"></script>
   <script src="../assets/js/config.js"></script>
   <script src="../assets/js/api/client.js"></script>
-  <script src="../assets/js/api/transport-local.js"></script>
   <script src="../assets/js/api/transport-http.js"></script>
   <script src="../assets/js/api/services.js"></script>
   <script src="../assets/js/main.js"></script>
