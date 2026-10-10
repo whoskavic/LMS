@@ -2,7 +2,7 @@
 
 Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
 
-> **Status:** backend FastAPI berjalan dengan auth JWT, manajemen user, course + modul + alur approval, dan katalog publik dengan pencarian. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** backend FastAPI berjalan dengan auth JWT, manajemen user, course + modul + alur approval, katalog publik dengan pencarian, serta enrollment + progress belajar. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Fitur
 
@@ -19,8 +19,9 @@ Legenda: ✅ terhubung ke backend · 🟡 belum dimigrasi (masih kode mock)
 | Instructor | Modul materi (urutkan, video URL) | ✅ |
 | Instructor | Quiz pilihan ganda, nilai akhir | 🟡 |
 | Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline | ✅ |
-| Student | Enroll course, belajar modul, progress | 🟡 |
-| Student | Quiz dengan timer & review, nilai akhir, IPK, sertifikat | 🟡 |
+| Student | Enroll course gratis (katalog / dashboard), belajar modul berurutan, progress dihitung server | ✅ |
+| Student | Dashboard: course per semester, progress, IPK, unduh sertifikat | ✅ |
+| Student | Quiz dengan timer & review | 🟡 |
 | Semua | Login, registrasi publik (student/instructor), profil, ganti password, tema terang/gelap | ✅ |
 
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
@@ -89,7 +90,7 @@ git clone https://github.com/whoskavic/LMS.git && cd LMS
 # 1. Backend + database
 docker compose up -d --build
 docker compose exec api alembic upgrade head      # migrasi
-docker compose exec api python -m app.seed        # data demo: akun, 5 kategori, 13 course + modul (--reset untuk mengisi ulang)
+docker compose exec api python -m app.seed        # data demo: akun, 5 kategori, 13 course + modul, enrollment (--reset untuk mengisi ulang)
 curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"ok"}
 # Swagger: http://localhost:8000/docs
 
@@ -139,7 +140,7 @@ Hasil `python -m app.seed`:
 
 Akun baru juga bisa dibuat lewat halaman **Sign up** (`register.html`) sebagai student atau instructor.
 
-Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller.
+Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress & nilai demo dari prototipe (8 course, IPK 3.67); Nadia dan Marcus masing-masing 4 course.
 
 ## API
 
@@ -175,6 +176,10 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET / POST | `/api/v1/courses/{id}/modules` | lihat: yang boleh melihat course · tambah: instructor pemilik |
 | PUT | `/api/v1/courses/{id}/modules/order` | instructor pemilik |
 | PATCH / DELETE | `/api/v1/modules/{id}` | instructor pemilik |
+| POST | `/api/v1/courses/{id}/enrollments` | student (course Active, pendaftaran dibuka, ada kursi) |
+| GET | `/api/v1/courses/{id}/enrollment` | student (enrollment miliknya di course itu) |
+| GET | `/api/v1/me/enrollments` (`semester, status, q, sort, page, pageSize`) | student |
+| POST | `/api/v1/enrollments/{id}/completed-modules` (`{ moduleId }`) | student pemilik enrollment |
 
 Autentikasi: header `Authorization: Bearer <token>` dari `/auth/login`.
 
@@ -210,9 +215,9 @@ Roadmap integrasi backend (satu PR per fase):
 2. ✅ Backend skeleton (FastAPI, Alembic, Docker, CI)
 3. ✅ Auth & users
 4. ✅ Courses & katalog publik
-5. Enrollment & progress
+5. ✅ Enrollment & progress
 6. Quiz dinilai di server
 7. Nilai akhir, IPK, sertifikat, laporan, dashboard
 8. Siap deploy
 
-Known issues saat ini: dashboard, halaman belajar student, quiz, nilai, dan laporan belum dimigrasi ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
+Known issues saat ini: dashboard admin & instructor, quiz, nilai, dan laporan belum dimigrasi (daftar quiz di halaman belajar menampilkan error sampai endpoint quiz tersedia) ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).

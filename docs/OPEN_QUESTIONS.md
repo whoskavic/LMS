@@ -19,3 +19,7 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 13 | Alasan reject | Mock: alasan opsional. Prompt: reject wajib note → API 400 bila `reason` kosong; UI admin meminta alasan di modal. | Diputuskan (PR 4) |
 | 14 | Log status saat course dibuat | Pembuatan course juga dicatat di `course_status_logs` (`NULL → draft`) agar riwayat lengkap. | Diputuskan (PR 4) |
 | 15 | Edit course Pending | Status hanya berubah lewat `/transitions`; course Pending tetap Pending saat diedit (tombol *Save draft* disembunyikan). | Diputuskan (PR 4) |
+| 16 | Progress setelah modul ditambah | Progress dihitung ulang saat modul ditambah/dihapus; status `completed` tetap (tidak kembali ke `active`) agar sertifikat yang sudah terbit tetap sah. | Diputuskan (PR 5) |
+| 17 | Video materi | `modules.video_url` berupa URL; URL YouTube di-embed, URL lain ditampilkan sebagai tautan. Modul Lecture tanpa URL tetap memakai simulasi video 3 detik seperti prototipe. | Diputuskan (PR 5) |
+| 18 | Kapasitas & pendaftaran | Aturan prototipe dipertahankan: `enrollment_open` dan `max_students` tetap berlaku untuk course gratis. | Diputuskan (PR 5) |
+| 19 | Sertifikat | Diterbitkan otomatis saat progress 100% bila course menerbitkan sertifikat; nomor acak `LRN-<KODE>-<12 karakter>`. Endpoint verifikasi publik ditambahkan di PR 7. | Diputuskan (PR 5) |

@@ -87,6 +87,8 @@ Object.assign(Api, {
     mine: (query) => Api.get("/me/enrollments", query), // { semester, status, q, sort }
     open: (query) => Api.get("/courses", { ...query, open: true }),
     enroll: (courseId) => Api.post(apiPath`/courses/${courseId}/enrollments`),
+    /** Enrollment student yang login di course tertentu (+ completedModuleIds) */
+    forCourse: (courseId) => Api.get(apiPath`/courses/${courseId}/enrollment`),
     addStudents: (courseId, studentIds) => Api.post(apiPath`/courses/${courseId}/enrollments/batch`, { studentIds }),
     remove: (id) => Api.del(apiPath`/enrollments/${id}`),
     completeModule: (enrollmentId, moduleId) => Api.post(apiPath`/enrollments/${enrollmentId}/completed-modules`, { moduleId }),

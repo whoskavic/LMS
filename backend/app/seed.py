@@ -14,9 +14,12 @@ from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401
 from app.auth.security import hash_password
+from app.common.grading import grade_from_score
 from app.common.util import slugify
 from app.courses.models import Category, Course, CourseStatusLog, Module
 from app.db import Base, SessionLocal
+from app.enrollments.models import Enrollment, ModuleProgress
+from app.enrollments.service import apply_progress
 from app.users.models import User
 
 # Diekspor dari assets/js/data.js (SEED) agar data demo sama dengan prototipe
@@ -166,9 +169,61 @@ def seed_courses(db: Session, users: dict[str, User]) -> dict[str, Course]:
     return courses
 
 
+# Enrollment demo: Alex Mercer memakai demoEnrollments dari mock; 2 student lain dibuat dengan pola serupa.
+# done = jumlah modul selesai (None = semua), finalScore = nilai akhir dari instructor.
+EXTRA_ENROLLMENTS = {
+    "nadia@learnova.ac.id": [
+        {"code": "CS205", "done": 6},
+        {"code": "MATH201", "done": None},
+        {"code": "DES302", "done": 3},
+        {"code": "DATA200", "done": None, "finalScore": 88},
+    ],
+    "marcus@learnova.ac.id": [
+        {"code": "CS101", "done": 4},
+        {"code": "BIO210", "done": 10},
+        {"code": "PHY310", "done": 0},
+        {"code": "PHY110", "done": None, "finalScore": 71},
+    ],
+}
+
+
+def seed_enrollments(db: Session, users: dict[str, User], courses: dict[str, Course]) -> list[Enrollment]:
+    plan = {"alex@learnova.ac.id": DATA["demoEnrollments"], **EXTRA_ENROLLMENTS}
+    enrollments = []
+    for email, items in plan.items():
+        for item in items:
+            course = courses[item["code"]]
+            start = datetime.combine(course.start_date, datetime.min.time(), tzinfo=UTC)
+            enrollment = Enrollment(user_id=users[email].id, course=course, enrolled_at=start - timedelta(days=7))
+            db.add(enrollment)
+            db.flush()
+            modules = list(db.scalars(select(Module).where(Module.course_id == course.id).order_by(Module.position)))
+            done = len(modules) if item.get("done") is None else min(item["done"], len(modules))
+            for i, module in enumerate(modules[:done]):
+                db.add(
+                    ModuleProgress(
+                        enrollment_id=enrollment.id,
+                        module_id=module.id,
+                        completed_at=start + timedelta(days=3 * (i + 1)),
+                    )
+                )
+            db.flush()
+            if done == len(modules) and modules:
+                # Course selesai: tanggal selesai = akhir course (seperti fallback sertifikat di prototipe)
+                enrollment.completed_at = min(start + timedelta(weeks=course.duration_weeks or 1), datetime.now(UTC))
+            apply_progress(db, enrollment)
+            if item.get("finalScore") is not None:
+                enrollment.final_score = item["finalScore"]
+                enrollment.grade_letter = grade_from_score(item["finalScore"])
+            enrollments.append(enrollment)
+    db.flush()
+    return enrollments
+
+
 def seed(db: Session) -> None:
     users = seed_users(db)
-    seed_courses(db, users)
+    courses = seed_courses(db, users)
+    seed_enrollments(db, users, courses)
     db.commit()
 
 
