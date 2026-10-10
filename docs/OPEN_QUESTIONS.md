@@ -23,3 +23,6 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 17 | Video materi | `modules.video_url` berupa URL; URL YouTube di-embed, URL lain ditampilkan sebagai tautan. Modul Lecture tanpa URL tetap memakai simulasi video 3 detik seperti prototipe. | Diputuskan (PR 5) |
 | 18 | Kapasitas & pendaftaran | Aturan prototipe dipertahankan: `enrollment_open` dan `max_students` tetap berlaku untuk course gratis. | Diputuskan (PR 5) |
 | 19 | Sertifikat | Diterbitkan otomatis saat progress 100% bila course menerbitkan sertifikat; nomor acak `LRN-<KODE>-<12 karakter>`. Endpoint verifikasi publik ditambahkan di PR 7. | Diputuskan (PR 5) |
+| 20 | Attempt kedaluwarsa | Attempt yang lewat `expires_at + 30 detik` ditandai `expired`, tidak dinilai (skor kosong), dan tetap dihitung sebagai attempt (keputusan produk #3: attempt dihitung saat Start). | Diputuskan (PR 6) |
+| 21 | Edit quiz yang sudah dikerjakan | Soal diperbarui di tempat (ID soal/opsi tetap) sehingga riwayat jawaban tetap terhubung; menghapus soal ikut menghapus jawaban soal tersebut. Skor attempt lama tidak dihitung ulang. | Diputuskan (PR 6) |
+| 22 | Bobot soal | Kolom `questions.points` (default 1) dipakai sebagai bobot skor; editor UI belum menampilkan bobot (semua 1 seperti prototipe). | Diputuskan (PR 6) |

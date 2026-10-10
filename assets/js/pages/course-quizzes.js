@@ -1,20 +1,31 @@
-// Detail Course · tab Quizzes — dosen membuat & mengedit quiz pilihan ganda (editor soal dengan validasi)
+// Detail Course · tab Quizzes — instructor membuat & mengedit quiz pilihan ganda (editor soal dengan validasi).
+// Data & statistik dari Api.quizzes; kunci jawaban hanya dikirim server ke instructor/admin.
 
-App.ready(() => {
-  const { course, canEdit } = CourseDetail;
-  if (!course) return;
+App.ready(async () => {
+  const course = await CourseDetail.loaded;
+  const { canEdit } = CourseDetail;
   const list = document.getElementById("quiz-rows");
   const LETTERS = ["A", "B", "C", "D"];
+  let quizzes = [];
 
-  function quizStats(quiz) {
-    const enrollments = Store.enrollmentsOf(course.id);
-    const best = enrollments.map((e) => Store.bestScore(e, quiz.id)).filter((s) => s !== null);
-    const attempts = enrollments.reduce((sum, e) => sum + Store.attemptsOf(e, quiz.id).length, 0);
-    return { attempts, takers: best.length, avg: best.length ? Math.round(Utils.average(best)) : null };
-  }
+  const quizStats = (quiz) => ({ attempts: quiz.stats.attempts, takers: quiz.stats.takers, avg: quiz.stats.avgBestScore });
+
+  const load = () =>
+    UI.load(list, () => Api.quizzes.list(course.id), (res) => {
+      quizzes = res.items;
+      render();
+    }, { label: "Loading quizzes…" });
 
   function render() {
-    const quizzes = Store.quizzesOf(course.id);
+    if (!quizzes.length) {
+      UI.empty(list, {
+        title: "No quizzes yet",
+        text: canEdit ? "Create a multiple-choice quiz for your students." : "The instructor has not created any quizzes.",
+        icon: "quiz",
+        action: canEdit ? { label: "New quiz", onClick: () => openEditor(null) } : undefined,
+      });
+      return;
+    }
     list.innerHTML = quizzes.length
       ? quizzes
           .map((q) => {
@@ -30,17 +41,16 @@ App.ready(() => {
               ${
                 canEdit
                   ? `<div class="row-list__actions">
-                      <button class="icon-btn icon-btn--sm" type="button" data-edit="${q.id}" aria-label="Edit ${Utils.escape(q.title)}"><i data-icon="edit" class="icon--sm"></i></button>
-                      <button class="icon-btn icon-btn--sm icon-btn--danger" type="button" data-delete="${q.id}" aria-label="Delete ${Utils.escape(q.title)}"><i data-icon="trash" class="icon--sm"></i></button>
+                      <button class="icon-btn icon-btn--sm" type="button" data-edit="${Utils.escape(q.id)}" aria-label="Edit ${Utils.escape(q.title)}"><i data-icon="edit" class="icon--sm"></i></button>
+                      <button class="icon-btn icon-btn--sm icon-btn--danger" type="button" data-delete="${Utils.escape(q.id)}" aria-label="Delete ${Utils.escape(q.title)}"><i data-icon="trash" class="icon--sm"></i></button>
                     </div>`
                   : ""
               }
             </li>`;
           })
           .join("")
-      : `<li class="empty">No quizzes yet.${canEdit ? " Click “New quiz” to create one." : ""}</li>`;
+      : "";
     renderIcons(list);
-    CourseDetail.updateCounts();
   }
 
   /* ---------- Editor soal ---------- */
@@ -83,7 +93,7 @@ App.ready(() => {
       body: `
         <form class="form-stack" novalidate>
           ${hasAttempts ? '<p class="alert alert--danger"><i data-icon="alert" class="icon--sm"></i><span>Students have already taken this quiz. Their previous scores are kept.</span></p>' : ""}
-          ${UI.field({ name: "title", label: "Quiz title", value: quiz?.title || `${course.code} Quiz ${Store.quizzesOf(course.id).length + 1}`, attrs: 'maxlength="80"' })}
+          ${UI.field({ name: "title", label: "Quiz title", value: quiz?.title || `${course.code || "Course"} Quiz ${quizzes.length + 1}`, attrs: 'maxlength="80"' })}
           <div class="field-row">
             ${UI.field({ name: "passingScore", label: "Passing score", type: "number", value: quiz?.passingScore ?? 70, attrs: 'min="1" max="100"' })}
             ${UI.field({ name: "maxAttempts", label: "Maximum attempts", type: "number", value: quiz?.maxAttempts ?? 3, attrs: 'min="1" max="5"' })}
@@ -111,7 +121,7 @@ App.ready(() => {
           renumber(container);
         });
       },
-      onConfirm: (modal) => {
+      onConfirm: async (modal) => {
         const form = modal.querySelector("form");
         const v = UI.formValues(form);
         const num = (value) => Number(value);
@@ -166,15 +176,24 @@ App.ready(() => {
           timeLimit: num(v.timeLimit),
           questions: questions.map(({ text, options, answer }) => ({ text, options, answer })),
         };
-        if (quiz) {
-          DB.update("quizzes", quiz.id, data);
-          UI.toast("Quiz updated.");
-        } else {
-          DB.insert("quizzes", { ...data, courseId: course.id });
-          Store.logActivity(`Created quiz "${v.title}" in ${course.code}`);
-          UI.toast("Quiz created.");
+        try {
+          if (quiz) await Api.quizzes.update(quiz.id, data);
+          else await Api.quizzes.create(course.id, data);
+        } catch (err) {
+          // Error per soal dari server: fields["questions.N"]
+          Object.entries(err.fields || {}).forEach(([key, message]) => {
+            const match = /^questions\.(\d+)$/.exec(key);
+            if (!match || !items[Number(match[1])]) return;
+            const errorEl = items[Number(match[1])].querySelector("[data-q-error]");
+            errorEl.hidden = false;
+            errorEl.textContent = message;
+          });
+          if (!UI.applyFieldErrors(form, err)) UI.toast(err.message, "error");
+          throw err;
         }
-        render();
+        UI.toast(quiz ? "Quiz updated." : "Quiz created.");
+        load();
+        CourseDetail.updateCounts();
       },
     });
   }
@@ -184,25 +203,29 @@ App.ready(() => {
   list.addEventListener("click", (e) => {
     const edit = e.target.closest("[data-edit]");
     const del = e.target.closest("[data-delete]");
-    if (edit) return openEditor(DB.get("quizzes", edit.dataset.edit));
+    if (edit) return openEditor(quizzes.find((q) => q.id === edit.dataset.edit));
     if (!del) return;
 
-    const quiz = DB.get("quizzes", del.dataset.delete);
+    const quiz = quizzes.find((q) => q.id === del.dataset.delete);
     const { attempts } = quizStats(quiz);
     UI.modal({
       title: "Delete quiz?",
       body: `<p><strong>${Utils.escape(quiz.title)}</strong> will be removed${attempts ? ` together with ${attempts} student attempts` : ""}. This action cannot be undone.</p>`,
       confirmText: "Delete",
       variant: "danger",
-      onConfirm: () => {
-        Store.enrollmentsOf(course.id).forEach((e) => (e.attempts = e.attempts.filter((a) => a.quizId !== quiz.id)));
-        DB.remove("quizzes", quiz.id);
-        Store.logActivity(`Deleted quiz "${quiz.title}" from ${course.code}`);
+      onConfirm: async () => {
+        try {
+          await Api.quizzes.remove(quiz.id);
+        } catch (err) {
+          UI.toast(err.message, "error");
+          throw err;
+        }
         UI.toast("Quiz deleted.");
-        render();
+        load();
+        CourseDetail.updateCounts();
       },
     });
   });
 
-  render();
+  load();
 });
