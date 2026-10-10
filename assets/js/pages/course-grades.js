@@ -1,30 +1,18 @@
-// Detail Course · tab Students & Grades — progress & skor quiz mahasiswa, dosen mengisi nilai akhir
+// Detail Course · tab Students & Grades — progress & skor quiz student, instructor mengisi nilai akhir.
+// Grade huruf ditampilkan langsung (Domain.gradeFromScore) dan dihitung ulang server saat disimpan.
 
-App.ready(() => {
-  const { course, canEdit } = CourseDetail;
-  if (!course) return;
+App.ready(async () => {
+  const course = await CourseDetail.loaded;
+  const { canEdit } = CourseDetail;
 
   const table = document.getElementById("grade-table");
   const tbody = document.getElementById("grade-rows");
   const saveBtn = document.getElementById("save-grades");
   const state = { key: "name", dir: "asc" };
   const drafts = new Map(); // enrollmentId → nilai yang diketik tetapi belum disimpan
+  let rows = [];
 
-  if (!canEdit) document.getElementById("grade-hint").textContent = "Final grades are entered by the course lecturer.";
-
-  const rows = () =>
-    Store.enrollmentsOf(course.id).map((e) => {
-      const student = DB.get("users", e.studentId);
-      return {
-        id: e.id,
-        name: student?.name || "Unknown student",
-        nim: student?.idNumber || "",
-        progress: Store.progressOf(e),
-        quiz: Store.averageQuiz(e),
-        finalScore: e.finalScore,
-        grade: e.grade,
-      };
-    });
+  if (!canEdit) document.getElementById("grade-hint").textContent = "Final grades are entered by the course instructor.";
 
   // Nilai kosong → tidak ada nilai; selain itu harus bilangan bulat 0–100
   const parseScore = (value) => {
@@ -33,14 +21,15 @@ App.ready(() => {
     return Number.isInteger(n) && n >= 0 && n <= 100 ? { score: n } : { error: "Enter 0–100" };
   };
 
-  const gradeCell = (score) => (score === null || score === undefined ? "–" : `<strong>${Store.gradeFromScore(score)}</strong>`);
+  const gradeCell = (score) => (score === null || score === undefined ? "–" : `<strong>${Domain.gradeFromScore(score)}</strong>`);
 
   function rowTemplate(r) {
-    const draft = drafts.has(r.id) ? drafts.get(r.id) : r.finalScore ?? "";
+    const id = r.enrollmentId;
+    const draft = drafts.has(id) ? drafts.get(id) : r.finalScore ?? "";
     const parsed = parseScore(String(draft));
     return `
       <tr>
-        <td>${Utils.escape(r.name)}<span class="table__code">NIM ${Utils.escape(r.nim)}</span></td>
+        <td>${Utils.escape(r.name)}<span class="table__code">${r.nim ? `NIM ${Utils.escape(r.nim)}` : Utils.escape(r.email)}</span></td>
         <td>
           <div class="table-progress">
             <div class="progress"><div class="progress__bar" style="width: ${r.progress}%"></div></div>
@@ -52,47 +41,67 @@ App.ready(() => {
           ${
             canEdit
               ? `<div class="field ${parsed.error ? "is-invalid" : ""}">
-                  <label class="visually-hidden" for="score-${r.id}">Final score for ${Utils.escape(r.name)}</label>
-                  <input class="field__input grade-input" id="score-${r.id}" type="number" min="0" max="100" inputmode="numeric"
-                    data-score="${r.id}" value="${Utils.escape(draft)}" placeholder="–">
+                  <label class="visually-hidden" for="score-${Utils.escape(id)}">Final score for ${Utils.escape(r.name)}</label>
+                  <input class="field__input grade-input" id="score-${Utils.escape(id)}" type="number" min="0" max="100" inputmode="numeric"
+                    data-score="${Utils.escape(id)}" value="${Utils.escape(draft)}" placeholder="–">
                 </div>`
               : r.finalScore ?? "–"
           }
         </td>
-        <td data-grade-for="${r.id}">${parsed.error ? '<span class="text-danger">Invalid</span>' : gradeCell(parsed.score)}</td>
+        <td data-grade-for="${Utils.escape(id)}">${parsed.error ? '<span class="text-danger">Invalid</span>' : gradeCell(parsed.score)}</td>
         ${
           canEdit
-            ? `<td><button class="icon-btn icon-btn--sm icon-btn--danger" type="button" data-unenroll="${r.id}" aria-label="Remove ${Utils.escape(r.name)} from course"><i data-icon="trash" class="icon--sm"></i></button></td>`
+            ? `<td><button class="icon-btn icon-btn--sm icon-btn--danger" type="button" data-unenroll="${Utils.escape(id)}" aria-label="Remove ${Utils.escape(r.name)} from course"><i data-icon="trash" class="icon--sm"></i></button></td>`
             : ""
         }
       </tr>`;
   }
 
   function render() {
-    const list = Utils.sortBy(rows(), state.key, state.dir);
-    tbody.innerHTML = list.length
-      ? list.map(rowTemplate).join("")
-      : `<tr><td class="table__empty" colspan="${canEdit ? 6 : 5}">No students are enrolled in this course yet.${canEdit ? " Click “Add students” to enroll them." : ""}</td></tr>`;
-    renderIcons(tbody);
+    const list = Utils.sortBy(rows, state.key, state.dir);
+    if (!list.length) {
+      UI.empty(tbody, {
+        title: "No students enrolled yet",
+        text: canEdit ? "Students appear here after they enroll, or add them with “Add students”." : "",
+        icon: "users",
+      });
+    } else {
+      tbody.innerHTML = list.map(rowTemplate).join("");
+      renderIcons(tbody);
+    }
     if (saveBtn) saveBtn.disabled = drafts.size === 0;
-    CourseDetail.updateCounts();
   }
 
-  /* ---------- Tambah mahasiswa (dosen pemilik) ---------- */
-  function openEnrollForm() {
+  async function load() {
+    UI.loading(tbody, { label: "Loading students…" });
+    try {
+      rows = (await Api.grades.list(course.id, { pageSize: 200 })).items;
+      tbody.removeAttribute("aria-busy");
+      render();
+    } catch (err) {
+      UI.error(tbody, err, load, { title: "Could not load students" });
+    }
+  }
+
+  /* ---------- Tambah student (instructor pemilik) ---------- */
+  async function openEnrollForm() {
     if (course.status !== "Active") {
       UI.toast("Students can be added after the course is approved by the administrator.", "error");
       return;
     }
-    const seats = Store.seatsLeft(course);
-    if (!seats) return UI.toast("This course is full. Increase the capacity in “Edit course” first.", "error");
-
-    const candidates = DB.where("users", (u) => u.role === "student" && u.status === "Active" && !Store.enrollment(u.id, course.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const seats = course.maxStudents ? course.maxStudents - rows.length : Infinity;
+    if (seats <= 0) return UI.toast("This course is full. Increase the capacity in “Edit course” first.", "error");
+    let candidates;
+    try {
+      candidates = await Api.enrollments.candidates(course.id);
+    } catch (err) {
+      return UI.toast(err.message, "error");
+    }
     if (!candidates.length) return UI.toast("All active students are already enrolled.", "error");
+    const seatsText = Number.isFinite(seats) ? `${seats} seat${seats === 1 ? "" : "s"} left` : "No seat limit";
 
     UI.modal({
-      title: `Add students to ${course.code}`,
+      title: `Add students to ${course.code || course.title}`,
       size: "lg",
       confirmText: "Enroll selected",
       body: `
@@ -100,16 +109,16 @@ App.ready(() => {
           <div class="field">
             <label class="field__label" for="enroll-search">Search student</label>
             <input class="field__input" id="enroll-search" type="search" placeholder="Name, NIM, or department" autocomplete="off">
-            <p class="field__hint" id="enroll-hint">${seats} seat${seats === 1 ? "" : "s"} left · 0 selected</p>
+            <p class="field__hint" id="enroll-hint">${seatsText} · 0 selected</p>
           </div>
           <ul class="pick-list" id="enroll-list">
             ${candidates
               .map(
                 (u) => `
-              <li data-search="${Utils.escape(`${u.name} ${u.idNumber} ${u.department}`.toLowerCase())}">
+              <li data-search="${Utils.escape(`${u.name} ${u.idNumber || ""} ${u.department || ""} ${u.email}`.toLowerCase())}">
                 <label class="task">
-                  <input type="checkbox" value="${u.id}">
-                  <span>${Utils.escape(u.name)}<span class="table__code">NIM ${Utils.escape(u.idNumber)} · ${Utils.escape(u.department)}</span></span>
+                  <input type="checkbox" value="${Utils.escape(u.id)}">
+                  <span>${Utils.escape(u.name)}<span class="table__code">${u.idNumber ? `NIM ${Utils.escape(u.idNumber)}` : Utils.escape(u.email)}${u.department ? ` · ${Utils.escape(u.department)}` : ""}</span></span>
                 </label>
               </li>`
               )
@@ -125,47 +134,53 @@ App.ready(() => {
         });
         modal.querySelector("#enroll-list").addEventListener("change", () => {
           const selected = modal.querySelectorAll("#enroll-list input:checked").length;
-          hint.textContent = `${seats} seat${seats === 1 ? "" : "s"} left · ${selected} selected`;
+          hint.textContent = `${seatsText} · ${selected} selected`;
           hint.classList.toggle("text-danger", selected > seats);
         });
       },
-      onConfirm: (modal) => {
+      onConfirm: async (modal) => {
         const ids = [...modal.querySelectorAll("#enroll-list input:checked")].map((el) => el.value);
         if (!ids.length) {
           UI.toast("Select at least one student.", "error");
           return false;
         }
-        if (ids.length > seats) {
-          UI.toast(`Only ${seats} seat${seats === 1 ? "" : "s"} left in this course.`, "error");
-          return false;
+        let added;
+        try {
+          added = (await Api.enrollments.addStudents(course.id, ids)).total;
+        } catch (err) {
+          UI.toast(err.message, "error");
+          throw err;
         }
-        const added = ids.filter((id) => Store.enrollStudent(id, course.id, { byLecturer: true }).enrollment).length;
-        Store.logActivity(`Enrolled ${added} student${added > 1 ? "s" : ""} in ${course.code} ${course.title}`);
-        UI.toast(`${added} student${added > 1 ? "s" : ""} enrolled in ${course.code}.`);
-        render();
+        UI.toast(`${added} student${added > 1 ? "s" : ""} enrolled in ${course.code || course.title}.`);
+        load();
+        CourseDetail.updateCounts();
       },
     });
   }
 
   document.getElementById("add-students")?.addEventListener("click", openEnrollForm);
 
-  // Keluarkan mahasiswa dari course
+  // Keluarkan student dari course
   tbody.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-unenroll]");
     if (!btn) return;
-    const enrollment = DB.get("enrollments", btn.dataset.unenroll);
-    const student = DB.get("users", enrollment.studentId);
+    const row = rows.find((r) => r.enrollmentId === btn.dataset.unenroll);
     UI.modal({
       title: "Remove student?",
-      body: `<p><strong>${Utils.escape(student?.name || "This student")}</strong> will be removed from ${Utils.escape(course.code)}. Their progress, quiz attempts, and grade in this course will be deleted.</p>`,
+      body: `<p><strong>${Utils.escape(row?.name || "This student")}</strong> will be removed from ${Utils.escape(course.code || course.title)}. Their progress, quiz attempts, and grade in this course will be deleted.</p>`,
       confirmText: "Remove",
       variant: "danger",
-      onConfirm: () => {
-        DB.remove("enrollments", enrollment.id);
-        drafts.delete(enrollment.id);
-        Store.logActivity(`Removed ${student?.name || "a student"} from ${course.code}`);
+      onConfirm: async () => {
+        try {
+          await Api.enrollments.remove(row.enrollmentId);
+        } catch (err) {
+          UI.toast(err.message, "error");
+          throw err;
+        }
+        drafts.delete(row.enrollmentId);
         UI.toast("Student removed from course.");
-        render();
+        load();
+        CourseDetail.updateCounts();
       },
     });
   });
@@ -175,32 +190,33 @@ App.ready(() => {
     const input = e.target.closest("[data-score]");
     if (!input) return;
     const id = input.dataset.score;
-    const original = Store.enrollmentsOf(course.id).find((x) => x.id === id).finalScore ?? "";
+    const original = rows.find((r) => r.enrollmentId === id)?.finalScore ?? "";
     const value = input.value.trim();
     if (value === String(original)) drafts.delete(id);
     else drafts.set(id, value);
 
     const parsed = parseScore(value);
     input.closest(".field").classList.toggle("is-invalid", Boolean(parsed.error));
-    tbody.querySelector(`[data-grade-for="${id}"]`).innerHTML = parsed.error ? '<span class="text-danger">Invalid</span>' : gradeCell(parsed.score);
+    tbody.querySelector(`[data-grade-for="${CSS.escape(id)}"]`).innerHTML = parsed.error ? '<span class="text-danger">Invalid</span>' : gradeCell(parsed.score);
     saveBtn.disabled = drafts.size === 0;
   });
 
-  saveBtn?.addEventListener("click", () => {
+  saveBtn?.addEventListener("click", async () => {
     const invalid = [...drafts.values()].filter((v) => parseScore(v).error).length;
     if (invalid) {
       UI.toast(`${invalid} score${invalid > 1 ? "s are" : " is"} invalid. Use whole numbers from 0 to 100.`, "error");
       tbody.querySelector(".field.is-invalid input")?.focus();
       return;
     }
-    drafts.forEach((value, id) => {
-      const { score } = parseScore(value);
-      DB.update("enrollments", id, { finalScore: score, grade: score === null ? null : Store.gradeFromScore(score) });
-    });
-    const count = drafts.size;
+    const grades = [...drafts.entries()].map(([enrollmentId, value]) => ({ enrollmentId, finalScore: parseScore(value).score }));
+    try {
+      rows = (await UI.busy(saveBtn, Api.grades.save(course.id, grades))).items;
+    } catch (err) {
+      UI.toast(err.message, "error");
+      return;
+    }
     drafts.clear();
-    Store.logActivity(`Updated ${count} final grade${count > 1 ? "s" : ""} in ${course.code}`);
-    UI.toast(`${count} grade${count > 1 ? "s" : ""} saved. Students can now see them.`);
+    UI.toast(`${grades.length} grade${grades.length > 1 ? "s" : ""} saved. Students can now see them.`);
     render();
   });
 
@@ -213,15 +229,15 @@ App.ready(() => {
   });
 
   document.getElementById("export-grades").addEventListener("click", () => {
-    const list = Utils.sortBy(rows(), state.key, state.dir);
+    const list = Utils.sortBy(rows, state.key, state.dir);
     if (!list.length) return UI.toast("Nothing to export.", "error");
     Utils.downloadCSV(
-      `learnova-${course.code.toLowerCase()}-grades.csv`,
+      `learnova-${(course.code || course.slug || "course").toLowerCase()}-grades.csv`,
       list.map((r) => ({ Student: r.name, NIM: r.nim, Progress: `${r.progress}%`, Quiz: r.quiz ?? "", "Final score": r.finalScore ?? "", Grade: r.grade ?? "" }))
     );
     UI.toast("Grades exported as CSV.");
   });
 
   UI.sortable(table, state, render);
-  render();
+  load();
 });

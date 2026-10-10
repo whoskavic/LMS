@@ -99,6 +99,7 @@ Object.assign(Api, {
     /** Enrollment student yang login di course tertentu (+ completedModuleIds) */
     forCourse: (courseId) => Api.get(apiPath`/courses/${courseId}/enrollment`),
     addStudents: (courseId, studentIds) => Api.post(apiPath`/courses/${courseId}/enrollments/batch`, { studentIds }),
+    candidates: (courseId, q) => Api.get(apiPath`/courses/${courseId}/candidates`, { q }),
     remove: (id) => Api.del(apiPath`/enrollments/${id}`),
     completeModule: (enrollmentId, moduleId) => Api.post(apiPath`/enrollments/${enrollmentId}/completed-modules`, { moduleId }),
   },
@@ -112,6 +113,26 @@ Object.assign(Api, {
   reports: {
     summary: () => Api.get("/reports/summary"),
     enrollments: (query) => Api.get("/reports/enrollments", query), // { courseId, status, q, sort, page, pageSize }
+    /** CSV dari server (semua baris sesuai filter) → unduh sebagai file */
+    async downloadCsv(query) {
+      const blob = await Api.download("/reports/enrollments.csv", query);
+      const url = URL.createObjectURL(blob);
+      const link = Object.assign(document.createElement("a"), { href: url, download: "learnova-learning-report.csv" });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    },
+  },
+
+  dashboard: {
+    admin: () => Api.get("/dashboard/admin"),
+    instructor: () => Api.get("/dashboard/instructor"),
+    student: () => Api.get("/dashboard/student"),
+  },
+
+  certificates: {
+    verify: (code) => Api.get(apiPath`/certificates/${code}`),
   },
 
   activities: {

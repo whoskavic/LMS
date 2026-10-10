@@ -2,26 +2,28 @@
 
 Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
 
-> **Status:** backend FastAPI berjalan dengan auth JWT, manajemen user, course + modul + alur approval, katalog publik dengan pencarian, enrollment + progress belajar, serta quiz yang dinilai di server. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** semua halaman sudah terhubung ke backend FastAPI + PostgreSQL (auth JWT, user, course + approval, katalog publik + search, enrollment + progress, quiz dinilai server, nilai akhir + IPK, sertifikat + verifikasi, laporan + CSV, dashboard per role). Mock data `localStorage` tidak lagi dipakai halaman. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Fitur
 
-Legenda: ✅ terhubung ke backend · 🟡 belum dimigrasi (masih kode mock)
+Legenda: ✅ terhubung ke backend
 
 | Role | Fitur | Status |
 |---|---|---|
-| Admin | Dashboard (statistik, grafik, pending approvals, aktivitas) | 🟡 |
+| Admin | Dashboard (statistik, grafik enrollment 6 bulan, pending approvals, status sistem, aktivitas) | ✅ |
 | Admin | Manajemen user (CRUD, aktif/nonaktif, hapus dengan aturan bisnis) | ✅ |
 | Admin | Approve / reject (dengan alasan) / archive / restore course, riwayat status | ✅ |
 | Admin | Kategori course (API) | ✅ |
-| Admin | Laporan progress & nilai, cetak, export CSV | 🟡 |
+| Admin | Laporan progress & nilai (filter, sortir, pagination), cetak, export CSV dari server | ✅ |
 | Instructor | Membuat & mengedit course, submit untuk approval | ✅ |
 | Instructor | Modul materi (urutkan, video URL) | ✅ |
 | Instructor | Quiz pilihan ganda (editor soal, statistik attempt) | ✅ |
-| Instructor | Nilai akhir student | 🟡 |
+| Instructor | Dashboard (course per status, progress & skor per course, attempt terbaru) | ✅ |
+| Instructor | Students & Grades: tambah/keluarkan student, nilai akhir → grade huruf otomatis, export CSV | ✅ |
 | Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline | ✅ |
 | Student | Enroll course gratis (katalog / dashboard), belajar modul berurutan, progress dihitung server | ✅ |
-| Student | Dashboard: course per semester, progress, IPK, unduh sertifikat | ✅ |
+| Student | Dashboard: course per semester, progress, nilai akhir, IPK (dihitung saat diminta), unduh sertifikat | ✅ |
+| Publik | Verifikasi sertifikat berdasarkan nomor (`verify.html`) | ✅ |
 | Student | Quiz: soal tanpa kunci, timer & batas attempt dari server, lanjut setelah refresh, skor & review setelah submit | ✅ |
 | Semua | Login, registrasi publik (student/instructor), profil, ganti password, tema terang/gelap | ✅ |
 
@@ -54,6 +56,7 @@ LMS/
 ├── index.html              ← Login
 ├── register.html           ← Registrasi publik
 ├── catalog.html            ← Katalog course publik (tanpa login)
+├── verify.html             ← Verifikasi sertifikat publik
 ├── pages/                  ← Halaman aplikasi per role
 ├── assets/
 │   ├── css/style.css
@@ -61,10 +64,11 @@ LMS/
 │   └── js/
 │       ├── config.js       ← Base URL API & transport (http / local)
 │       ├── domain.js       ← Logika murni (grade, IPK, progress, sertifikat)
-│       ├── data.js         ← Mock data (seed)
-│       ├── store.js        ← "Database" localStorage
+│       ├── data.js         ← Mock data prototipe (hanya untuk test kontrak MockServer)
+│       ├── store.js        ← "Database" localStorage prototipe (hanya untuk test kontrak)
 │       ├── main.js         ← Guard, layout, UI helper
-│       ├── api/            ← client (token, ApiError), transport http/local, services
+│       ├── api/            ← client (token, ApiError, download), transport-http, services
+│       │                     (transport-local.js = MockServer lama, spesifikasi kontrak)
 │       └── pages/          ← Script per halaman
 ├── backend/
 │   ├── app/                ← FastAPI: main, config, db, common/, satu folder per domain
@@ -99,7 +103,7 @@ curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"o
 npx http-server -p 5500     # lalu buka http://localhost:5500
 ```
 
-Frontend memanggil API di `http://localhost:8000/api/v1` (atur di `assets/js/config.js`). Origin frontend harus ada di `CORS_ORIGINS`. Untuk demo tanpa backend, ubah `transport` menjadi `"local"` (mock data lama di browser).
+Frontend memanggil API di `http://localhost:8000/api/v1` (atur di `assets/js/config.js`). Origin frontend harus ada di `CORS_ORIGINS`.
 
 Tanpa Docker:
 
@@ -188,6 +192,15 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET | `/api/v1/quizzes/{id}/attempts` (riwayat) | student |
 | GET / PATCH | `/api/v1/attempts/{id}` (review / simpan jawaban sementara) | student pemilik |
 | POST | `/api/v1/attempts/{id}/submit` | student pemilik (ditolak 409 bila lewat `expiresAt` + 30 detik) |
+| GET / PUT | `/api/v1/courses/{id}/grades` | GET: admin, instructor pemilik · PUT: instructor pemilik |
+| GET | `/api/v1/courses/{id}/candidates` | instructor pemilik (student yang bisa ditambahkan) |
+| POST | `/api/v1/courses/{id}/enrollments/batch` | instructor pemilik |
+| DELETE | `/api/v1/enrollments/{id}` | instructor pemilik (409 bila sudah bersertifikat) |
+| GET | `/api/v1/certificates/{code}` | publik (verifikasi) |
+| GET | `/api/v1/reports/summary`, `/api/v1/reports/enrollments`, `/api/v1/reports/enrollments.csv` | admin |
+| GET | `/api/v1/activities` | admin |
+| GET | `/api/v1/dashboard/admin` · `/dashboard/instructor` · `/dashboard/student` | sesuai role |
+| GET | `/api/v1/meta/enrollment-chart`, `/api/v1/meta/system-status` | admin |
 
 Autentikasi: header `Authorization: Bearer <token>` dari `/auth/login`.
 
@@ -225,7 +238,7 @@ Roadmap integrasi backend (satu PR per fase):
 4. ✅ Courses & katalog publik
 5. ✅ Enrollment & progress
 6. ✅ Quiz dinilai di server
-7. Nilai akhir, IPK, sertifikat, laporan, dashboard
+7. ✅ Nilai akhir, IPK, sertifikat, laporan, dashboard
 8. Siap deploy
 
-Known issues saat ini: dashboard admin & instructor, nilai akhir (Students & Grades), dan laporan belum dimigrasi ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
+Known issues saat ini: upload thumbnail course belum disimpan (hanya preview); aktivitas & notifikasi diturunkan dari data (tidak ada tabel log umum); seed hanya berisi 6 akun demo. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
