@@ -203,13 +203,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Aksi course (event delegation) ---
   view.addEventListener("click", (e) => {
     const certBtn = e.target.closest("[data-certificate]");
-    if (certBtn) return Certificate.download(courses.find((c) => c.id === Number(certBtn.dataset.certificate)).enrollment);
+    if (certBtn) return Certificate.download(courses.find((c) => c.id === certBtn.dataset.certificate).enrollment);
 
     const continueBtn = e.target.closest("[data-continue]");
     const gradeBtn = e.target.closest("[data-grade]");
     if (!continueBtn && !gradeBtn) return;
 
-    const course = courses.find((c) => c.id === Number((continueBtn || gradeBtn).dataset[continueBtn ? "continue" : "grade"]));
+    const course = courses.find((c) => c.id === (continueBtn || gradeBtn).dataset[continueBtn ? "continue" : "grade"]);
     const openCourse = () => (location.href = `course.html?id=${course.id}`);
 
     if (continueBtn) {

@@ -21,11 +21,13 @@ const Storage = {
       return fallback;
     }
   },
+  // Mengembalikan false bila gagal (storage tidak tersedia / kuota penuh) — data hanya bertahan di halaman ini
   write(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      return true;
     } catch {
-      // Storage tidak tersedia (mode private) — data hanya bertahan di halaman ini
+      return false;
     }
   },
   remove(key) {
@@ -84,25 +86,41 @@ function seedAnswers(questions, correctCount) {
   return questions.map((q, i) => (i < correctCount ? q.answer : (q.answer + 1) % q.options.length));
 }
 
+// ID entity adalah string opaque. Data seed memakai ID berprefix yang deterministik (mis. "usr_1"),
+// record baru memakai UUID (lihat newId). Jangan pernah mengubah ID menjadi angka.
+const seedId = (prefix, n) => `${prefix}_${n}`;
+
+function newId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  // Cadangan untuk browser lama / konteks non-secure: UUID v4 dari getRandomValues
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 function buildDatabase() {
   const random = seededRandom(2026);
   const pick = (list) => list[Math.floor(random() * list.length)];
-  const withIds = (list) => list.map((item, i) => ({ id: i + 1, ...item }));
+  const withIds = (prefix, list) => list.map((item, i) => ({ id: seedId(prefix, i + 1), ...item }));
 
-  // --- Users ---
-  const users = SEED.users.map((u) => ({ ...u }));
+  // --- Users --- (ID numerik di SEED → string berprefix)
+  const users = SEED.users.map((u) => ({ ...u, id: seedId("usr", u.id) }));
   SEED.studentNames.forEach(([name, nim, department], i) => {
     const first = name.split(" ")[0].toLowerCase();
     const email = i === 0 ? "alex@learnova.ac.id" : `${first}.${nim}@learnova.ac.id`;
-    users.push({ id: users.length + 1, role: "student", name, email, password: "student123", idNumber: nim, department, status: "Active" });
+    users.push({ id: seedId("usr", users.length + 1), role: "student", name, email, password: "student123", idNumber: nim, department, status: "Active" });
   });
 
   // --- Courses, modules, quizzes ---
-  const courses = SEED.courses.map((c) => ({ ...c }));
+  const courses = SEED.courses.map((c) => ({ ...c, id: seedId("crs", c.id), lecturerId: seedId("usr", c.lecturerId) }));
   const modules = withIds(
+    "mod",
     courses.flatMap((c) => courseModules(c, SEED.courseTopics[c.code] || []).map((m, i) => ({ ...m, order: i + 1 })))
   );
   const quizzes = withIds(
+    "quz",
     courses
       .filter((c) => SEED.quizBank[c.code])
       .map((c) => ({
@@ -127,16 +145,16 @@ function buildDatabase() {
     const attempts = [];
     if (quiz && quizScore != null) {
       const correct = Math.round((quizScore / 100) * quiz.questions.length);
-      attempts.push({ quizId: quiz.id, score: quizScore, answers: seedAnswers(quiz.questions, correct), date: "2026-09-20T10:00" });
+      attempts.push({ quizId: quiz.id, score: quizScore, answers: seedAnswers(quiz.questions, correct), date: "2026-09-20T03:00:00.000Z" });
     }
     enrollments.push({
-      id: enrollments.length + 1,
+      id: seedId("enr", enrollments.length + 1),
       studentId,
       courseId: course.id,
       completedModules: done == null ? total : Math.min(done, total),
       attempts,
       finalScore: finalScore ?? null,
-      grade: finalScore != null ? Store.gradeFromScore(finalScore) : null,
+      grade: finalScore != null ? Domain.gradeFromScore(finalScore) : null,
     });
   };
 
@@ -167,7 +185,8 @@ function buildDatabase() {
     modules,
     quizzes,
     enrollments,
-    activities: withIds(SEED.activities),
+    activities: withIds("act", SEED.activities),
+    sessions: [], // sesi login MockServer: { id, token, userId, createdAt }
   };
 }
 
@@ -190,16 +209,22 @@ const DB = {
     return data;
   },
 
+  // false bila gagal menulis (mis. kuota penuh / mode private). MockServer memakai writeFailed → 500.
+  writeFailed: false,
+
   save() {
-    Storage.write(STORAGE_KEYS.db, this.load());
+    const ok = Storage.write(STORAGE_KEYS.db, this.load());
+    if (!ok) this.writeFailed = true;
+    return ok;
   },
 
   all(collection) {
     return this.load()[collection];
   },
 
+  // ID dibandingkan sebagai string (opaque) — tidak pernah diubah menjadi angka
   get(collection, id) {
-    return this.all(collection).find((item) => item.id === Number(id)) || null;
+    return this.all(collection).find((item) => item.id === String(id)) || null;
   },
 
   where(collection, predicate) {
@@ -208,7 +233,7 @@ const DB = {
 
   insert(collection, item) {
     const list = this.all(collection);
-    const record = { ...item, id: Math.max(0, ...list.map((x) => x.id)) + 1 };
+    const record = { ...item, id: newId() };
     list.push(record);
     this.save();
     return record;
@@ -224,7 +249,7 @@ const DB = {
 
   remove(collection, id) {
     const data = this.load();
-    data[collection] = data[collection].filter((item) => item.id !== Number(id));
+    data[collection] = data[collection].filter((item) => item.id !== String(id));
     this.save();
   },
 
@@ -292,23 +317,23 @@ const Store = {
   },
 
   coursesOf(lecturerId) {
-    return DB.where("courses", (c) => c.lecturerId === Number(lecturerId));
+    return DB.where("courses", (c) => c.lecturerId === String(lecturerId));
   },
 
   modulesOf(courseId) {
-    return DB.where("modules", (m) => m.courseId === Number(courseId)).sort((a, b) => a.order - b.order);
+    return DB.where("modules", (m) => m.courseId === String(courseId)).sort((a, b) => a.order - b.order);
   },
 
   quizzesOf(courseId) {
-    return DB.where("quizzes", (q) => q.courseId === Number(courseId));
+    return DB.where("quizzes", (q) => q.courseId === String(courseId));
   },
 
   enrollmentsOf(courseId) {
-    return DB.where("enrollments", (e) => e.courseId === Number(courseId));
+    return DB.where("enrollments", (e) => e.courseId === String(courseId));
   },
 
   enrollment(studentId, courseId) {
-    return DB.all("enrollments").find((e) => e.studentId === Number(studentId) && e.courseId === Number(courseId)) || null;
+    return DB.all("enrollments").find((e) => e.studentId === String(studentId) && e.courseId === String(courseId)) || null;
   },
 
   progressOf(enrollment) {
@@ -331,7 +356,7 @@ const Store = {
 
   // Course milik mahasiswa + progress & nilai (untuk dashboard mahasiswa)
   studentCourses(studentId) {
-    return DB.where("enrollments", (e) => e.studentId === Number(studentId))
+    return DB.where("enrollments", (e) => e.studentId === String(studentId))
       .map((enrollment) => {
         const course = DB.get("courses", enrollment.courseId);
         if (!course) return null;
@@ -418,7 +443,7 @@ const Store = {
 
   /* ---------- Quiz ---------- */
   attemptsOf(enrollment, quizId) {
-    return enrollment.attempts.filter((a) => a.quizId === Number(quizId));
+    return enrollment.attempts.filter((a) => a.quizId === String(quizId));
   },
 
   bestScore(enrollment, quizId) {
@@ -442,7 +467,7 @@ const Store = {
       quizId: quiz.id,
       score: Math.round((correct / quiz.questions.length) * 100),
       answers,
-      date: new Date().toISOString().slice(0, 16),
+      date: Domain.nowIso(),
     };
     enrollment.attempts.push(attempt);
     DB.save();
@@ -455,14 +480,14 @@ const Store = {
   },
 
   gpa(studentId) {
-    return Domain.gpa(DB.where("enrollments", (e) => e.studentId === Number(studentId)).map((e) => e.grade));
+    return Domain.gpa(DB.where("enrollments", (e) => e.studentId === String(studentId)).map((e) => e.grade));
   },
 
   /* ---------- Aktivitas & demo ---------- */
   logActivity(action) {
     const session = this.getSession();
     DB.insert("activities", {
-      time: new Date().toISOString().slice(0, 16),
+      time: Domain.nowIso(),
       actor: session ? session.name : "System",
       action,
     });

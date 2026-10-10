@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (move && !move.disabled) {
       const modules = Store.modulesOf(course.id);
-      const index = modules.findIndex((m) => m.id === Number(move.dataset.id));
+      const index = modules.findIndex((m) => m.id === move.dataset.id);
       const target = modules[index + Number(move.dataset.move)];
       [modules[index].order, target.order] = [target.order, modules[index].order];
       normalize();
