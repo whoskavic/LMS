@@ -60,6 +60,8 @@ App.ready(() => {
         ...a,
         student: DB.get("users", e.studentId)?.name || "Student",
         course: DB.get("courses", e.courseId).code,
+        // Lulus/tidak mengikuti nilai lulus quiz masing-masing (bukan angka tetap)
+        passed: a.score >= (DB.get("quizzes", a.quizId)?.passingScore ?? 70),
       }))
     )
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -71,7 +73,7 @@ App.ready(() => {
           (a) => `
         <li class="list-row">
           <span>${Utils.escape(a.student)} · ${Utils.escape(a.course)}</span>
-          <span class="badge ${a.score >= 70 ? "badge--success" : "badge--danger"}">${a.score}</span>
+          <span class="badge ${a.passed ? "badge--success" : "badge--danger"}" title="${a.passed ? "Passed" : "Not passed"}">${a.score}</span>
         </li>`
         )
         .join("")
