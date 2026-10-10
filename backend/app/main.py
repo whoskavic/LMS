@@ -4,9 +4,12 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.auth.router import router as auth_router
 from app.common.errors import register_error_handlers
 from app.config import get_settings
 from app.db import SessionLocal
+from app.reports.router import router as reports_router
+from app.users.router import router as users_router
 
 settings = get_settings()
 
@@ -41,4 +44,7 @@ def health() -> dict:
     return {"status": "ok" if database == "ok" else "degraded", "database": database}
 
 
+api.include_router(auth_router)
+api.include_router(users_router)
+api.include_router(reports_router)
 app.include_router(api)

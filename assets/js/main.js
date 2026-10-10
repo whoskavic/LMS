@@ -538,6 +538,11 @@ const UI = {
    Identitas & role selalu berasal dari Api.auth.me() (data user di server),
    browser hanya menyimpan token sesi.
    ========================================================================= */
+// Halaman awal sesuai role (path relatif dari folder pages/)
+function homeFor(role) {
+  return { admin: "dashboard.html", instructor: "lecturer-dashboard.html", student: "student-dashboard.html" }[role] || "../index.html";
+}
+
 const App = {
   user: null,
   allowedRoles: (document.body.dataset.role || "").split(" ").filter(Boolean),
@@ -631,7 +636,7 @@ function applyUserToLayout(user) {
   document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(user.name)));
 
   const globalSearch = document.getElementById("global-search");
-  const placeholders = { lecturer: "Search your courses...", student: "Search your courses..." };
+  const placeholders = { instructor: "Search your courses...", student: "Search your courses..." };
   if (globalSearch && placeholders[user.role]) globalSearch.placeholder = placeholders[user.role];
 
   const notifList = document.querySelector("[data-notifications]");
@@ -651,6 +656,9 @@ function applyUserToLayout(user) {
 
 document.addEventListener("DOMContentLoaded", () => {
   const body = document.body;
+
+  // Elemen khusus mode mock (mis. "Reset demo data") disembunyikan saat memakai backend
+  if (Api.config.transport !== "local") document.querySelectorAll("[data-mock-only]").forEach((el) => el.remove());
 
   // --- Sidebar (mobile) ---
   const openBtn = document.querySelector("[data-sidebar-open]");

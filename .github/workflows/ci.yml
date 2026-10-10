@@ -36,7 +36,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://learnova:learnova@localhost:5432/learnova
       TEST_DATABASE_URL: postgresql+psycopg://learnova:learnova@localhost:5432/learnova_test
-      JWT_SECRET: ci-secret
+      JWT_SECRET: ci-secret-0123456789abcdef0123456789abcdef
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

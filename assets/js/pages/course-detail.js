@@ -32,12 +32,12 @@ App.ready(() => {
   }
 
   CourseDetail.course = course;
-  CourseDetail.canEdit = me.role === "lecturer";
+  CourseDetail.canEdit = me.role === "instructor";
   const setText = (id, value) => (document.getElementById(id).textContent = value);
 
   // Tombol khusus dosen pemilik
   if (!CourseDetail.canEdit) document.querySelectorAll("[data-owner-only]").forEach((el) => el.remove());
-  if (me.role === "lecturer") setText("crumb-parent", "My Courses");
+  if (me.role === "instructor") setText("crumb-parent", "My Courses");
 
   /* ---------- Header ---------- */
   function renderHeader() {

@@ -90,11 +90,11 @@ const MockServer = (() => {
   /* =======================================================================
      Aturan validasi (sama dengan yang ditampilkan di form)
      ======================================================================= */
-  const ROLES = ["admin", "lecturer", "student"];
-  const ROLE_LABEL = { admin: "administrator", lecturer: "lecturer", student: "student" };
+  const ROLES = ["admin", "instructor", "student"];
+  const ROLE_LABEL = { admin: "administrator", instructor: "instructor", student: "student" };
   const ID_RULES = {
     student: { label: "NIM", pattern: /^\d{5,10}$/, hint: "5–10 digits" },
-    lecturer: { label: "NIDN", pattern: /^\d{10}$/, hint: "10 digits" },
+    instructor: { label: "NIDN", pattern: /^\d{10}$/, hint: "10 digits" },
     admin: { label: "Staff ID", pattern: /^[A-Z]{3}-\d{3}$/, hint: "format ADM-001" },
   };
   const COURSE_STATUSES = ["Draft", "Pending", "Active", "Rejected", "Archived"];
@@ -325,7 +325,7 @@ const MockServer = (() => {
   }
 
   const findCourse = (id) => DB.get("courses", id) || notFound("Course");
-  const isOwner = (user, course) => user.role === "lecturer" && course.lecturerId === user.id;
+  const isOwner = (user, course) => user.role === "instructor" && course.lecturerId === user.id;
 
   // Lihat course: admin semua, dosen miliknya, mahasiswa yang terdaftar atau course yang bisa didaftari
   function viewableCourse(user, id) {
@@ -350,7 +350,7 @@ const MockServer = (() => {
   }
 
   const userCourseCount = (u) =>
-    u.role === "student" ? DB.where("enrollments", (e) => e.studentId === u.id).length : u.role === "lecturer" ? Store.coursesOf(u.id).length : null;
+    u.role === "student" ? DB.where("enrollments", (e) => e.studentId === u.id).length : u.role === "instructor" ? Store.coursesOf(u.id).length : null;
 
   /* =======================================================================
      Auth & profil
@@ -396,7 +396,7 @@ const MockServer = (() => {
       const enrollments = DB.where("enrollments", (e) => e.studentId === user.id);
       return { role: "student", courses: enrollments.length, gpa: Domain.gpa(enrollments.map((e) => e.grade)) };
     }
-    if (user.role === "lecturer") return { role: "lecturer", coursesTaught: Store.coursesOf(user.id).length };
+    if (user.role === "instructor") return { role: "instructor", coursesTaught: Store.coursesOf(user.id).length };
     return { role: "admin", usersManaged: DB.all("users").length };
   });
 
@@ -473,7 +473,7 @@ const MockServer = (() => {
   route("DELETE", "/users/:id", { roles: ["admin"] }, ({ user, params }) => {
     const target = DB.get("users", params.id) || notFound("User");
     if (target.id === user.id) conflict("CANNOT_DELETE_SELF", "You cannot delete your own account.");
-    const teaching = target.role === "lecturer" ? Store.coursesOf(target.id).length : 0;
+    const teaching = target.role === "instructor" ? Store.coursesOf(target.id).length : 0;
     if (teaching) {
       conflict("LECTURER_HAS_COURSES", `${target.name} still teaches ${teaching} course${teaching > 1 ? "s" : ""}. Delete or reassign those courses first, or deactivate the account instead.`);
     }
@@ -506,7 +506,7 @@ const MockServer = (() => {
   route("GET", "/courses", {}, ({ user, query }) => {
     let items;
     if (user.role === "admin") items = DB.all("courses");
-    else if (user.role === "lecturer") items = Store.coursesOf(user.id);
+    else if (user.role === "instructor") items = Store.coursesOf(user.id);
     else if (bool(query.open)) items = Store.openCoursesFor(user.id);
     else forbidden("Students can list open courses with ?open=true or their own courses with /me/enrollments.");
 
@@ -520,7 +520,7 @@ const MockServer = (() => {
 
   route("GET", "/courses/:id", {}, ({ user, params }) => courseView(viewableCourse(user, params.id)));
 
-  route("POST", "/courses", { roles: ["lecturer"] }, ({ user, body }) => {
+  route("POST", "/courses", { roles: ["instructor"] }, ({ user, body }) => {
     const data = { title: "", ...courseInput(body) };
     assertValid(courseErrors(data, { complete: false, isNew: true }));
     assertCourseCodeFree(data.code);
@@ -556,7 +556,7 @@ const MockServer = (() => {
 
   route("DELETE", "/courses/:id", {}, ({ user, params }) => {
     const course = findCourse(params.id);
-    if (user.role === "lecturer") {
+    if (user.role === "instructor") {
       if (!isOwner(user, course)) forbidden("Only the course lecturer can delete this course.");
       if (course.status === "Active" || course.status === "Archived") {
         conflict("COURSE_PUBLISHED", "Published courses can only be removed by the administrator.");
@@ -574,7 +574,7 @@ const MockServer = (() => {
 
   // Mesin status course — izin per action sesuai PERANCANGAN §2
   const TRANSITIONS = {
-    submit: { role: "lecturer", from: ["Draft", "Rejected"], to: "Pending", verb: "Submitted for approval" },
+    submit: { role: "instructor", from: ["Draft", "Rejected"], to: "Pending", verb: "Submitted for approval" },
     approve: { role: "admin", from: ["Pending"], to: "Active", verb: "Approved" },
     reject: { role: "admin", from: ["Pending"], to: "Rejected", verb: "Rejected" },
     archive: { role: "admin", from: ["Active"], to: "Archived", verb: "Archived" },
@@ -586,7 +586,7 @@ const MockServer = (() => {
     if (!rule) assertValid({ action: `Unknown action. Use one of: ${Object.keys(TRANSITIONS).join(", ")}.` });
     const course = findCourse(params.id);
     if (user.role !== rule.role) forbidden(`Only ${rule.role === "admin" ? "administrators" : "the course lecturer"} can ${body.action} a course.`);
-    if (rule.role === "lecturer" && !isOwner(user, course)) forbidden("Only the course lecturer can submit this course.");
+    if (rule.role === "instructor" && !isOwner(user, course)) forbidden("Only the course lecturer can submit this course.");
     if (!rule.from.includes(course.status)) {
       conflict("INVALID_TRANSITION", `Cannot ${body.action} a course that is ${course.status.toLowerCase()}.`);
     }
@@ -874,7 +874,7 @@ const MockServer = (() => {
   );
 
   route("GET", "/meta/lecturers", { roles: ["admin"] }, () =>
-    DB.where("users", (u) => u.role === "lecturer").map((u) => pick(u, ["id", "name", "department", "status"])).sort((a, b) => a.name.localeCompare(b.name))
+    DB.where("users", (u) => u.role === "instructor").map((u) => pick(u, ["id", "name", "department", "status"])).sort((a, b) => a.name.localeCompare(b.name))
   );
 
   route("GET", "/meta/notifications", {}, ({ user }) => clone(SEED.notifications[user.role] || []));

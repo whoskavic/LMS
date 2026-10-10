@@ -1,8 +1,8 @@
 // Learnova LMS — klien API
 // Halaman hanya berbicara dengan backend lewat objek global `Api` (lihat services.js).
 // Setiap fungsi mengembalikan Promise. Transport bisa ditukar tanpa mengubah halaman:
-//   - "local": MockServer di browser (transport-local.js) — dipakai sekarang
-//   - "http" : fetch ke backend FastAPI (transport-http.js) — disiapkan untuk integrasi
+//   - "http" : fetch ke backend FastAPI (transport-http.js) — default, lihat assets/js/config.js
+//   - "local": MockServer di browser (transport-local.js) — mock data tanpa backend
 //
 // Kontrak:
 //   sukses list   → { items, total, page, pageSize }
@@ -28,8 +28,9 @@ class ApiError extends Error {
 
 const Api = {
   config: {
-    transport: "local", // "local" | "http"
-    baseUrl: "/api/v1", // dipakai transport http
+    // Nilai dari assets/js/config.js (AppConfig); default "local" bila config tidak dimuat (mis. test node)
+    transport: typeof AppConfig !== "undefined" ? AppConfig.transport : "local", // "local" | "http"
+    baseUrl: typeof AppConfig !== "undefined" ? AppConfig.apiBaseUrl : "/api/v1", // dipakai transport http
     mock: "off", // "off" | "slow" | "fail" — simulasi di transport local (?mock=…)
     slowMs: 1200,
   },

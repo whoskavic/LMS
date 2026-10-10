@@ -1,62 +1,67 @@
-// Manajemen User (admin) — tab per role, cari, filter, sortir, tambah/edit (modal + validasi), nonaktifkan, hapus
+// Manajemen User (admin) — tab per role, cari, filter, sortir, tambah/edit (modal), nonaktifkan, hapus.
+// Semua data dari Api.users (backend); filter, sort, dan pagination dikerjakan server.
 
-App.ready(() => {
+App.ready((me) => {
   const PAGE_SIZE = 8;
-  const me = Store.currentUser();
   const table = document.getElementById("user-table");
   const tbody = document.getElementById("user-rows");
   const searchInput = document.getElementById("user-search");
   const globalSearch = document.getElementById("global-search");
   const departmentSelect = document.getElementById("filter-department");
   const statusSelect = document.getElementById("filter-user-status");
+  const summary = document.getElementById("user-summary");
+  const paginationNav = document.getElementById("user-pagination");
 
   const ROLE_INFO = {
-    student: { id: "NIM", courses: "Enrolled", label: "student", pattern: /^\d{5,10}$/, idHint: "5–10 digits" },
-    lecturer: { id: "NIDN", courses: "Teaching", label: "lecturer", pattern: /^\d{10}$/, idHint: "10 digits" },
-    admin: { id: "Staff ID", courses: "Courses", label: "administrator", pattern: /^[A-Z]{3}-\d{3}$/, idHint: "Format ADM-001" },
+    student: { id: "NIM", courses: "Enrolled", label: "student", idHint: "5–10 digits" },
+    instructor: { id: "NIDN", courses: "Teaching", label: "instructor", idHint: "10 digits" },
+    admin: { id: "Staff ID", courses: "Courses", label: "administrator", idHint: "Format ADM-001" },
   };
 
   const state = { role: "student", q: "", department: "", status: "", page: 1, key: "name", dir: "asc" };
+  let current = { items: [], total: 0 }; // halaman yang sedang tampil
+  let requestId = 0;
 
-  const courseCount = (u) =>
-    u.role === "student"
-      ? DB.where("enrollments", (e) => e.studentId === u.id).length
-      : u.role === "lecturer"
-        ? Store.coursesOf(u.id).length
-        : null;
+  const query = (extra = {}) => ({
+    role: state.role,
+    q: state.q,
+    department: state.department,
+    status: state.status,
+    sort: `${state.dir === "desc" ? "-" : ""}${state.key}`,
+    page: state.page,
+    pageSize: PAGE_SIZE,
+    ...extra,
+  });
 
-  const rows = () => DB.where("users", (u) => u.role === state.role).map((u) => ({ ...u, courses: courseCount(u) }));
-
-  function filtered() {
-    const q = state.q.toLowerCase();
-    const list = rows().filter(
-      (u) =>
-        (!q || [u.name, u.email, u.idNumber].some((v) => v.toLowerCase().includes(q))) &&
-        (!state.department || u.department === state.department) &&
-        (!state.status || u.status === state.status)
-    );
-    return Utils.sortBy(list, state.key, state.dir);
-  }
-
-  function renderTabs() {
-    document.querySelectorAll("[data-count]").forEach((el) => {
-      el.textContent = DB.where("users", (u) => u.role === el.dataset.count).length;
-    });
+  /* ---------- Tab, jumlah per role, opsi departemen ---------- */
+  async function renderTabs() {
     document.querySelectorAll("[data-role-tab]").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.roleTab === state.role)));
     document.getElementById("id-header").querySelector(".sort-btn").firstChild.textContent = ROLE_INFO[state.role].id;
     document.getElementById("courses-header").querySelector(".sort-btn").firstChild.textContent = ROLE_INFO[state.role].courses;
 
-    const current = departmentSelect.value;
-    departmentSelect.innerHTML =
-      '<option value="">Department: All</option>' +
-      Utils.unique(rows().map((u) => u.department)).map((d) => `<option value="${Utils.escape(d)}">${Utils.escape(d)}</option>`).join("");
-    departmentSelect.value = Utils.unique(rows().map((u) => u.department)).includes(current) ? current : "";
-    state.department = departmentSelect.value;
+    document.querySelectorAll("[data-count]").forEach((el) => {
+      Api.users
+        .list({ role: el.dataset.count, pageSize: 1 })
+        .then((res) => (el.textContent = res.total))
+        .catch(() => (el.textContent = "–"));
+    });
+
+    try {
+      const departments = await Api.meta.departments(state.role);
+      const selected = departmentSelect.value;
+      departmentSelect.innerHTML =
+        '<option value="">Department: All</option>' +
+        departments.map((d) => `<option value="${Utils.escape(d)}">${Utils.escape(d)}</option>`).join("");
+      departmentSelect.value = departments.includes(selected) ? selected : "";
+      state.department = departmentSelect.value;
+    } catch {
+      // filter departemen opsional — tabel tetap bisa dimuat
+    }
   }
 
   const actionButton = (action, u, icon, label, disabled = false) =>
-    `<button class="icon-btn icon-btn--sm ${action === "delete" ? "icon-btn--danger" : ""}" type="button" data-action="${action}" data-id="${u.id}"
-       aria-label="${label}" title="${label}" ${disabled ? "disabled" : ""}><i data-icon="${icon}" class="icon--sm"></i></button>`;
+    `<button class="icon-btn icon-btn--sm ${action === "delete" ? "icon-btn--danger" : ""}" type="button" data-action="${action}" data-id="${Utils.escape(u.id)}"
+       aria-label="${Utils.escape(label)}" title="${Utils.escape(label)}" ${disabled ? "disabled" : ""}><i data-icon="${icon}" class="icon--sm"></i></button>`;
 
   const rowTemplate = (u) => {
     const self = u.id === me.id;
@@ -69,8 +74,8 @@ App.ready(() => {
             <span>${Utils.escape(u.name)}${self ? ' <span class="badge badge--primary">You</span>' : ""}<span class="user-cell__email">${Utils.escape(u.email)}</span></span>
           </div>
         </td>
-        <td>${Utils.escape(u.idNumber)}</td>
-        <td>${Utils.escape(u.department)}</td>
+        <td>${Utils.escape(Utils.orDash(u.idNumber))}</td>
+        <td>${Utils.escape(Utils.orDash(u.department))}</td>
         <td>${u.courses ?? "–"}</td>
         <td>${Utils.statusBadge(u.status)}</td>
         <td>
@@ -83,29 +88,48 @@ App.ready(() => {
       </tr>`;
   };
 
-  function render() {
-    const list = filtered();
-    const start = UI.pagination(document.getElementById("user-pagination"), state, list.length, PAGE_SIZE, render);
-    const pageRows = list.slice(start, start + PAGE_SIZE);
-    tbody.innerHTML = pageRows.length
-      ? pageRows.map(rowTemplate).join("")
-      : '<tr><td class="table__empty" colspan="6">No users match your search or filters.</td></tr>';
-    document.getElementById("user-summary").textContent = list.length
-      ? `Showing ${start + 1}–${start + pageRows.length} of ${list.length} ${ROLE_INFO[state.role].label}s`
-      : "Showing 0 users";
-    renderIcons(tbody);
+  /* ---------- Tabel (loading / empty / error) ---------- */
+  async function render() {
+    const id = ++requestId;
+    UI.loading(tbody, { label: "Loading users…" });
+    summary.textContent = "";
+    try {
+      const res = await Api.users.list(query());
+      if (id !== requestId) return; // respons lama (filter sudah berubah)
+      current = res;
+      state.page = res.page;
+      UI.pagination(paginationNav, state, res.total, PAGE_SIZE, render);
+      tbody.removeAttribute("aria-busy");
+      if (!res.items.length) {
+        const filtering = state.q || state.department || state.status;
+        UI.empty(tbody, {
+          title: filtering ? "No users match your search or filters" : `No ${ROLE_INFO[state.role].label}s yet`,
+          icon: "users",
+          action: filtering ? undefined : { label: `Add ${ROLE_INFO[state.role].label}`, onClick: () => openForm(null) },
+        });
+        summary.textContent = "Showing 0 users";
+        return;
+      }
+      tbody.innerHTML = res.items.map(rowTemplate).join("");
+      const start = (res.page - 1) * res.pageSize;
+      summary.textContent = `Showing ${start + 1}–${start + res.items.length} of ${res.total} ${ROLE_INFO[state.role].label}s`;
+      renderIcons(tbody);
+    } catch (err) {
+      if (id !== requestId) return;
+      paginationNav.innerHTML = "";
+      UI.error(tbody, err, render, { title: "Could not load users" });
+    }
   }
 
   function refresh() {
-    renderTabs();
-    render();
+    renderTabs().then(render);
   }
 
-  /* ---------- Form tambah / edit (modal) ---------- */
-  function openForm(user) {
+  /* ---------- Form tambah / edit (modal) — aturan lengkap diputuskan server ---------- */
+  async function openForm(user) {
     const role = user?.role || state.role;
     const info = ROLE_INFO[role];
-    const departments = Utils.unique(DB.all("users").map((u) => u.department));
+    const departments = await Api.meta.departments().catch(() => []);
 
     UI.modal({
       title: user ? `Edit ${info.label}` : `Add ${info.label}`,
@@ -127,55 +151,30 @@ App.ready(() => {
             ${user ? "" : UI.field({ name: "password", label: "Initial password", type: "password", hint: "At least 8 characters, with letters and numbers.", attrs: 'autocomplete="new-password"' })}
           </div>
         </form>`,
-      onConfirm: (modal) => {
+      onConfirm: async (modal) => {
         const form = modal.querySelector("form");
         const v = UI.formValues(form);
-        const taken = (key, value) =>
-          DB.all("users").some((u) => u.id !== user?.id && String(u[key]).toLowerCase() === value.toLowerCase());
-
-        const rules = {
-          name: !v.name ? "Full name is required." : v.name.length < 3 ? "Name must be at least 3 characters." : "",
-          email: !v.email
-            ? "Email is required."
-            : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)
-              ? "Enter a valid email address."
-              : taken("email", v.email)
-                ? "This email is already registered."
-                : "",
-          idNumber: !v.idNumber
-            ? `${info.id} is required.`
-            : !info.pattern.test(v.idNumber)
-              ? `${info.id} must be ${info.idHint.toLowerCase()}.`
-              : taken("idNumber", v.idNumber)
-                ? `This ${info.id} is already used.`
-                : "",
-          department: v.department ? "" : "Department is required.",
-          password: user
-            ? ""
-            : !v.password
-              ? "Password is required."
-              : !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(v.password)
-                ? "Use at least 8 characters with letters and numbers."
-                : "",
-        };
-        if (user && user.id === me.id && v.status !== "Active") rules.status = "You cannot deactivate your own account.";
-
-        Object.entries(rules).forEach(([name, message]) => UI.fieldError(form, name, message));
-        const firstInvalid = Object.keys(rules).find((name) => rules[name]);
-        if (firstInvalid) {
-          form.elements[firstInvalid]?.focus();
+        const required = { name: "Full name is required.", email: "Email is required.", idNumber: `${info.id} is required.`, department: "Department is required." };
+        if (!user) required.password = "Password is required.";
+        const missing = Object.keys(required).filter((name) => !v[name]);
+        Object.keys(required).forEach((name) => UI.fieldError(form, name, missing.includes(name) ? required[name] : ""));
+        if (missing.length) {
+          form.elements[missing[0]].focus();
           return false;
         }
 
         const data = { name: v.name, email: v.email, idNumber: v.idNumber, department: v.department, status: v.status };
-        if (user) {
-          DB.update("users", user.id, data);
-          Store.logActivity(`Updated ${info.label} account ${v.name}`);
-          UI.toast(`${v.name} updated.`);
-        } else {
-          DB.insert("users", { ...data, role, password: v.password });
-          Store.logActivity(`Created ${info.label} account ${v.name}`);
-          UI.toast(`${v.name} added as ${info.label}.`);
+        try {
+          if (user) {
+            await Api.users.update(user.id, data);
+            UI.toast(`${v.name} updated.`);
+          } else {
+            await Api.users.create({ ...data, role, password: v.password });
+            UI.toast(`${v.name} added as ${info.label}.`);
+          }
+        } catch (err) {
+          if (!UI.applyFieldErrors(form, err)) UI.toast(err.message, "error");
+          throw err; // modal tetap terbuka
         }
         refresh();
       },
@@ -191,12 +190,16 @@ App.ready(() => {
     })
   );
 
+  let searchTimer;
   const onSearch = (value) => {
-    state.q = value.trim();
-    state.page = 1;
     searchInput.value = value;
     globalSearch.value = value;
-    render();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.q = value.trim();
+      state.page = 1;
+      render();
+    }, 250);
   };
   searchInput.addEventListener("input", (e) => onSearch(e.target.value));
   globalSearch.addEventListener("input", (e) => onSearch(e.target.value));
@@ -217,7 +220,8 @@ App.ready(() => {
   tbody.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
     if (!btn || btn.disabled) return;
-    const user = DB.get("users", btn.dataset.id);
+    const user = current.items.find((u) => u.id === btn.dataset.id);
+    if (!user) return;
 
     if (btn.dataset.action === "edit") return openForm(user);
 
@@ -228,55 +232,59 @@ App.ready(() => {
         body: `<p><strong>${Utils.escape(user.name)}</strong> ${activate ? "will be able to sign in again." : "will no longer be able to sign in. Their data is kept."}</p>`,
         confirmText: activate ? "Activate" : "Deactivate",
         variant: activate ? "primary" : "danger",
-        onConfirm: () => {
-          DB.update("users", user.id, { status: activate ? "Active" : "Inactive" });
-          Store.logActivity(`${activate ? "Activated" : "Deactivated"} account ${user.name}`);
+        onConfirm: async () => {
+          try {
+            await Api.users.setStatus(user.id, activate ? "Active" : "Inactive");
+          } catch (err) {
+            UI.toast(err.message, "error");
+            throw err;
+          }
           UI.toast(`${user.name} is now ${activate ? "active" : "inactive"}.`);
-          refresh();
+          render();
         },
       });
     }
 
-    // Hapus: dosen yang masih punya course tidak boleh dihapus
-    const teaching = user.role === "lecturer" ? Store.coursesOf(user.id).length : 0;
-    if (teaching) {
-      return UI.modal({
-        title: "Cannot delete lecturer",
-        body: `<p><strong>${Utils.escape(user.name)}</strong> still teaches ${teaching} course${teaching > 1 ? "s" : ""}.
-               Delete or archive those courses first, or deactivate the account instead.</p>`,
-      });
-    }
-    const enrolled = user.role === "student" ? courseCount(user) : 0;
+    // Hapus: server menolak (409) bila user masih punya course atau enrollment
     UI.modal({
       title: "Delete account?",
-      body: `<p><strong>${Utils.escape(user.name)}</strong> (${Utils.escape(user.email)}) will be permanently removed${enrolled ? ` together with ${enrolled} course enrollments` : ""}. This action cannot be undone.</p>`,
+      body: `<p><strong>${Utils.escape(user.name)}</strong> (${Utils.escape(user.email)}) will be permanently removed. This action cannot be undone.</p>
+             ${user.courses ? `<p class="text-muted">This account has ${user.courses} course${user.courses > 1 ? "s" : ""}. Accounts with courses or enrollments cannot be deleted — deactivate it instead.</p>` : ""}`,
       confirmText: "Delete",
       variant: "danger",
-      onConfirm: () => {
-        DB.where("enrollments", (x) => x.studentId === user.id).forEach((x) => DB.remove("enrollments", x.id));
-        DB.remove("users", user.id);
-        Store.logActivity(`Deleted account ${user.name}`);
+      onConfirm: async () => {
+        try {
+          await Api.users.remove(user.id);
+        } catch (err) {
+          UI.toast(err.message, "error");
+          throw err;
+        }
         UI.toast(`${user.name} deleted.`);
         refresh();
       },
     });
   });
 
-  document.getElementById("export-users").addEventListener("click", () => {
-    const list = filtered();
-    if (!list.length) return UI.toast("Nothing to export.", "error");
-    Utils.downloadCSV(
-      `learnova-${state.role}s.csv`,
-      list.map((u) => ({
-        Name: u.name,
-        Email: u.email,
-        [ROLE_INFO[state.role].id]: u.idNumber,
-        Department: u.department,
-        [ROLE_INFO[state.role].courses]: u.courses ?? "",
-        Status: u.status,
-      }))
-    );
-    UI.toast(`${list.length} accounts exported as CSV.`);
+  // Export: ambil semua baris yang cocok dengan filter (bukan hanya halaman aktif)
+  document.getElementById("export-users").addEventListener("click", async (e) => {
+    try {
+      const res = await UI.busy(e.currentTarget, Api.users.list(query({ page: 1, pageSize: 200 })));
+      if (!res.items.length) return UI.toast("Nothing to export.", "error");
+      Utils.downloadCSV(
+        `learnova-${state.role}s.csv`,
+        res.items.map((u) => ({
+          Name: u.name,
+          Email: u.email,
+          [ROLE_INFO[state.role].id]: u.idNumber ?? "",
+          Department: u.department ?? "",
+          [ROLE_INFO[state.role].courses]: u.courses ?? "",
+          Status: u.status,
+        }))
+      );
+      UI.toast(`${res.items.length} accounts exported as CSV.`);
+    } catch (err) {
+      UI.toast(err.message, "error");
+    }
   });
 
   UI.sortable(table, state, () => {

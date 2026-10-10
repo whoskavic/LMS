@@ -11,7 +11,7 @@ TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://learnova:learnova@localhost:5432/learnova_test"
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ.setdefault("JWT_SECRET", "test-secret")
+os.environ["JWT_SECRET"] = "test-secret-for-pytest-only-0123456789abcdef"
 
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402

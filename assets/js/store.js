@@ -342,7 +342,7 @@ const Store = {
         return {
           ...course,
           enrollment,
-          lecturer: this.lecturerName(course.lecturerId),
+          instructor: this.lecturerName(course.lecturerId),
           modules: done,
           totalModules: total,
           progress: this.progressOf(enrollment),
@@ -480,8 +480,3 @@ const Store = {
     Storage.remove(STORAGE_KEYS.flash);
   },
 };
-
-// Halaman awal sesuai role (path relatif dari folder pages/)
-function homeFor(role) {
-  return { admin: "dashboard.html", lecturer: "lecturer-dashboard.html", student: "student-dashboard.html" }[role] || "../index.html";
-}

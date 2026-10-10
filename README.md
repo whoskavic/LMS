@@ -2,23 +2,23 @@
 
 Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
 
-> **Status:** backend FastAPI sudah punya skeleton (config, database, migrasi seluruh skema, `/health`, CI). Frontend masih memakai mock data di `localStorage` (lewat `MockServer` di `assets/js/api/transport-local.js`) sampai tiap modul dihubungkan. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** backend FastAPI berjalan dengan auth JWT dan manajemen user. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Fitur
 
-Legenda: ✅ terhubung ke backend · 🟡 masih mock (`localStorage`)
+Legenda: ✅ terhubung ke backend · 🟡 belum dimigrasi (masih kode mock)
 
 | Role | Fitur | Status |
 |---|---|---|
 | Admin | Dashboard (statistik, grafik, pending approvals, aktivitas) | 🟡 |
-| Admin | Manajemen user (CRUD, aktif/nonaktif) | 🟡 |
+| Admin | Manajemen user (CRUD, aktif/nonaktif, hapus dengan aturan bisnis) | ✅ |
 | Admin | Approve / reject / archive / restore course | 🟡 |
 | Admin | Laporan progress & nilai, cetak, export CSV | 🟡 |
 | Instructor | Membuat & mengedit course, submit untuk approval | 🟡 |
 | Instructor | Modul materi, quiz pilihan ganda, nilai akhir | 🟡 |
 | Student | Browse & enroll course, belajar modul, progress | 🟡 |
 | Student | Quiz dengan timer & review, nilai akhir, IPK, sertifikat | 🟡 |
-| Semua | Login, profil, ganti password, tema terang/gelap | 🟡 |
+| Semua | Login, registrasi publik (student/instructor), profil, ganti password, tema terang/gelap | ✅ |
 
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 
@@ -47,16 +47,18 @@ Backend adalah modular monolith: satu folder per domain (`auth`, `users`, `cours
 ```
 LMS/
 ├── index.html              ← Login
+├── register.html           ← Registrasi publik
 ├── pages/                  ← Halaman aplikasi per role
 ├── assets/
 │   ├── css/style.css
 │   ├── img/
 │   └── js/
+│       ├── config.js       ← Base URL API & transport (http / local)
 │       ├── domain.js       ← Logika murni (grade, IPK, progress, sertifikat)
 │       ├── data.js         ← Mock data (seed)
 │       ├── store.js        ← "Database" localStorage
 │       ├── main.js         ← Guard, layout, UI helper
-│       ├── api/            ← client, transport local/http, services
+│       ├── api/            ← client (token, ApiError), transport http/local, services
 │       └── pages/          ← Script per halaman
 ├── backend/
 │   ├── app/                ← FastAPI: main, config, db, common/, satu folder per domain
@@ -83,6 +85,7 @@ git clone https://github.com/whoskavic/LMS.git && cd LMS
 # 1. Backend + database
 docker compose up -d --build
 docker compose exec api alembic upgrade head      # migrasi
+docker compose exec api python -m app.seed        # data demo (pakai --reset untuk mengisi ulang)
 curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"ok"}
 # Swagger: http://localhost:8000/docs
 
@@ -90,7 +93,7 @@ curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"o
 npx http-server -p 5500     # lalu buka http://localhost:5500
 ```
 
-Seed data demo: belum tersedia (ditambahkan bersama auth & users).
+Frontend memanggil API di `http://localhost:8000/api/v1` (atur di `assets/js/config.js`). Origin frontend harus ada di `CORS_ORIGINS`. Untuk demo tanpa backend, ubah `transport` menjadi `"local"` (mock data lama di browser).
 
 Tanpa Docker:
 
@@ -100,6 +103,7 @@ python3.12 -m venv .venv && . .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env        # sesuaikan DATABASE_URL
 alembic upgrade head
+python -m app.seed
 uvicorn app.main:app --reload
 ```
 
@@ -118,13 +122,18 @@ Backend membaca variabel berikut (lihat `backend/.env.example`):
 
 ## Akun demo
 
-Mock data di browser:
+Hasil `python -m app.seed`:
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | admin@learnova.ac.id | admin123 |
-| Instructor (Dosen) | budi@learnova.ac.id | dosen123 |
-| Student (Mahasiswa) | alex@learnova.ac.id | student123 |
+| Role | Nama | Email | Password |
+|---|---|---|---|
+| Admin | Admin User | admin@learnova.ac.id | admin123 |
+| Instructor | Dr. Budi Santoso | budi@learnova.ac.id | dosen123 |
+| Instructor | Dr. Adam Miller | adam@learnova.ac.id | dosen123 |
+| Student | Alex Mercer | alex@learnova.ac.id | student123 |
+| Student | Nadia Putri | nadia@learnova.ac.id | student123 |
+| Student | Marcus Chen | marcus@learnova.ac.id | student123 |
+
+Akun baru juga bisa dibuat lewat halaman **Sign up** (`register.html`) sebagai student atau instructor.
 
 ## API
 
@@ -133,6 +142,20 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | Method | Path | Role |
 |---|---|---|
 | GET | `/api/v1/health` | publik |
+| POST | `/api/v1/auth/register` | publik (role student/instructor) |
+| POST | `/api/v1/auth/login` | publik |
+| POST | `/api/v1/auth/logout` | publik (JWT stateless) |
+| GET | `/api/v1/auth/me` | login |
+| POST | `/api/v1/auth/password` | login |
+| PATCH | `/api/v1/me` | login |
+| GET | `/api/v1/me/stats` | login |
+| GET | `/api/v1/users` (`role, q, department, status, sort, page, pageSize`) | admin |
+| POST | `/api/v1/users` | admin |
+| GET / PATCH / DELETE | `/api/v1/users/{id}` | admin |
+| GET | `/api/v1/meta/departments` | admin |
+| GET | `/api/v1/meta/notifications` | login |
+
+Autentikasi: header `Authorization: Bearer <token>` dari `/auth/login`.
 
 Endpoint berikutnya mengikuti kontrak `MockServer` (`assets/js/api/transport-local.js`), rencananya di [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
@@ -164,11 +187,11 @@ Roadmap integrasi backend (satu PR per fase):
 
 1. ✅ Dokumentasi & rencana
 2. ✅ Backend skeleton (FastAPI, Alembic, Docker, CI)
-3. Auth & users
+3. ✅ Auth & users
 4. Courses & katalog publik
 5. Enrollment & progress
 6. Quiz dinilai di server
 7. Nilai akhir, IPK, sertifikat, laporan, dashboard
 8. Siap deploy
 
-Known issues saat ini: data hanya tersimpan di browser, password mock disimpan sebagai teks biasa, kunci jawaban quiz ada di klien. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
+Known issues saat ini: halaman course, dashboard, quiz, dan laporan belum dimigrasi ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
