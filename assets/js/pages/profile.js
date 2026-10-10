@@ -8,10 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderSummary() {
     document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = me.name));
-    document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = Store.userTitle(me)));
+    document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = Domain.userTitle(me)));
     document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(me.name)));
     document.getElementById("profile-email").textContent = me.email;
-    document.getElementById("profile-role").textContent = ROLE_LABELS[me.role];
+    document.getElementById("profile-role").textContent = Domain.roleLabel(me.role);
 
     const extra =
       me.role === "student"
@@ -41,7 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (invalid) return infoForm.elements[invalid].focus();
 
     me = DB.update("users", me.id, { name: v.name, department: v.department });
-    Store.setSession(me);
     renderSummary();
     UI.toast("Profile updated.");
   });
@@ -96,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
       variant: "danger",
       onConfirm: () => {
         Store.resetDemo();
-        Store.logout();
+        Api.session.clear();
         Store.setFlash("Demo data has been reset.");
         location.href = "../index.html";
       },

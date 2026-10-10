@@ -227,6 +227,23 @@ const UI = {
     }, 3200);
   },
 
+  /* ---------- Pesan sekali tampil setelah pindah halaman (preferensi UI, bukan data) ---------- */
+  flash(message, type = "success") {
+    try {
+      localStorage.setItem("learnova.flash", JSON.stringify({ message, type }));
+    } catch {}
+  },
+
+  takeFlash() {
+    try {
+      const flash = JSON.parse(localStorage.getItem("learnova.flash"));
+      localStorage.removeItem("learnova.flash");
+      return flash;
+    } catch {
+      return null;
+    }
+  },
+
   /**
    * Tampilkan modal.
    * options: { title, body (HTML), confirmText, cancelText, variant: "primary"|"danger", size: "lg", onConfirm, onOpen }
@@ -512,31 +529,78 @@ const UI = {
 };
 
 /* =========================================================================
-   Auth guard — <body data-role="admin lecturer"> : hanya role tersebut yang boleh masuk
+   Sesi & guard — <body data-role="admin lecturer"> : hanya role tersebut yang boleh masuk
+   Identitas & role selalu berasal dari Api.auth.me() (data user di server),
+   browser hanya menyimpan token sesi.
    ========================================================================= */
-const allowedRoles = (document.body.dataset.role || "").split(" ").filter(Boolean);
-let session = Store.getSession();
+const App = {
+  user: null,
+  allowedRoles: (document.body.dataset.role || "").split(" ").filter(Boolean),
+  loginUrl: location.pathname.includes("/pages/") ? "../index.html" : "index.html",
+};
 
-// Sesi tidak berlaku lagi bila user dihapus / dinonaktifkan admin
-if (session) {
-  const user = DB.get("users", session.id);
-  if (!user || user.status !== "Active") {
-    Store.logout();
-    session = null;
+// Promise<user | null> — null bila belum login (halaman publik) atau sedang dialihkan
+App.session = (async () => {
+  const protectedPage = App.allowedRoles.length > 0;
+  if (!Api.session.token()) {
+    if (protectedPage) location.replace(App.loginUrl);
+    return null;
   }
-}
-
-if (allowedRoles.length) {
-  if (!session) {
-    location.replace("../index.html");
-  } else if (!allowedRoles.includes(session.role)) {
-    location.replace(homeFor(session.role));
+  try {
+    const user = await Api.auth.me();
+    App.user = user;
+    if (protectedPage && !App.allowedRoles.includes(user.role)) location.replace(homeFor(user.role));
+    return user;
+  } catch (err) {
+    // 401: sesi habis / user dihapus / dinonaktifkan → kembali ke login dengan pesan
+    if (err.status === 401) {
+      if (protectedPage) {
+        UI.flash(err.message, "error");
+        location.replace(App.loginUrl);
+      }
+      return null;
+    }
+    throw err;
   }
-}
+})();
 
 /* =========================================================================
    Layout: sidebar, menu aktif, info user, notifikasi, logout, search
    ========================================================================= */
+
+// Bagian layout yang bergantung pada user yang login
+function applyUserToLayout(user) {
+  document.querySelectorAll(".nav [data-nav-role]").forEach((item) => {
+    if (!item.dataset.navRole.split(" ").includes(user.role)) item.remove();
+  });
+  // Elemen konten khusus role tertentu (tombol, kolom tabel, filter)
+  document.querySelectorAll("[data-show-role]").forEach((el) => {
+    if (!el.dataset.showRole.split(" ").includes(user.role)) el.remove();
+  });
+
+  document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = user.name));
+  document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = Domain.userTitle(user)));
+  document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(user.name)));
+
+  const globalSearch = document.getElementById("global-search");
+  const placeholders = { lecturer: "Search your courses...", student: "Search your courses..." };
+  if (globalSearch && placeholders[user.role]) globalSearch.placeholder = placeholders[user.role];
+
+  const notifList = document.querySelector("[data-notifications]");
+  if (notifList) {
+    Api.meta
+      .notifications()
+      .then((items) => {
+        notifList.innerHTML = items.length
+          ? items.map((n) => `<li class="notif"><p class="notif__text">${Utils.escape(n.text)}</p><p class="notif__time">${Utils.escape(n.time)}</p></li>`).join("")
+          : '<li class="notif"><p class="notif__time">No notifications.</p></li>';
+      })
+      .catch(() => {
+        notifList.innerHTML = '<li class="notif"><p class="notif__time">Notifications are unavailable right now.</p></li>';
+      });
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const body = document.body;
 
@@ -552,17 +616,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape") setSidebar(false);
   });
 
-  // --- Menu sesuai role & menu aktif ---
-  if (session) {
-    document.querySelectorAll(".nav [data-nav-role]").forEach((item) => {
-      if (!item.dataset.navRole.split(" ").includes(session.role)) item.remove();
-    });
-    // Elemen konten khusus role tertentu (tombol, kolom tabel, filter)
-    document.querySelectorAll("[data-show-role]").forEach((el) => {
-      if (!el.dataset.showRole.split(" ").includes(session.role)) el.remove();
-    });
-  }
-
   // Halaman di luar menu (mis. detail course) menandai menu induknya lewat data-nav-active
   const current = body.dataset.navActive || location.pathname.split("/").pop() || "index.html";
   const links = document.querySelectorAll(".nav__link");
@@ -574,17 +627,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     match.classList.add("is-active");
     match.setAttribute("aria-current", "page");
-  }
-
-  // --- Info user yang login ---
-  if (session) {
-    document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = session.name));
-    document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = session.title));
-    document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(session.name)));
-
-    const globalSearch = document.getElementById("global-search");
-    const placeholders = { lecturer: "Search your courses...", student: "Search your courses..." };
-    if (globalSearch && placeholders[session.role]) globalSearch.placeholder = placeholders[session.role];
   }
 
   // --- Tombol tema terang / gelap ---
@@ -614,13 +656,6 @@ document.addEventListener("DOMContentLoaded", () => {
   new MutationObserver(labelTables).observe(document.body, { childList: true, subtree: true });
 
   // --- Dropdown notifikasi ---
-  const notifList = document.querySelector("[data-notifications]");
-  if (notifList && session) {
-    notifList.innerHTML = (SEED.notifications[session.role] || [])
-      .map((n) => `<li class="notif"><p class="notif__text">${Utils.escape(n.text)}</p><p class="notif__time">${Utils.escape(n.time)}</p></li>`)
-      .join("");
-  }
-
   document.querySelectorAll("[data-dropdown-toggle]").forEach((toggle) => {
     const menu = toggle.nextElementSibling;
     const setOpen = (open) => {
@@ -648,9 +683,9 @@ document.addEventListener("DOMContentLoaded", () => {
         body: "<p>You will need to sign in again to access the panel.</p>",
         confirmText: "Sign out",
         variant: "danger",
-        onConfirm: () => {
-          Store.logout();
-          location.href = "../index.html";
+        onConfirm: async () => {
+          await Api.auth.logout();
+          location.href = App.loginUrl;
         },
       });
     });
@@ -663,14 +698,16 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       if (body.dataset.search === "local") return;
       const q = searchForm.querySelector("input").value.trim();
-      const target = session?.role === "student" ? "student-dashboard.html" : "data-master.html";
+      const target = App.user?.role === "student" ? "student-dashboard.html" : "data-master.html";
       location.href = `${target}${q ? `?q=${encodeURIComponent(q)}` : ""}`;
     });
   }
 
   renderIcons();
 
+  App.session.then((user) => user && applyUserToLayout(user)).catch(() => {});
+
   // --- Pesan dari halaman sebelumnya (mis. setelah simpan form) ---
-  const flash = Store.takeFlash();
+  const flash = UI.takeFlash();
   if (flash) UI.toast(flash.message, flash.type);
 });

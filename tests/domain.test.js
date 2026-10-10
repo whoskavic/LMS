@@ -90,3 +90,11 @@ test("formatDate & formatDateTime mengembalikan nilai asli bila tidak valid", ()
   assert.equal(Domain.formatDateTime(""), "");
   assert.equal(Domain.formatDate(null), "");
 });
+
+test("roleLabel & userTitle untuk tampilan user", () => {
+  assert.equal(Domain.roleLabel("lecturer"), "Lecturer");
+  assert.equal(Domain.roleLabel("unknown"), "unknown");
+  assert.equal(Domain.userTitle({ role: "student", idNumber: "40992" }), "Student · NIM 40992");
+  assert.equal(Domain.userTitle({ role: "lecturer", department: "Informatics" }), "Lecturer · Informatics");
+  assert.equal(Domain.userTitle({ role: "admin" }), "System administrator");
+});

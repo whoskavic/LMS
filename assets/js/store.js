@@ -264,40 +264,17 @@ const DB = {
    Store — logika domain yang butuh data (auth, course, progress, quiz, nilai)
    Perhitungan murni (skala nilai, IPK, progress, tanggal) ada di domain.js.
    ========================================================================= */
-const ROLE_LABELS = { admin: "Administrator", lecturer: "Lecturer", student: "Student" };
-
 const Store = {
-  /* ---------- Autentikasi ---------- */
-  login(email, password) {
-    const user = DB.all("users").find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!user || user.password !== password) return { error: "Email or password is incorrect." };
-    if (user.status !== "Active") return { error: "This account is inactive. Please contact the administrator." };
-    return { session: this.setSession(user) };
-  },
+  /* ---------- Sesi ----------
+     Login/logout lewat Api.auth (MockServer). Browser hanya menyimpan { token } di learnova.session;
+     identitas & role selalu dibaca dari data user, bukan dari localStorage. */
 
-  setSession(user) {
-    const session = { id: user.id, name: user.name, email: user.email, role: user.role, title: this.userTitle(user) };
-    Storage.write(STORAGE_KEYS.session, session);
-    return session;
-  },
-
-  getSession() {
-    return Storage.read(STORAGE_KEYS.session, null);
-  },
-
+  // User aktif pemilik token sesi saat ini (dipakai halaman yang belum dimigrasi ke Api)
   currentUser() {
-    const session = this.getSession();
-    return session ? DB.get("users", session.id) : null;
-  },
-
-  logout() {
-    Storage.remove(STORAGE_KEYS.session);
-  },
-
-  userTitle(user) {
-    if (user.role === "student") return `Student · NIM ${user.idNumber}`;
-    if (user.role === "lecturer") return `Lecturer · ${user.department}`;
-    return "System administrator";
+    const token = Storage.read(STORAGE_KEYS.session, null)?.token;
+    const session = token && DB.all("sessions").find((s) => s.token === token);
+    const user = session && DB.get("users", session.userId);
+    return user && user.status === "Active" ? user : null;
   },
 
   /* ---------- Pesan sekali tampil (setelah redirect) ---------- */
@@ -485,10 +462,11 @@ const Store = {
 
   /* ---------- Aktivitas & demo ---------- */
   logActivity(action) {
-    const session = this.getSession();
+    const user = this.currentUser();
     DB.insert("activities", {
       time: Domain.nowIso(),
-      actor: session ? session.name : "System",
+      actor: user ? user.name : "System",
+      actorId: user?.id ?? null,
       action,
     });
   },
