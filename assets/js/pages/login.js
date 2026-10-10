@@ -1,4 +1,4 @@
-// Halaman login — validasi form & autentikasi dengan akun hardcode (data.js)
+// Halaman login — alur dua langkah (email → password), validasi form & autentikasi dengan akun hardcode (data.js)
 
 document.addEventListener("DOMContentLoaded", () => {
   // Sudah login → langsung ke dashboard sesuai role
@@ -45,12 +45,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Dua langkah seperti Udemy: isi email → Continue → isi password → Log in
+  const submitBtn = document.getElementById("login-submit");
+  let step = "email";
+
+  function showStep(next) {
+    step = next;
+    form.querySelectorAll("[data-step]").forEach((el) => (el.hidden = el.dataset.step !== step));
+    submitBtn.textContent = step === "email" ? "Continue" : "Log in";
+    document.getElementById("account-email").textContent = emailInput.value.trim();
+    (step === "email" ? emailInput : passwordInput).focus();
+  }
+
+  document.getElementById("change-email").addEventListener("click", () => {
+    alertBox.hidden = true;
+    passwordInput.value = "";
+    showStep("email");
+  });
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     alertBox.hidden = true;
 
+    if (step === "email") {
+      if (validate("email")) showStep("password");
+      else emailInput.focus();
+      return;
+    }
+
     const invalid = Object.keys(rules).filter((name) => !validate(name));
     if (invalid.length) {
+      if (invalid[0] === "email") return showStep("email");
       form.elements[invalid[0]].focus();
       return;
     }
@@ -98,6 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
       passwordInput.value = btn.dataset.password;
       alertBox.hidden = true;
       Object.keys(rules).forEach(validate);
+      showStep("password");
+      submitBtn.focus();
     });
   });
 });

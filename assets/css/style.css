@@ -208,6 +208,10 @@ svg {
   outline-offset: 2px;
 }
 
+.mt-3 {
+  margin-top: var(--space-3);
+}
+
 .mt-5 {
   margin-top: var(--space-5);
 }
@@ -615,6 +619,10 @@ svg {
 
 .btn--link:hover {
   text-decoration: underline;
+}
+
+.btn--link + .btn--link {
+  margin-left: var(--space-3);
 }
 
 .btn--block {
@@ -1301,6 +1309,9 @@ textarea.field__input {
 }
 
 .course-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: var(--color-bg);
 }
@@ -1753,43 +1764,188 @@ textarea.field__input {
 @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } }
 
 /* 9. HALAMAN LOGIN ======================================================== */
+/* Tata letak ala Udemy: header tipis, ilustrasi di kiri, form di kanan */
 .auth {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  padding: var(--space-4);
+  background: var(--color-surface);
 }
 
-.auth__card {
-  width: 100%;
-  max-width: 400px;
-  padding: var(--space-8);
+.auth-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-height);
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06);
 }
 
-.auth__brand {
+.auth-nav__brand {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  color: var(--color-text);
+  text-decoration: none;
 }
 
-.auth__header {
-  margin-bottom: var(--space-6);
+.auth-nav__tagline {
+  margin-right: auto;
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+  color: var(--color-text-secondary);
+}
+
+.auth__layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px var(--space-6);
+}
+
+.auth__art {
+  display: flex;
+  justify-content: center;
+}
+
+.auth__art img {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+}
+
+/* Ilustrasi bergaris hitam — beri latar terang agar tetap terlihat di tema gelap */
+:root[data-theme="dark"] .auth__art img {
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: #f3f4f6;
+}
+
+.auth__panel {
+  width: 100%;
+  max-width: 420px;
+  justify-self: center;
+}
+
+.auth__title {
+  margin-bottom: var(--space-8);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+/* Input dengan label di dalam kotak (floating label) */
+.float-field {
+  position: relative;
+}
+
+.float-field .field__input {
+  height: 64px;
+  padding: 22px var(--space-4) 6px;
+  font-size: var(--fs-base);
+}
+
+.float-field label {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--space-4) + 1px);
+  transform: translateY(-50%);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  pointer-events: none;
+  transition: top var(--transition), font-size var(--transition);
+}
+
+.float-field .field__input:focus + label,
+.float-field .field__input:not(:placeholder-shown) + label {
+  top: 18px;
+  font-size: var(--fs-xs);
+}
+
+.float-field.input-group .field__input {
+  padding-right: 52px;
+}
+
+.float-field .input-group__btn {
+  right: var(--space-2);
+}
+
+.auth__submit {
+  height: 48px;
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+
+.auth__account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--fs-sm);
+}
+
+.auth__account-email {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .auth__demo {
   margin-top: var(--space-6);
-  padding-top: var(--space-5);
+}
+
+/* Garis pemisah dengan teks di tengah ("Other log in options") */
+.auth__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--color-text-secondary);
+}
+
+.auth__divider::before,
+.auth__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.auth__box {
+  margin-top: var(--space-8);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.auth__box > p {
+  padding: var(--space-4);
+}
+
+.auth__box > p + p {
   border-top: 1px solid var(--color-border);
 }
 
-.auth__demo-title {
-  margin-bottom: var(--space-2);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: var(--color-text-secondary);
+.auth__box .btn--link {
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .demo-account {
@@ -1818,18 +1974,6 @@ textarea.field__input {
 
 .demo-account__email {
   font-weight: 600;
-}
-
-.auth__toolbar {
-  position: fixed;
-  top: var(--space-4);
-  right: var(--space-4);
-}
-
-.auth__reset {
-  margin-top: var(--space-4);
-  text-align: center;
-  font-size: var(--fs-xs);
 }
 
 /* 10. FITUR LANJUTAN (sortir, tab, user, quiz, profil) ===================== */
@@ -2363,6 +2507,15 @@ th[aria-sort="descending"] .sort-btn .icon {
     grid-template-columns: 1fr;
   }
 
+  /* Login: ilustrasi disembunyikan, form di tengah */
+  .auth__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .auth__art {
+    display: none;
+  }
+
   .sidebar {
     position: fixed;
     inset: 0 auto 0 0;
@@ -2531,8 +2684,24 @@ th[aria-sort="descending"] .sort-btn .icon {
     width: auto;
   }
 
-  .auth__card {
-    padding: var(--space-6);
+  .auth-nav {
+    padding: 0 var(--space-4);
+  }
+
+  .auth-nav__tagline {
+    display: none;
+  }
+
+  .auth-nav .icon-btn {
+    margin-left: auto;
+  }
+
+  .auth__layout {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .auth__title {
+    font-size: 1.5rem;
   }
 }
 

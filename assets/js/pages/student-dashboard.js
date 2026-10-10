@@ -32,7 +32,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const actionButton = (c) =>
     c.learningStatus === "Completed"
-      ? `<button class="btn btn--outline" type="button" data-grade="${c.id}">View final grade</button>`
+      ? `<button class="btn btn--outline" type="button" data-grade="${c.id}">View final grade</button>${
+          Store.certificateFor(c.enrollment)
+            ? `<button class="btn btn--outline" type="button" data-certificate="${c.id}"><i data-icon="download" class="icon--sm"></i>Certificate</button>`
+            : ""
+        }`
       : `<button class="btn btn--primary" type="button" data-continue="${c.id}">Continue course <i data-icon="arrow-right" class="icon--sm"></i></button>`;
 
   const cardTemplate = (c) => `
@@ -67,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><div class="table-progress">${progressBar(c.progress, `${c.code} progress`)}<span>${c.progress}%</span></div></td>
                 <td>${statusBadge(c.learningStatus)}</td>
                 <td>${c.grade ? `<strong>${Utils.escape(c.grade)}</strong>` : "–"}</td>
-                <td>${actionButton(c).replace(/btn--(primary|outline)/, "btn--link")}</td>
+                <td>${actionButton(c).replace(/btn--(primary|outline)/g, "btn--link")}</td>
               </tr>`
               )
               .join("")}
@@ -198,6 +202,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- Aksi course (event delegation) ---
   view.addEventListener("click", (e) => {
+    const certBtn = e.target.closest("[data-certificate]");
+    if (certBtn) return Certificate.download(courses.find((c) => c.id === Number(certBtn.dataset.certificate)).enrollment);
+
     const continueBtn = e.target.closest("[data-continue]");
     const gradeBtn = e.target.closest("[data-grade]");
     if (!continueBtn && !gradeBtn) return;

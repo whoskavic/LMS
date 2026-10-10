@@ -404,8 +404,30 @@ const Store = {
   completeModule(enrollmentId, number) {
     const enrollment = DB.get("enrollments", enrollmentId);
     if (!enrollment || number !== enrollment.completedModules + 1) return false;
-    DB.update("enrollments", enrollment.id, { completedModules: number });
+    const finished = number >= this.modulesOf(enrollment.courseId).length;
+    DB.update("enrollments", enrollment.id, {
+      completedModules: number,
+      ...(finished && { completedAt: new Date().toISOString().slice(0, 10) }),
+    });
     return true;
+  },
+
+  /**
+   * Sertifikat kelulusan: tersedia bila course menerbitkan sertifikat dan semua modul selesai.
+   * Mengembalikan { number, date } atau null.
+   */
+  certificateFor(enrollment) {
+    const course = DB.get("courses", enrollment.courseId);
+    if (!course?.certificate || !this.modulesOf(course.id).length || this.progressOf(enrollment) < 100) return null;
+    // Data seed tidak punya tanggal selesai → pakai akhir course (paling lambat hari ini)
+    const today = new Date().toISOString().slice(0, 10);
+    const end = new Date(course.startDate);
+    end.setDate(end.getDate() + course.duration * 7);
+    const fallback = end.toISOString().slice(0, 10);
+    return {
+      number: `LRN-${course.code}-${String(enrollment.id).padStart(5, "0")}`,
+      date: enrollment.completedAt || (fallback < today ? fallback : today),
+    };
   },
 
   /* ---------- Quiz ---------- */

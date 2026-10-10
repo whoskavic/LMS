@@ -38,7 +38,10 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("course-modules", `${done()}/${modules.length} modules`);
     document.getElementById("course-progress-bar").style.width = `${progress}%`;
     document.getElementById("course-progress-track").setAttribute("aria-valuenow", progress);
+    document.getElementById("download-certificate").hidden = !Store.certificateFor(enrollment);
   }
+
+  document.getElementById("download-certificate").addEventListener("click", () => Certificate.download(enrollment));
 
   /* ---------- Daftar quiz ---------- */
   function renderQuizzes() {
@@ -236,13 +239,15 @@ document.addEventListener("DOMContentLoaded", () => {
         Store.logActivity(`Completed all modules of ${course.code} ${course.title}`);
         renderList();
         renderLesson();
+        const hasCertificate = Boolean(Store.certificateFor(enrollment));
         UI.modal({
           title: "Course completed!",
           body: `<p>Congratulations — you finished all ${modules.length} modules of <strong>${Utils.escape(course.title)}</strong>.
-                 Your final grade will be published by your lecturer.</p>`,
-          confirmText: "Back to dashboard",
-          cancelText: "Stay here",
-          onConfirm: () => (location.href = "student-dashboard.html"),
+                 Your final grade will be published by your lecturer.</p>
+                 ${hasCertificate ? "<p>Your certificate of completion is ready to download.</p>" : ""}`,
+          confirmText: hasCertificate ? "Download certificate" : "Back to dashboard",
+          cancelText: hasCertificate ? "Close" : "Stay here",
+          onConfirm: () => (hasCertificate ? Certificate.download(enrollment) : (location.href = "student-dashboard.html")),
         });
       } else {
         UI.toast(`Module ${m.number} completed. Next module unlocked.`);

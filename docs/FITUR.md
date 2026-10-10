@@ -67,14 +67,14 @@ Aturan: admin tidak bisa menonaktifkan/menghapus akunnya sendiri; dosen yang mas
 | Halaman | Fitur |
 |---|---|
 | **Dashboard** (`student-dashboard.html`) | Ringkasan per semester (total course, progress, IPK dari nilai dosen), tampilan Grid / Table, filter semester & status, pencarian, modal Continue course / View final grade, **Browse courses** untuk mendaftar sendiri ke course yang Active, *Enrollment open*, dan masih ada kursi |
-| **Course** (`course.html`) | Daftar modul (selesai / berjalan / terkunci), video demo (simulasi 3 detik), materi dari dosen, checklist tugas latihan, **Mark as complete**, navigasi Previous/Next, daftar quiz dengan skor terbaik, pencarian modul |
+| **Course** (`course.html`) | Daftar modul (selesai / berjalan / terkunci), video demo (simulasi 3 detik), materi dari dosen, checklist tugas latihan, **Mark as complete**, navigasi Previous/Next, daftar quiz dengan skor terbaik, pencarian modul, **Download certificate** (PNG) setelah semua modul selesai bila course menerbitkan sertifikat — juga tersedia di kartu course yang sudah selesai di dashboard |
 | **Quiz** (`quiz.html`) | Intro (jumlah soal, batas waktu, nilai lulus, sisa percobaan), pengerjaan 1 soal per layar, **timer** hitung mundur (submit otomatis saat habis), navigasi nomor soal, pintasan keyboard (1–4, ← →), konfirmasi submit dengan peringatan soal kosong, hasil (cincin skor, lulus/tidak), **review jawaban** benar/salah, batas percobaan |
 
 ### Semua role
 
 | Halaman | Fitur |
 |---|---|
-| **Login** (`index.html`) | Validasi email & password, pesan akun salah/nonaktif, tampil/sembunyikan password, akun demo klik-untuk-isi, tombol tema, reset data |
+| **Login** (`index.html`) | Tata letak ala Udemy (ilustrasi kiri, form kanan; ilustrasi disembunyikan di layar kecil), login dua langkah (email → Continue → password, bisa *Change* email), input dengan label di dalam kotak, validasi email & password, pesan akun salah/nonaktif, tampil/sembunyikan password, akun demo klik-untuk-isi, tombol tema, reset data |
 | **Profile** (`profile.html`) | Kartu profil, edit nama & departemen, ganti password (password lama harus benar, minimal 8 karakter huruf + angka, konfirmasi harus sama), pilihan tema Light/Dark/System, reset data demo |
 | **Layout** | Sidebar dengan menu sesuai role, sidebar off-canvas di mobile, search, notifikasi dropdown, tombol dark mode, logout dengan konfirmasi |
 
