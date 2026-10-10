@@ -2,7 +2,7 @@
 
 Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
 
-> **Status:** frontend masih memakai mock data di `localStorage` (lewat `MockServer` di `assets/js/api/transport-local.js`). Backend FastAPI belum ada di `master`; rencananya ada di [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** backend FastAPI sudah punya skeleton (config, database, migrasi seluruh skema, `/health`, CI). Frontend masih memakai mock data di `localStorage` (lewat `MockServer` di `assets/js/api/transport-local.js`) sampai tiap modul dihubungkan. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Fitur
 
@@ -25,20 +25,22 @@ Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 ## Tech stack
 
 - **Frontend:** HTML5, CSS3, JavaScript murni (classic script, tanpa framework/bundler), Chart.js 4 (lokal di `assets/js/vendor/`).
-- **Backend (direncanakan):** Python 3.12, FastAPI, SQLAlchemy 2.0, Alembic, Pydantic v2, PostgreSQL 16, pytest + httpx, ruff.
-- **Test frontend:** `node --test` (unit test `domain.js` + kontrak MockServer).
+- **Backend:** Python 3.12, FastAPI, SQLAlchemy 2.0, Alembic, Pydantic v2, PostgreSQL 16, pytest + httpx, ruff.
+- **Test:** `node --test` (frontend), pytest + httpx terhadap PostgreSQL (backend), ruff.
+- **Infra lokal:** Docker Compose (api + postgres), GitHub Actions CI.
 
 ## Arsitektur singkat
 
-Kondisi saat ini:
-
 ```mermaid
 flowchart LR
-  Browser["Frontend statis<br/>(HTML/CSS/JS)"] --> Api["Api (assets/js/api)"]
-  Api --> Local["LocalTransport<br/>MockServer"]
+  Browser["Frontend statis<br/>(HTML/CSS/JS + Chart.js)"] --> Api["Api (assets/js/api)"]
+  Api --> Local["LocalTransport<br/>MockServer (mock)"]
   Local --> LS[("localStorage")]
-  Api -. "belum dipakai" .-> Http["HttpTransport"]
+  Api -. "HttpTransport<br/>JSON + JWT" .-> API["FastAPI<br/>/api/v1"]
+  API --> PG[("PostgreSQL 16")]
 ```
+
+Backend adalah modular monolith: satu folder per domain (`auth`, `users`, `courses`, `enrollments`, `quizzes`, `reports`) di `backend/app/`.
 
 ## Struktur folder
 
@@ -56,6 +58,14 @@ LMS/
 │       ├── main.js         ← Guard, layout, UI helper
 │       ├── api/            ← client, transport local/http, services
 │       └── pages/          ← Script per halaman
+├── backend/
+│   ├── app/                ← FastAPI: main, config, db, common/, satu folder per domain
+│   ├── alembic/            ← migrasi database
+│   ├── tests/              ← pytest
+│   ├── Dockerfile
+│   ├── requirements*.txt
+│   └── .env.example
+├── docker-compose.yml      ← api + postgres
 ├── tests/                  ← node --test
 ├── docs/                   ← Dokumen perancangan, keputusan, rencana backend
 ├── prompt.md               ← Instruksi kerja otonom untuk integrasi backend
@@ -65,17 +75,46 @@ LMS/
 
 ## Menjalankan secara lokal
 
-Prasyarat: browser modern. (Docker, Python, dan PostgreSQL baru dibutuhkan setelah backend ditambahkan.)
+Prasyarat: Docker + Docker Compose, browser modern. (Opsional tanpa Docker: Python 3.12 dan PostgreSQL 16.)
 
-1. Clone repo: `git clone https://github.com/whoskavic/LMS.git && cd LMS`
-2. Buka `index.html` langsung di browser, atau jalankan server statis: `npx http-server -p 5500` lalu buka `http://localhost:5500`.
-3. Klik salah satu akun demo di halaman login.
+```bash
+git clone https://github.com/whoskavic/LMS.git && cd LMS
 
-Docker compose, migrasi Alembic, dan seed: belum tersedia.
+# 1. Backend + database
+docker compose up -d --build
+docker compose exec api alembic upgrade head      # migrasi
+curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"ok"}
+# Swagger: http://localhost:8000/docs
+
+# 2. Frontend (server statis)
+npx http-server -p 5500     # lalu buka http://localhost:5500
+```
+
+Seed data demo: belum tersedia (ditambahkan bersama auth & users).
+
+Tanpa Docker:
+
+```bash
+cd backend
+python3.12 -m venv .venv && . .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env        # sesuaikan DATABASE_URL
+alembic upgrade head
+uvicorn app.main:app --reload
+```
 
 ## Environment variable
 
-Belum ada (frontend murni statis).
+Backend membaca variabel berikut (lihat `backend/.env.example`):
+
+| Nama | Keterangan | Contoh |
+|---|---|---|
+| `APP_ENV` | Nama environment | `development` |
+| `DATABASE_URL` | URL SQLAlchemy ke PostgreSQL | `postgresql+psycopg://learnova:learnova@localhost:5432/learnova` |
+| `TEST_DATABASE_URL` | Database khusus pytest (dibuat otomatis bila belum ada) | `postgresql+psycopg://learnova:learnova@localhost:5432/learnova_test` |
+| `JWT_SECRET` | Secret penandatangan JWT (wajib diganti di produksi) | `ganti-dengan-string-acak-panjang` |
+| `JWT_EXPIRES_MINUTES` | Masa berlaku token (menit) | `720` |
+| `CORS_ORIGINS` | Origin frontend yang diizinkan, dipisah koma (`*` = semua) | `http://localhost:5500,http://127.0.0.1:5500` |
 
 ## Akun demo
 
@@ -89,17 +128,31 @@ Mock data di browser:
 
 ## API
 
-Belum ada backend. Kontrak REST yang akan diikuti sudah didefinisikan oleh `MockServer` (`assets/js/api/transport-local.js`) dan dirangkum di [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/openapi.json`. Semua endpoint memakai prefix `/api/v1`, JSON camelCase, dan error berbentuk `{ "error": { "code", "message", "fields"? } }`.
+
+| Method | Path | Role |
+|---|---|---|
+| GET | `/api/v1/health` | publik |
+
+Endpoint berikutnya mengikuti kontrak `MockServer` (`assets/js/api/transport-local.js`), rencananya di [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Database
 
-Belum ada database server. Rencana skema PostgreSQL dan pemetaan dari mock data ada di [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md); ERD lengkap akan ditulis di `docs/ERD.md` bersama migrasi pertama.
+PostgreSQL 16 dengan 13 tabel: `users`, `categories`, `courses`, `course_status_logs`, `modules`, `quizzes`, `questions`, `question_options`, `enrollments`, `module_progress`, `quiz_attempts`, `attempt_answers`, `certificates`. Primary key UUID, enum disimpan sebagai string + CHECK constraint, extension `pg_trgm` untuk pencarian course. Diagram, relasi, dan daftar index: [docs/ERD.md](docs/ERD.md).
 
 ## Testing
 
 ```bash
-node --test
+node --test                                  # frontend
+
+cd backend
+ruff check . && ruff format --check .        # lint & format
+pytest                                       # butuh PostgreSQL (TEST_DATABASE_URL)
+# atau lewat Docker:
+docker compose exec api pytest
 ```
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) menjalankan `node --test`, ruff, `alembic upgrade head` dari database kosong, dan pytest di setiap PR.
 
 ## Deploy
 
@@ -109,8 +162,8 @@ Saat ini cukup sebagai static site (mis. Vercel: import repo, preset **Other**, 
 
 Roadmap integrasi backend (satu PR per fase):
 
-1. Dokumentasi & rencana (PR ini)
-2. Backend skeleton (FastAPI, Alembic, Docker, CI)
+1. ✅ Dokumentasi & rencana
+2. ✅ Backend skeleton (FastAPI, Alembic, Docker, CI)
 3. Auth & users
 4. Courses & katalog publik
 5. Enrollment & progress
