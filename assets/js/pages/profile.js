@@ -12,7 +12,7 @@ App.ready((me) => {
   const infoForm = document.getElementById("info-form");
   const passwordForm = document.getElementById("password-form");
   const details = document.getElementById("profile-details");
-  const ID_LABEL = { student: "NIM", lecturer: "NIDN", admin: "Staff ID" };
+  const ID_LABEL = { student: "NIM", instructor: "NIDN", admin: "Staff ID" };
 
   /* ---------- Ringkasan profil ---------- */
   // Nama, keterangan, dan avatar ikut diperbarui di sidebar & topbar
@@ -28,10 +28,10 @@ App.ready((me) => {
     const extra =
       stats.role === "student"
         ? [["Courses", stats.courses], ["GPA", stats.gpa === null ? "–" : stats.gpa.toFixed(2)]]
-        : stats.role === "lecturer"
+        : stats.role === "instructor"
           ? [["Courses taught", stats.coursesTaught]]
           : [["Users managed", stats.usersManaged]];
-    const rows = [[ID_LABEL[me.role], me.idNumber], ["Department", me.department], ...extra];
+    const rows = [[ID_LABEL[me.role], Utils.orDash(me.idNumber)], ["Department", Utils.orDash(me.department)], ...extra];
     details.innerHTML = `<dl class="detail-list">${rows
       .map(([label, value]) => `<dt>${Utils.escape(label)}</dt><dd>${Utils.escape(value)}</dd>`)
       .join("")}</dl>`;
@@ -42,14 +42,14 @@ App.ready((me) => {
   /* ---------- Data diri ---------- */
   infoForm.elements.name.value = me.name;
   infoForm.elements.email.value = me.email;
-  infoForm.elements.department.value = me.department;
+  infoForm.elements.department.value = me.department ?? "";
 
   infoForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = UI.formValues(infoForm);
     const rules = {
       name: v.name ? "" : "Full name is required.",
-      department: v.department ? "" : "Department is required.",
+      department: v.department || me.role !== "admin" ? "" : "Department is required.",
     };
     Object.entries(rules).forEach(([name, message]) => UI.fieldError(infoForm, name, message));
     const invalid = Object.keys(rules).find((name) => rules[name]);
@@ -108,7 +108,7 @@ App.ready((me) => {
   });
 
   /* ---------- Reset data demo ---------- */
-  document.getElementById("reset-demo").addEventListener("click", () => {
+  document.getElementById("reset-demo")?.addEventListener("click", () => {
     UI.modal({
       title: "Reset demo data?",
       body: "<p>All courses, users, progress, quiz attempts, and grades will return to the original mock data. You will be signed out.</p>",

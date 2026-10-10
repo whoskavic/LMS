@@ -32,13 +32,13 @@
           <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
           <!-- Dosen -->
-          <li data-nav-role="lecturer"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
-          <li data-nav-role="lecturer"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
-          <li data-nav-role="lecturer"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <li data-nav-role="instructor"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="instructor"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="instructor"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
           <!-- Mahasiswa -->
           <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>Dashboard</span></a></li>
           <!-- Semua role -->
-          <li data-nav-role="admin lecturer student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+          <li data-nav-role="admin instructor student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
         </ul>
       </nav>
 
@@ -86,7 +86,7 @@
           <div>
             <p class="page-header__eyebrow">User management</p>
             <h1 class="page-header__title">Users</h1>
-            <p class="page-header__subtitle">Manage student, lecturer, and administrator accounts</p>
+            <p class="page-header__subtitle">Manage student, instructor, and administrator accounts</p>
           </div>
           <div class="page-header__actions">
             <button class="btn btn--outline" type="button" id="export-users"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
@@ -96,7 +96,7 @@
 
         <div class="tabs__list" role="tablist" aria-label="User roles">
           <button class="tabs__tab" type="button" role="tab" aria-selected="true" data-role-tab="student">Students <span class="tabs__count" data-count="student">0</span></button>
-          <button class="tabs__tab" type="button" role="tab" aria-selected="false" data-role-tab="lecturer">Lecturers <span class="tabs__count" data-count="lecturer">0</span></button>
+          <button class="tabs__tab" type="button" role="tab" aria-selected="false" data-role-tab="instructor">Instructors <span class="tabs__count" data-count="instructor">0</span></button>
           <button class="tabs__tab" type="button" role="tab" aria-selected="false" data-role-tab="admin">Admins <span class="tabs__count" data-count="admin">0</span></button>
         </div>
 
@@ -156,6 +156,7 @@
   <script src="../assets/js/data.js"></script>
   <script src="../assets/js/domain.js"></script>
   <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/config.js"></script>
   <script src="../assets/js/api/client.js"></script>
   <script src="../assets/js/api/transport-local.js"></script>
   <script src="../assets/js/api/transport-http.js"></script>

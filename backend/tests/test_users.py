@@ -94,3 +94,22 @@ def test_seed_creates_demo_accounts(client, db):
     seed(db)
     res = client.post("/api/v1/auth/login", json={"email": "admin@learnova.ac.id", "password": "admin123"})
     assert res.status_code == 200 and res.json()["user"]["role"] == "admin"
+
+
+def test_notifications_for_admin_list_pending_courses(client, db):
+    admin = make_user(db, role="admin")
+    instructor = make_user(db, role="instructor")
+    db.add(
+        Course(
+            instructor_id=instructor.id,
+            title="Mobile Programming",
+            slug="mobile",
+            status="pending",
+            code="MOB301",
+        )
+    )
+    db.commit()
+    items = client.get("/api/v1/meta/notifications", headers=auth(admin)).json()
+    assert items[0]["text"] == "MOB301 Mobile Programming is waiting for approval"
+    assert client.get("/api/v1/meta/notifications", headers=auth(instructor)).json()[0]["time"] == "Pending"
+    assert client.get("/api/v1/meta/notifications").status_code == 401

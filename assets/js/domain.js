@@ -40,7 +40,7 @@ const Domain = {
   },
 
   /* ---------- User ---------- */
-  ROLE_LABELS: { admin: "Administrator", lecturer: "Lecturer", student: "Student" },
+  ROLE_LABELS: { admin: "Administrator", instructor: "Instructor", student: "Student" },
 
   roleLabel(role) {
     return Domain.ROLE_LABELS[role] || role;
@@ -48,8 +48,9 @@ const Domain = {
 
   // Keterangan singkat di bawah nama user (sidebar, profil)
   userTitle(user) {
-    if (user.role === "student") return `Student · NIM ${user.idNumber}`;
-    if (user.role === "lecturer") return `Lecturer · ${user.department}`;
+    // NIM / departemen bisa kosong untuk akun dari registrasi publik
+    if (user.role === "student") return user.idNumber ? `Student · NIM ${user.idNumber}` : "Student";
+    if (user.role === "instructor") return user.department ? `Instructor · ${user.department}` : "Instructor";
     return "System administrator";
   },
 

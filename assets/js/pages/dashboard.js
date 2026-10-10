@@ -8,7 +8,7 @@ App.ready(() => {
     const courses = DB.all("courses");
     const users = DB.all("users");
     const students = users.filter((u) => u.role === "student");
-    const lecturers = users.filter((u) => u.role === "lecturer");
+    const lecturers = users.filter((u) => u.role === "instructor");
     const pending = courses.filter((c) => c.status === "Pending");
 
     setText("stat-courses", Utils.number(courses.length));

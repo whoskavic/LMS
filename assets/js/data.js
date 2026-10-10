@@ -14,17 +14,17 @@ const SEED = {
     { id: 1, role: "admin", name: "Admin User", email: "admin@learnova.ac.id", password: "admin123", idNumber: "ADM-001", department: "Academic Operations", status: "Active" },
 
     // Dosen (password semua: dosen123)
-    { id: 2, role: "lecturer", name: "Dr. Budi Santoso", email: "budi@learnova.ac.id", password: "dosen123", idNumber: "0412078801", department: "Informatics", status: "Active" },
-    { id: 3, role: "lecturer", name: "Dr. Adam Miller", email: "adam@learnova.ac.id", password: "dosen123", idNumber: "0415037902", department: "Informatics", status: "Active" },
-    { id: 4, role: "lecturer", name: "Prof. Emily Chen", email: "emily@learnova.ac.id", password: "dosen123", idNumber: "0420117503", department: "Design", status: "Active" },
-    { id: 5, role: "lecturer", name: "Dr. Karen Vance", email: "karen@learnova.ac.id", password: "dosen123", idNumber: "0402088204", department: "Mathematics", status: "Active" },
-    { id: 6, role: "lecturer", name: "Prof. Rina Sharma", email: "rina@learnova.ac.id", password: "dosen123", idNumber: "0411097405", department: "Physics", status: "Active" },
-    { id: 7, role: "lecturer", name: "Dr. Marcus Vale", email: "marcus@learnova.ac.id", password: "dosen123", idNumber: "0428018106", department: "Humanities", status: "Active" },
-    { id: 8, role: "lecturer", name: "Dr. Sarah Kim", email: "sarah.kim@learnova.ac.id", password: "dosen123", idNumber: "0417058307", department: "Biology", status: "Active" },
-    { id: 9, role: "lecturer", name: "Prof. Elena Ruiz", email: "elena@learnova.ac.id", password: "dosen123", idNumber: "0409127708", department: "Design", status: "Active" },
-    { id: 10, role: "lecturer", name: "Dr. Nathan Cole", email: "nathan@learnova.ac.id", password: "dosen123", idNumber: "0423068509", department: "Physics", status: "Active" },
-    { id: 11, role: "lecturer", name: "Dr. Sarah Thorne", email: "thorne@learnova.ac.id", password: "dosen123", idNumber: "0405028610", department: "Data Science", status: "Active" },
-    { id: 12, role: "lecturer", name: "Prof. David Lee", email: "david@learnova.ac.id", password: "dosen123", idNumber: "0414107311", department: "Mathematics", status: "Inactive" },
+    { id: 2, role: "instructor", name: "Dr. Budi Santoso", email: "budi@learnova.ac.id", password: "dosen123", idNumber: "0412078801", department: "Informatics", status: "Active" },
+    { id: 3, role: "instructor", name: "Dr. Adam Miller", email: "adam@learnova.ac.id", password: "dosen123", idNumber: "0415037902", department: "Informatics", status: "Active" },
+    { id: 4, role: "instructor", name: "Prof. Emily Chen", email: "emily@learnova.ac.id", password: "dosen123", idNumber: "0420117503", department: "Design", status: "Active" },
+    { id: 5, role: "instructor", name: "Dr. Karen Vance", email: "karen@learnova.ac.id", password: "dosen123", idNumber: "0402088204", department: "Mathematics", status: "Active" },
+    { id: 6, role: "instructor", name: "Prof. Rina Sharma", email: "rina@learnova.ac.id", password: "dosen123", idNumber: "0411097405", department: "Physics", status: "Active" },
+    { id: 7, role: "instructor", name: "Dr. Marcus Vale", email: "marcus@learnova.ac.id", password: "dosen123", idNumber: "0428018106", department: "Humanities", status: "Active" },
+    { id: 8, role: "instructor", name: "Dr. Sarah Kim", email: "sarah.kim@learnova.ac.id", password: "dosen123", idNumber: "0417058307", department: "Biology", status: "Active" },
+    { id: 9, role: "instructor", name: "Prof. Elena Ruiz", email: "elena@learnova.ac.id", password: "dosen123", idNumber: "0409127708", department: "Design", status: "Active" },
+    { id: 10, role: "instructor", name: "Dr. Nathan Cole", email: "nathan@learnova.ac.id", password: "dosen123", idNumber: "0423068509", department: "Physics", status: "Active" },
+    { id: 11, role: "instructor", name: "Dr. Sarah Thorne", email: "thorne@learnova.ac.id", password: "dosen123", idNumber: "0405028610", department: "Data Science", status: "Active" },
+    { id: 12, role: "instructor", name: "Prof. David Lee", email: "david@learnova.ac.id", password: "dosen123", idNumber: "0414107311", department: "Mathematics", status: "Inactive" },
 
     // Mahasiswa (password semua: student123) — daftar lengkap dibuat dari studentNames di bawah
   ],
@@ -194,7 +194,7 @@ const SEED = {
       { text: "3 new student accounts this week", time: "2 hours ago" },
       { text: "Weekly report is ready", time: "Yesterday" },
     ],
-    lecturer: [
+    instructor: [
       { text: "4 students submitted the CS205 quiz", time: "15 min ago" },
       { text: "MOB301 is waiting for admin approval", time: "1 hour ago" },
       { text: "Final grades for Fall 2026 are due in 6 weeks", time: "2 days ago" },

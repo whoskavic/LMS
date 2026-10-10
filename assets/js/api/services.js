@@ -18,6 +18,12 @@ Object.assign(Api, {
         Api.session.clear();
       }
     },
+    /** Registrasi publik (role: "student" | "instructor"); token disimpan otomatis */
+    async register(data) {
+      const result = await Api.post("/auth/register", data);
+      Api.session.set(result.token);
+      return result;
+    },
     me: () => Api.get("/auth/me"),
     changePassword: (current, next) => Api.post("/auth/password", { current, next }),
   },

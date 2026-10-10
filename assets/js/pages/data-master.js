@@ -15,7 +15,7 @@ App.ready(() => {
   const filters = {
     category: document.getElementById("filter-category"),
     status: document.getElementById("filter-status"),
-    lecturer: document.getElementById("filter-lecturer"), // hanya ada untuk admin
+    instructor: document.getElementById("filter-lecturer"), // hanya ada untuk admin
   };
 
   if (!isAdmin) {
@@ -28,7 +28,7 @@ App.ready(() => {
     q: params.get("q") || "",
     category: "",
     status: params.get("status") || "",
-    lecturer: "",
+    instructor: "",
     page: 1,
     key: "title",
     dir: "asc",
@@ -38,7 +38,7 @@ App.ready(() => {
   const rows = () =>
     (isAdmin ? DB.all("courses") : Store.coursesOf(me.id)).map((c) => {
       const stats = Store.courseStats(c.id);
-      return { ...c, lecturer: Store.lecturerName(c.lecturerId), students: stats.students, avgProgress: stats.avgProgress };
+      return { ...c, instructor: Store.lecturerName(c.lecturerId), students: stats.students, avgProgress: stats.avgProgress };
     });
 
   // --- Isi pilihan filter ---

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign up | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/theme.js"></script>
+</head>
+<body class="auth">
+  <header class="auth-nav">
+    <a class="auth-nav__brand" href="index.html">
+      <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+      <span class="brand-name">Learnova</span>
+    </a>
+    <p class="auth-nav__tagline">Learning Management System</p>
+    <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+  </header>
+
+  <main class="auth__layout">
+    <div class="auth__art">
+      <img src="assets/img/login-illustration.webp" alt="" width="640" height="720">
+    </div>
+
+    <section class="auth__panel" aria-labelledby="register-title">
+      <h1 class="auth__title" id="register-title">Sign up and start learning — or teaching</h1>
+
+      <form class="form-stack" id="register-form" novalidate>
+        <div class="alert alert--danger" id="register-alert" role="alert" hidden>
+          <i data-icon="alert" class="icon--sm"></i>
+          <span id="register-alert-text"></span>
+        </div>
+
+        <div class="field" data-field="name">
+          <div class="float-field">
+            <input class="field__input" id="name" name="name" type="text" placeholder=" " autocomplete="name" maxlength="60" aria-describedby="name-error">
+            <label for="name">Full name</label>
+          </div>
+          <p class="field__error" id="name-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+        </div>
+
+        <div class="field" data-field="email">
+          <div class="float-field">
+            <input class="field__input" id="email" name="email" type="email" placeholder=" " autocomplete="email" aria-describedby="email-error">
+            <label for="email">Email</label>
+          </div>
+          <p class="field__error" id="email-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+        </div>
+
+        <div class="field" data-field="password">
+          <div class="float-field">
+            <input class="field__input" id="password" name="password" type="password" placeholder=" " autocomplete="new-password" aria-describedby="password-hint password-error">
+            <label for="password">Password</label>
+          </div>
+          <p class="field__hint" id="password-hint">At least 8 characters, with letters and numbers.</p>
+          <p class="field__error" id="password-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+        </div>
+
+        <fieldset class="field theme-options" data-field="role">
+          <legend class="field__label">I want to</legend>
+          <label class="theme-option"><input type="radio" name="role" value="student" checked><i data-icon="school"></i>Learn (Student)</label>
+          <label class="theme-option"><input type="radio" name="role" value="instructor"><i data-icon="book"></i>Teach (Instructor)</label>
+          <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+        </fieldset>
+
+        <button class="btn btn--primary btn--block auth__submit" type="submit" id="register-submit">Create account</button>
+      </form>
+
+      <div class="auth__box">
+        <p>Already have an account? <a class="btn btn--link" href="index.html">Log in</a></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/domain.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api/client.js"></script>
+  <script src="assets/js/api/transport-http.js"></script>
+  <script src="assets/js/api/services.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/pages/register.js"></script>
+</body>
+</html>

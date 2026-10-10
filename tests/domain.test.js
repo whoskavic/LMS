@@ -92,9 +92,9 @@ test("formatDate & formatDateTime mengembalikan nilai asli bila tidak valid", ()
 });
 
 test("roleLabel & userTitle untuk tampilan user", () => {
-  assert.equal(Domain.roleLabel("lecturer"), "Lecturer");
+  assert.equal(Domain.roleLabel("instructor"), "Instructor");
   assert.equal(Domain.roleLabel("unknown"), "unknown");
   assert.equal(Domain.userTitle({ role: "student", idNumber: "40992" }), "Student · NIM 40992");
-  assert.equal(Domain.userTitle({ role: "lecturer", department: "Informatics" }), "Lecturer · Informatics");
+  assert.equal(Domain.userTitle({ role: "instructor", department: "Informatics" }), "Instructor · Informatics");
   assert.equal(Domain.userTitle({ role: "admin" }), "System administrator");
 });
