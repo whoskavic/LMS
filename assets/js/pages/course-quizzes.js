@@ -1,6 +1,6 @@
 // Detail Course · tab Quizzes — dosen membuat & mengedit quiz pilihan ganda (editor soal dengan validasi)
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const { course, canEdit } = CourseDetail;
   if (!course) return;
   const list = document.getElementById("quiz-rows");

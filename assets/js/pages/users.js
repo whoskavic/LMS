@@ -1,6 +1,6 @@
 // Manajemen User (admin) — tab per role, cari, filter, sortir, tambah/edit (modal + validasi), nonaktifkan, hapus
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const PAGE_SIZE = 8;
   const me = Store.currentUser();
   const table = document.getElementById("user-table");

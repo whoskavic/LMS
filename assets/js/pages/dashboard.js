@@ -1,6 +1,6 @@
 // Dashboard Admin (operator) — ringkasan, grafik enrollment, persetujuan course, status sistem, aktivitas
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const setText = (id, value) => (document.getElementById(id).textContent = value);
   const { labels, enrollments, completions } = SEED.enrollmentChart;
 

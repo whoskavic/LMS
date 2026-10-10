@@ -1,7 +1,7 @@
 // Laporan (admin) — rangkuman progress, nilai quiz, grafik, aktivitas sistem, cetak & export
 // Semua angka dihitung dari data enrollment + percobaan quiz di database.
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const PAGE_SIZE = 10;
   const setText = (id, value) => (document.getElementById(id).textContent = value);
   const courses = DB.all("courses");

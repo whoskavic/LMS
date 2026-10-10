@@ -1,6 +1,6 @@
 // Dashboard Mahasiswa — ringkasan, daftar course (grid/table), filter semester & status, nilai akhir
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   let courses = Store.studentCourses(me.id);
   const view = document.getElementById("course-view");

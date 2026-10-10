@@ -1,6 +1,6 @@
 // Quiz mahasiswa — intro, pengerjaan (timer, navigasi soal, keyboard), konfirmasi submit, hasil & review jawaban
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   const quiz = DB.get("quizzes", Utils.params().get("id"));
   const course = quiz ? DB.get("courses", quiz.courseId) : null;

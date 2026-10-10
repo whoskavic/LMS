@@ -1,6 +1,6 @@
 // Dashboard Dosen — ringkasan course yang diajar, grafik per course, percobaan quiz terbaru
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   const setText = (id, value) => (document.getElementById(id).textContent = value);
 

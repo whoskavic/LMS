@@ -356,14 +356,14 @@ const UI = {
   },
 
   /** Error state dari ApiError (atau Error biasa) dengan tombol Retry opsional. */
-  error(el, err, onRetry) {
+  error(el, err, onRetry, { title = "Could not load this section" } = {}) {
     el.removeAttribute("aria-busy");
     const message = err?.message || "Something went wrong. Please try again.";
     UI._setState(
       el,
       `<div class="state state--error" role="alert">
         <span class="state__icon"><i data-icon="alert"></i></span>
-        <p class="state__title">Could not load this section</p>
+        <p class="state__title">${Utils.escape(title)}</p>
         <p class="state__text">${Utils.escape(message)}</p>
         ${onRetry ? '<button class="btn btn--outline" type="button" data-state-retry><i data-icon="refresh" class="icon--sm"></i>Try again</button>' : ""}
       </div>`
@@ -549,11 +549,15 @@ App.session = (async () => {
   try {
     const user = await Api.auth.me();
     App.user = user;
-    if (protectedPage && !App.allowedRoles.includes(user.role)) location.replace(homeFor(user.role));
+    if (protectedPage && !App.allowedRoles.includes(user.role)) {
+      location.replace(homeFor(user.role));
+      return null;
+    }
     return user;
   } catch (err) {
-    // 401: sesi habis / user dihapus / dinonaktifkan → kembali ke login dengan pesan
-    if (err.status === 401) {
+    // 401: sesi habis / user dihapus / dinonaktifkan → kembali ke login dengan pesan.
+    // Halaman publik (login) tidak butuh sesi, jadi error apa pun diabaikan.
+    if (err.status === 401 || !protectedPage) {
       if (protectedPage) {
         UI.flash(err.message, "error");
         location.replace(App.loginUrl);
@@ -563,6 +567,45 @@ App.session = (async () => {
     throw err;
   }
 })();
+
+/*
+ * App.ready(fn) — satu-satunya titik masuk script halaman.
+ * fn(user) dipanggil setelah DOM siap DAN sesi terverifikasi untuk role halaman ini, sesuai urutan
+ * pendaftaran. Bila user tidak berhak / sedang dialihkan, fn tidak pernah dipanggil sehingga data
+ * role lain tidak pernah dirender. Halaman terlindungi tetap tersembunyi (CSS body:not(.is-ready))
+ * sampai semua fn awal selesai.
+ */
+const domReady = new Promise((resolve) =>
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", resolve, { once: true }) : resolve()
+);
+
+App.verified = (async () => {
+  await domReady;
+  const user = await App.session;
+  if (App.allowedRoles.length && !user) return new Promise(() => {}); // sedang dialihkan: jangan jalankan halaman
+  if (user) applyUserToLayout(user);
+  return user;
+})();
+
+App.ready = (fn) => {
+  App.verified.then(fn).catch((err) => {
+    if (err instanceof ApiError) return; // ditangani showBootError
+    console.error(err);
+  });
+};
+
+// Tampilkan halaman setelah semua script halaman menjalankan render awalnya
+App.verified.then(() => setTimeout(() => document.body.classList.add("is-ready"), 0)).catch(showBootError);
+
+// Sesi tidak bisa diverifikasi (server error / ?mock=…): tampilkan error dengan tombol coba lagi
+function showBootError(err) {
+  const box = document.createElement("div");
+  box.className = "boot-error";
+  box.innerHTML = '<section class="card"></section>';
+  document.body.append(box);
+  document.body.classList.add("boot-failed");
+  UI.error(box.firstElementChild, err, () => location.reload(), { title: "Could not load this page" });
+}
 
 /* =========================================================================
    Layout: sidebar, menu aktif, info user, notifikasi, logout, search
@@ -704,10 +747,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   renderIcons();
+});
 
-  App.session.then((user) => user && applyUserToLayout(user)).catch(() => {});
-
-  // --- Pesan dari halaman sebelumnya (mis. setelah simpan form) ---
+// --- Pesan dari halaman sebelumnya (mis. setelah simpan form) — tidak dipakai bila halaman dialihkan ---
+App.ready(() => {
   const flash = UI.takeFlash();
   if (flash) UI.toast(flash.message, flash.type);
 });

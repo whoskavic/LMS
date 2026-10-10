@@ -1,6 +1,6 @@
 // Detail Course · tab Modules — dosen menambah, mengedit, mengurutkan, dan menghapus modul materi
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const { course, canEdit } = CourseDetail;
   if (!course) return;
   const list = document.getElementById("module-rows");

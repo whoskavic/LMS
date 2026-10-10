@@ -1,6 +1,6 @@
 // Profil (semua role) — edit data diri, ganti password (validasi), pilihan tema, reset data demo
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   let me = Store.currentUser();
   const infoForm = document.getElementById("info-form");
   const passwordForm = document.getElementById("password-form");

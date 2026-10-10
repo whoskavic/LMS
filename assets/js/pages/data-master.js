@@ -1,7 +1,7 @@
 // Data Master Course — dipakai admin (semua course) & dosen (course miliknya)
 // Fitur: pencarian, filter, sortir kolom, pagination, approve/reject/archive (admin), edit/hapus, export CSV
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const PAGE_SIZE = 7;
   const me = Store.currentUser();
   const isAdmin = me.role === "admin";

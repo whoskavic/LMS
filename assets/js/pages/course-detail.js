@@ -20,7 +20,7 @@ const CourseDetail = {
   },
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   const course = DB.get("courses", Utils.params().get("id"));
   const allowed = course && (me.role === "admin" || course.lecturerId === me.id);

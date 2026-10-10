@@ -1,6 +1,6 @@
 // Detail Course · tab Students & Grades — progress & skor quiz mahasiswa, dosen mengisi nilai akhir
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const { course, canEdit } = CourseDetail;
   if (!course) return;
 

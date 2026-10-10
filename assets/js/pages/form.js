@@ -1,7 +1,7 @@
 // Form Course (dosen) — buat / edit course milik sendiri, validasi input dengan JavaScript
 // Course baru dikirim ke admin untuk disetujui (status Pending).
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const form = document.getElementById("course-form");
   const el = form.elements;
   const me = Store.currentUser();
