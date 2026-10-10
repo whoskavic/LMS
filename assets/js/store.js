@@ -236,20 +236,9 @@ const DB = {
 };
 
 /* =========================================================================
-   Store — logika domain (auth, course, progress, quiz, nilai)
+   Store — logika domain yang butuh data (auth, course, progress, quiz, nilai)
+   Perhitungan murni (skala nilai, IPK, progress, tanggal) ada di domain.js.
    ========================================================================= */
-const GRADE_SCALE = [
-  { min: 85, grade: "A", point: 4.0 },
-  { min: 80, grade: "A-", point: 3.7 },
-  { min: 75, grade: "B+", point: 3.3 },
-  { min: 70, grade: "B", point: 3.0 },
-  { min: 65, grade: "B-", point: 2.7 },
-  { min: 60, grade: "C+", point: 2.3 },
-  { min: 55, grade: "C", point: 2.0 },
-  { min: 45, grade: "D", point: 1.0 },
-  { min: 0, grade: "E", point: 0 },
-];
-
 const ROLE_LABELS = { admin: "Administrator", lecturer: "Lecturer", student: "Student" };
 
 const Store = {
@@ -323,8 +312,7 @@ const Store = {
   },
 
   progressOf(enrollment) {
-    const total = this.modulesOf(enrollment.courseId).length;
-    return total ? Math.round((Math.min(enrollment.completedModules, total) / total) * 100) : 0;
+    return Domain.progressPercent(enrollment.completedModules, this.modulesOf(enrollment.courseId).length);
   },
 
   // Ringkasan statistik satu course (dipakai dashboard, tabel, laporan)
@@ -333,8 +321,8 @@ const Store = {
     const quizScores = list.map((e) => this.averageQuiz(e)).filter((s) => s !== null);
     return {
       students: list.length,
-      avgProgress: Math.round(Utils.average(list.map((e) => this.progressOf(e)))),
-      avgQuiz: quizScores.length ? Math.round(Utils.average(quizScores)) : null,
+      avgProgress: Math.round(Domain.average(list.map((e) => this.progressOf(e)))),
+      avgQuiz: quizScores.length ? Math.round(Domain.average(quizScores)) : null,
       completed: list.filter((e) => this.progressOf(e) === 100).length,
       modules: this.modulesOf(courseId).length,
       quizzes: this.quizzesOf(courseId).length,
@@ -407,7 +395,7 @@ const Store = {
     const finished = number >= this.modulesOf(enrollment.courseId).length;
     DB.update("enrollments", enrollment.id, {
       completedModules: number,
-      ...(finished && { completedAt: new Date().toISOString().slice(0, 10) }),
+      ...(finished && { completedAt: Domain.todayLocal() }),
     });
     return true;
   },
@@ -420,12 +408,10 @@ const Store = {
     const course = DB.get("courses", enrollment.courseId);
     if (!course?.certificate || !this.modulesOf(course.id).length || this.progressOf(enrollment) < 100) return null;
     // Data seed tidak punya tanggal selesai → pakai akhir course (paling lambat hari ini)
-    const today = new Date().toISOString().slice(0, 10);
-    const end = new Date(course.startDate);
-    end.setDate(end.getDate() + course.duration * 7);
-    const fallback = end.toISOString().slice(0, 10);
+    const today = Domain.todayLocal();
+    const fallback = Domain.addDays(course.startDate, course.duration * 7);
     return {
-      number: `LRN-${course.code}-${String(enrollment.id).padStart(5, "0")}`,
+      number: Domain.certificateNumber(course.code, enrollment.id),
       date: enrollment.completedAt || (fallback < today ? fallback : today),
     };
   },
@@ -445,7 +431,7 @@ const Store = {
     const scores = this.quizzesOf(enrollment.courseId)
       .map((q) => this.bestScore(enrollment, q.id))
       .filter((s) => s !== null);
-    return scores.length ? Math.round(Utils.average(scores)) : null;
+    return scores.length ? Math.round(Domain.average(scores)) : null;
   },
 
   submitAttempt(enrollmentId, quizId, answers) {
@@ -465,18 +451,11 @@ const Store = {
 
   /* ---------- Nilai ---------- */
   gradeFromScore(score) {
-    return GRADE_SCALE.find((g) => score >= g.min).grade;
-  },
-
-  gradePoint(grade) {
-    return GRADE_SCALE.find((g) => g.grade === grade)?.point ?? null;
+    return Domain.gradeFromScore(score);
   },
 
   gpa(studentId) {
-    const points = DB.where("enrollments", (e) => e.studentId === Number(studentId) && e.grade)
-      .map((e) => this.gradePoint(e.grade))
-      .filter((p) => p !== null);
-    return points.length ? Utils.average(points) : null;
+    return Domain.gpa(DB.where("enrollments", (e) => e.studentId === Number(studentId)).map((e) => e.grade));
   },
 
   /* ---------- Aktivitas & demo ---------- */

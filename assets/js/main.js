@@ -79,7 +79,7 @@ const Utils = {
   },
 
   average(values) {
-    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+    return Domain.average(values);
   },
 
   unique(values) {
@@ -118,12 +118,9 @@ const Utils = {
       .toUpperCase();
   },
 
-  // "2026-09-25T14:32" → "25 Sep 2026, 14:32"
-  formatDate(iso, withTime = true) {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return iso;
-    const day = date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    return withTime ? `${day}, ${date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : day;
+  // Kompatibilitas halaman lama — logika ada di Domain.formatDate / Domain.formatDateTime
+  formatDate(value, withTime = true) {
+    return withTime ? Domain.formatDateTime(value) : Domain.formatDate(value);
   },
 
   // Urutkan salinan array berdasarkan key (angka / teks), null selalu di akhir
