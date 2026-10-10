@@ -92,6 +92,7 @@ const Domain = {
 
   // "2026-09-25T07:32:00.000Z" → "25 Sep 2026" (tanggal lokal). Nilai tidak valid dikembalikan apa adanya.
   formatDate(value) {
+    if (value === null || value === undefined || value === "") return "";
     const date = Domain.toDate(value);
     if (Number.isNaN(date.getTime())) return value ?? "";
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -99,6 +100,7 @@ const Domain = {
 
   // "2026-09-25T07:32:00.000Z" → "25 Sep 2026, 14:32" (waktu lokal, mis. WIB)
   formatDateTime(value) {
+    if (value === null || value === undefined || value === "") return "";
     const date = Domain.toDate(value);
     if (Number.isNaN(date.getTime())) return value ?? "";
     const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
