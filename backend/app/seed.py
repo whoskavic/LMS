@@ -5,14 +5,22 @@ Jalankan: `python -m app.seed` (lewati bila data sudah ada) atau `python -m app.
 """
 
 import argparse
+import json
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401
 from app.auth.security import hash_password
+from app.common.util import slugify
+from app.courses.models import Category, Course, CourseStatusLog, Module
 from app.db import Base, SessionLocal
 from app.users.models import User
+
+# Diekspor dari assets/js/data.js (SEED) agar data demo sama dengan prototipe
+DATA = json.loads((Path(__file__).parent / "seed_data.json").read_text())
 
 # 1 admin, 2 instructor, 3 student — diambil dari mock data prototipe (assets/js/data.js)
 DEMO_USERS = [
@@ -48,8 +56,119 @@ def seed_users(db: Session) -> dict[str, User]:
     return users
 
 
+def course_modules(course: dict, topics: list[str]) -> list[dict]:
+    """Setiap topik = 1 modul Lecture + 1 modul Practice (courseModules di store.js)."""
+    modules = []
+    for i, topic in enumerate(topics):
+        modules.append(
+            {
+                "title": f"{topic} — Lecture",
+                "type": "lecture",
+                "minutes": 10 + (i * 7) % 15,
+                "content": (
+                    f"In this lecture you will explore {topic} as part of {course['title']}. "
+                    "We introduce the core ideas behind the topic, why it matters, and how it is applied through "
+                    "worked examples.\n\n"
+                    f"Watch the video first, then read these notes. Try to connect {topic} with what you learned in "
+                    "earlier modules — the practice session that follows will ask you to apply these ideas."
+                ),
+                "tasks": [],
+            }
+        )
+        modules.append(
+            {
+                "title": f"{topic} — Practice",
+                "type": "practice",
+                "minutes": 20 + (i * 5) % 20,
+                "content": f"Time to put {topic} into practice. Work through the tasks below and tick each one "
+                "when you have finished.",
+                "tasks": [
+                    f"Review your notes from the {topic} lecture",
+                    f"Complete the {topic} exercise set (5 questions)",
+                    f"Share one question or insight about {topic} in the discussion forum",
+                ],
+            }
+        )
+    return modules
+
+
+def owner_email(course: dict) -> str:
+    """Mock punya 11 dosen; course dibagi ke 2 instructor demo (lihat docs/OPEN_QUESTIONS.md #4)."""
+    if course["mockLecturerId"] == 3:
+        return "adam@learnova.ac.id"
+    if course["mockLecturerId"] == 2 or course["category"] in ("Technology", "Design"):
+        return "budi@learnova.ac.id"
+    return "adam@learnova.ac.id"
+
+
+STATUS_PATH = {
+    "draft": ["draft"],
+    "pending": ["draft", "pending"],
+    "active": ["draft", "pending", "active"],
+    "archived": ["draft", "pending", "active", "archived"],
+}
+
+
+def seed_courses(db: Session, users: dict[str, User]) -> dict[str, Course]:
+    admin = users["admin@learnova.ac.id"]
+    categories = {}
+    for name in DATA["categories"]:
+        categories[name] = Category(name=name, slug=slugify(name))
+        db.add(categories[name])
+    courses = {}
+    base = datetime(2026, 8, 1, 2, 0, tzinfo=UTC)
+    for i, c in enumerate(DATA["courses"]):
+        status = c["status"].lower()
+        owner = users[owner_email(c)]
+        course = Course(
+            instructor=owner,
+            category=categories[c["category"]],
+            title=c["title"],
+            slug=slugify(c["title"]),
+            description=c["description"],
+            price=0,
+            status=status,
+            code=c["code"],
+            semester=c["semester"],
+            duration_weeks=c["duration"],
+            start_date=date.fromisoformat(c["startDate"]),
+            max_students=c["maxStudents"],
+            color=c["color"],
+            enrollment_open=c["enrollmentOpen"],
+            issues_certificate=c["certificate"],
+        )
+        db.add(course)
+        db.flush()
+        created = base + timedelta(days=i)
+        course.created_at = created
+        previous = None
+        for step, to_status in enumerate(STATUS_PATH[status]):
+            at = created + timedelta(days=step * 2)
+            actor = owner if to_status in ("draft", "pending") else admin
+            db.add(
+                CourseStatusLog(
+                    course_id=course.id,
+                    actor_id=actor.id,
+                    from_status=previous,
+                    to_status=to_status,
+                    created_at=at,
+                )
+            )
+            if to_status == "pending":
+                course.submitted_at = at
+            if to_status == "active" and not course.published_at:
+                course.published_at = at
+            previous = to_status
+        for position, m in enumerate(course_modules(c, DATA["courseTopics"].get(c["code"], [])), start=1):
+            db.add(Module(course_id=course.id, position=position, **m))
+        courses[c["code"]] = course
+    db.flush()
+    return courses
+
+
 def seed(db: Session) -> None:
-    seed_users(db)
+    users = seed_users(db)
+    seed_courses(db, users)
     db.commit()
 
 

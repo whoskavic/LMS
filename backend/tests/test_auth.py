@@ -30,16 +30,12 @@ def test_register_rejects_admin_role_and_duplicate_email(client, db):
         json={"name": "Eve Admin", "email": "x@test.dev", "password": "secret123", "role": "admin"},
     )
     assert res.status_code == 400 and "role" in res.json()["error"]["fields"]
-    res = client.post(
-        "/api/v1/auth/register", json={"name": "Eve", "email": "taken@test.dev", "password": "secret123"}
-    )
+    res = client.post("/api/v1/auth/register", json={"name": "Eve", "email": "taken@test.dev", "password": "secret123"})
     assert res.status_code == 409 and res.json()["error"]["fields"]["email"]
 
 
 def test_register_validates_password(client):
-    res = client.post(
-        "/api/v1/auth/register", json={"name": "Weak Pw", "email": "w@test.dev", "password": "short"}
-    )
+    res = client.post("/api/v1/auth/register", json={"name": "Weak Pw", "email": "w@test.dev", "password": "short"})
     assert res.status_code == 400
     assert res.json()["error"]["code"] == "VALIDATION"
 
@@ -51,9 +47,7 @@ def test_login_wrong_password_and_inactive(client, db):
     make_user(db, email="off@test.dev", active=False)
     res = client.post("/api/v1/auth/login", json={"email": "off@test.dev", "password": PASSWORD})
     assert res.status_code == 403 and res.json()["error"]["code"] == "ACCOUNT_INACTIVE"
-    assert (
-        client.post("/api/v1/auth/login", json={"email": user.email, "password": PASSWORD}).status_code == 200
-    )
+    assert client.post("/api/v1/auth/login", json={"email": user.email, "password": PASSWORD}).status_code == 200
 
 
 def test_me_requires_valid_token_and_active_user(client, db):
@@ -71,18 +65,11 @@ def test_me_requires_valid_token_and_active_user(client, db):
 def test_change_password(client, db):
     user = make_user(db)
     headers = auth(user)
-    res = client.post(
-        "/api/v1/auth/password", json={"current": "wrong", "next": "newpass123"}, headers=headers
-    )
+    res = client.post("/api/v1/auth/password", json={"current": "wrong", "next": "newpass123"}, headers=headers)
     assert res.status_code == 400 and "current" in res.json()["error"]["fields"]
-    res = client.post(
-        "/api/v1/auth/password", json={"current": PASSWORD, "next": "newpass123"}, headers=headers
-    )
+    res = client.post("/api/v1/auth/password", json={"current": PASSWORD, "next": "newpass123"}, headers=headers)
     assert res.status_code == 200
-    assert (
-        client.post("/api/v1/auth/login", json={"email": user.email, "password": "newpass123"}).status_code
-        == 200
-    )
+    assert client.post("/api/v1/auth/login", json={"email": user.email, "password": "newpass123"}).status_code == 200
 
 
 def test_update_profile_and_stats(client, db):

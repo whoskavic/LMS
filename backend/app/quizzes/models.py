@@ -115,7 +115,5 @@ class AttemptAnswer(UUIDPk, Base):
 
     attempt_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("quiz_attempts.id", ondelete="CASCADE"))
     question_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"))
-    selected_option_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("question_options.id", ondelete="SET NULL")
-    )
+    selected_option_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("question_options.id", ondelete="SET NULL"))
     is_correct: Mapped[bool] = mapped_column(Boolean, default=False)

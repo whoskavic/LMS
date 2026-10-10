@@ -56,9 +56,7 @@ def register_error_handlers(app: FastAPI) -> None:
         for err in exc.errors():
             loc = [str(p) for p in err.get("loc", ()) if p not in ("body", "query", "path")]
             fields.setdefault(".".join(loc) or "body", err.get("msg", "Invalid value."))
-        return JSONResponse(
-            status_code=400, content=_body("VALIDATION", "Please fix the highlighted fields.", fields)
-        )
+        return JSONResponse(status_code=400, content=_body("VALIDATION", "Please fix the highlighted fields.", fields))
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(_: Request, exc: StarletteHTTPException):

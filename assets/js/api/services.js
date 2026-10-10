@@ -43,7 +43,7 @@ Object.assign(Api, {
   },
 
   courses: {
-    list: (query) => Api.get("/courses", query), // { q, status, category, semester, lecturerId, open, sort, page, pageSize }
+    list: (query) => Api.get("/courses", query), // { q, status, category, semester, instructorId, open, sort, page, pageSize }
     get: (id) => Api.get(apiPath`/courses/${id}`),
     stats: (id) => Api.get(apiPath`/courses/${id}/stats`),
     create: (data) => Api.post("/courses", data),
@@ -51,6 +51,20 @@ Object.assign(Api, {
     remove: (id) => Api.del(apiPath`/courses/${id}`),
     /** action: "submit" | "approve" | "reject" | "archive" | "restore" */
     transition: (id, action, reason) => Api.post(apiPath`/courses/${id}/transitions`, { action, ...(reason ? { reason } : {}) }),
+    statusLogs: (id) => Api.get(apiPath`/courses/${id}/status-logs`),
+  },
+
+  // Katalog publik (tanpa login): hanya course Active
+  catalog: {
+    list: (query) => Api.get("/catalog/courses", query), // { q, category, sort, page, pageSize }
+    get: (idOrSlug) => Api.get(apiPath`/catalog/courses/${idOrSlug}`),
+  },
+
+  categories: {
+    list: () => Api.get("/categories"),
+    create: (name) => Api.post("/categories", { name }),
+    update: (id, name) => Api.patch(apiPath`/categories/${id}`, { name }),
+    remove: (id) => Api.del(apiPath`/categories/${id}`),
   },
 
   modules: {
@@ -96,7 +110,7 @@ Object.assign(Api, {
   meta: {
     categories: () => Api.get("/meta/categories"),
     departments: (role) => Api.get("/meta/departments", { role }),
-    lecturers: () => Api.get("/meta/lecturers"),
+    instructors: () => Api.get("/meta/instructors"),
     notifications: () => Api.get("/meta/notifications"),
     systemStatus: () => Api.get("/meta/system-status"),
     enrollmentChart: () => Api.get("/meta/enrollment-chart"),

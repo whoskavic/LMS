@@ -37,12 +37,8 @@ def register(db: Session, data: RegisterIn) -> User:
         }
     )
     if db.scalar(select(User.id).where(func.lower(User.email) == email)):
-        raise conflict(
-            "CONFLICT", "This email is already registered.", {"email": "This email is already registered."}
-        )
-    user = User(
-        name=name, email=email, role=data.role, password_hash=hash_password(data.password), is_active=True
-    )
+        raise conflict("CONFLICT", "This email is already registered.", {"email": "This email is already registered."})
+    user = User(name=name, email=email, role=data.role, password_hash=hash_password(data.password), is_active=True)
     db.add(user)
     db.commit()
     return user
