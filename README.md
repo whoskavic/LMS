@@ -74,10 +74,13 @@ LMS/
 │   ├── app/                ← FastAPI: main, config, db, common/, satu folder per domain
 │   ├── alembic/            ← migrasi database
 │   ├── tests/              ← pytest
-│   ├── Dockerfile
+│   ├── Dockerfile          ← image produksi (migrasi + seed opsional + uvicorn di $PORT)
+│   ├── Dockerfile.dev      ← image dev untuk docker compose (hot reload)
+│   ├── start.sh            ← entrypoint produksi
 │   ├── requirements*.txt
 │   └── .env.example
-├── docker-compose.yml      ← api + postgres
+├── docker-compose.yml      ← api + postgres (lokal)
+├── render.yaml             ← blueprint Render (API + Postgres + static site)
 ├── tests/                  ← node --test
 ├── docs/                   ← Dokumen perancangan, keputusan, rencana backend
 ├── prompt.md               ← Instruksi kerja otonom untuk integrasi backend
@@ -123,12 +126,16 @@ Backend membaca variabel berikut (lihat `backend/.env.example`):
 
 | Nama | Keterangan | Contoh |
 |---|---|---|
-| `APP_ENV` | Nama environment | `development` |
-| `DATABASE_URL` | URL SQLAlchemy ke PostgreSQL | `postgresql+psycopg://learnova:learnova@localhost:5432/learnova` |
+| `APP_ENV` | `development` atau `production` (production menolak `JWT_SECRET` default / < 32 karakter) | `production` |
+| `DATABASE_URL` | URL PostgreSQL. `postgres://…` / `postgresql://…` dari Railway/Render otomatis diubah ke driver psycopg | `postgresql+psycopg://learnova:learnova@localhost:5432/learnova` |
 | `TEST_DATABASE_URL` | Database khusus pytest (dibuat otomatis bila belum ada) | `postgresql+psycopg://learnova:learnova@localhost:5432/learnova_test` |
 | `JWT_SECRET` | Secret penandatangan JWT (wajib diganti di produksi) | `ganti-dengan-string-acak-panjang` |
 | `JWT_EXPIRES_MINUTES` | Masa berlaku token (menit) | `720` |
-| `CORS_ORIGINS` | Origin frontend yang diizinkan, dipisah koma (`*` = semua) | `http://localhost:5500,http://127.0.0.1:5500` |
+| `CORS_ORIGINS` | Origin frontend yang diizinkan, dipisah koma (`*` = semua) | `https://learnova-web.onrender.com` |
+| `PORT` | Port uvicorn di image produksi (diisi otomatis oleh Railway/Render) | `8000` |
+| `SEED_DEMO` | `true` → image produksi mengisi data demo saat start bila database kosong | `true` |
+
+Frontend tidak memakai environment variable: URL API produksi ditulis di `assets/js/config.js` (`PRODUCTION_API_URL`). Saat dibuka dari `localhost`, frontend otomatis memakai `http://localhost:8000/api/v1`.
 
 ## Akun demo
 
@@ -226,7 +233,45 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) menjalankan `node --test`, ruff,
 
 ## Deploy
 
-Saat ini cukup sebagai static site (mis. Vercel: import repo, preset **Other**, tanpa build command). Langkah deploy backend + database akan ditambahkan setelah backend tersedia.
+Arsitektur produksi: **backend** (image Docker `backend/Dockerfile`) + **PostgreSQL 16** + **frontend statis** (folder root repo, tanpa build). Image produksi menjalankan `alembic upgrade head` setiap start, lalu `python -m app.seed` bila `SEED_DEMO=true` (dilewati bila data sudah ada), lalu uvicorn di `$PORT`.
+
+### Opsi A — Render (blueprint)
+
+1. Push repo ke GitHub, buka Render → **New → Blueprint** → pilih repo. `render.yaml` membuat `learnova-db` (Postgres 16), `learnova-api` (Docker, `JWT_SECRET` dibuat otomatis, `SEED_DEMO=true`), dan `learnova-web` (static site).
+2. Setelah selesai, buka `learnova-api` → **Environment** → isi `CORS_ORIGINS` dengan URL static site, mis. `https://learnova-web.onrender.com`.
+3. Ubah `PRODUCTION_API_URL` di `assets/js/config.js` menjadi URL API + `/api/v1`, mis. `https://learnova-api.onrender.com/api/v1`, commit & push (static site ter-deploy ulang).
+4. Cek `https://learnova-api.onrender.com/api/v1/health` → `{"status":"ok","database":"ok"}`, lalu login dengan akun demo.
+
+### Opsi B — Railway
+
+1. **New Project → Deploy from GitHub repo**, set **Root Directory** = `backend` (Railway memakai `backend/Dockerfile`).
+2. Tambahkan **PostgreSQL** ke project, lalu di service API set variabel: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `APP_ENV=production`, `JWT_SECRET=<acak ≥ 32 karakter>`, `SEED_DEMO=true`, `CORS_ORIGINS=<URL frontend>`.
+3. **Settings → Networking → Generate Domain** untuk API. Health check: `/api/v1/health`.
+4. Frontend: deploy root repo sebagai static site (Vercel / Netlify / Render static / GitHub Pages) dan isi `PRODUCTION_API_URL` seperti langkah A.3.
+
+### Opsi C — VPS (Docker)
+
+```bash
+docker network create learnova
+docker run -d --name learnova-db --network learnova -e POSTGRES_USER=learnova \
+  -e POSTGRES_PASSWORD=<password> -e POSTGRES_DB=learnova -v learnova-pg:/var/lib/postgresql/data postgres:16-alpine
+docker build -t learnova-api ./backend
+docker run -d --name learnova-api --network learnova -p 8000:8000 -e APP_ENV=production \
+  -e DATABASE_URL=postgresql://learnova:<password>@learnova-db:5432/learnova \
+  -e JWT_SECRET=<acak ≥ 32 karakter> -e SEED_DEMO=true -e CORS_ORIGINS=https://lms.domainanda.id learnova-api
+```
+
+Pasang reverse proxy (Nginx/Caddy) dengan HTTPS untuk API dan sajikan folder repo sebagai static site.
+
+### Frontend statis (Vercel / Netlify)
+
+Import repo, framework preset **Other**, tanpa build command, output directory = root. Pastikan `PRODUCTION_API_URL` sudah menunjuk ke backend dan domain frontend ada di `CORS_ORIGINS`.
+
+### Setelah deploy
+
+- Akun demo (bila `SEED_DEMO=true`): lihat bagian **Akun demo**. Ganti password admin setelah demo.
+- Reset data demo di server: jalankan `python -m app.seed --reset` di shell service API.
+- Swagger produksi: `https://<api>/docs`.
 
 ## Roadmap dan Known Issues
 
@@ -239,6 +284,8 @@ Roadmap integrasi backend (satu PR per fase):
 5. ✅ Enrollment & progress
 6. ✅ Quiz dinilai di server
 7. ✅ Nilai akhir, IPK, sertifikat, laporan, dashboard
-8. Siap deploy
+8. ✅ Siap deploy
+
+Berikutnya (menuju platform kursus publik): upload thumbnail/video ke object storage, refresh token + rate limiting login, reset password via email, editor bobot soal, course berbayar (kolom `price` sudah ada, saat ini selalu 0), log audit umum.
 
 Known issues saat ini: upload thumbnail course belum disimpan (hanya preview); aktivitas & notifikasi diturunkan dari data (tidak ada tabel log umum); seed hanya berisi 6 akun demo. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
