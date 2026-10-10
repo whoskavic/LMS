@@ -160,7 +160,7 @@ const Charts = {
       primary: v("--color-primary"),
       success: v("--color-success"),
       warning: v("--color-warning"),
-      series: [v("--color-primary"), v("--color-success"), v("--color-warning"), "#ec4899", "#0ea5e9", "#8b5cf6"],
+      series: [v("--color-primary"), v("--color-success"), v("--color-warning"), v("--chart-4"), v("--chart-5"), v("--chart-6")],
     };
   },
 
