@@ -42,10 +42,10 @@ App.ready(() => {
           const s = Store.courseStats(c.id);
           return `
           <li>
-            <span class="row-list__order" style="background: ${c.color}; color: var(--color-on-pastel)">${Utils.escape(c.code.slice(0, 3))}</span>
+            <span class="row-list__order" style="background: ${c.color}; color: var(--color-on-pastel)">${Utils.escape((c.code || "–").slice(0, 3))}</span>
             <div class="row-list__main">
               <a class="row-list__title" href="course-detail.html?id=${c.id}">${Utils.escape(c.title)}</a>
-              <p class="row-list__meta">${Utils.escape(c.code)} · ${s.students} students · ${s.modules} modules · ${s.quizzes} quizzes</p>
+              <p class="row-list__meta">${Utils.escape(Utils.orDash(c.code))} ·${s.students} students · ${s.modules} modules · ${s.quizzes} quizzes</p>
             </div>
             ${Utils.statusBadge(c.status)}
           </li>`;

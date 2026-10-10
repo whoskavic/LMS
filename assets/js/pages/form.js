@@ -227,7 +227,7 @@ App.ready(() => {
       semester: value("semester"),
       duration: Number(value("duration")) || null,
       startDate: value("startDate"),
-      code: value("code") || "—",
+      code: value("code"), // boleh kosong untuk Draft — ditampilkan "–"
       maxStudents: Number(value("maxStudents")) || null,
       enrollmentOpen: el.enrollmentOpen.checked,
       certificate: el.certificate.checked,

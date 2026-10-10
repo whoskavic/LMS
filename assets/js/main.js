@@ -74,6 +74,11 @@ const Utils = {
     })[ch]);
   },
 
+  // Nilai kosong (null / undefined / "") ditampilkan sebagai "–", mis. field course Draft
+  orDash(value) {
+    return value === null || value === undefined || value === "" ? "–" : value;
+  },
+
   number(value) {
     return Number(value).toLocaleString("en-US");
   },

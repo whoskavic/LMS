@@ -88,10 +88,10 @@ App.ready(() => {
 
   const rowTemplate = (c) => `
     <tr>
-      <td>${Utils.escape(c.title)}<span class="table__code">${Utils.escape(c.code)} · ${Utils.escape(c.semester)}</span></td>
+      <td>${Utils.escape(c.title)}<span class="table__code">${Utils.escape(Utils.orDash(c.code))} · ${Utils.escape(Utils.orDash(c.semester))}</span></td>
       ${isAdmin ? `<td>${Utils.escape(c.lecturer)}</td>` : ""}
-      <td>${Utils.escape(c.category)}</td>
-      <td>${c.students} / ${c.maxStudents}</td>
+      <td>${Utils.escape(Utils.orDash(c.category))}</td>
+      <td>${c.students} / ${Utils.orDash(c.maxStudents)}</td>
       <td>
         <div class="table-progress">
           <div class="progress"><div class="progress__bar" style="width: ${c.avgProgress}%"></div></div>
@@ -175,7 +175,7 @@ App.ready(() => {
     const btn = e.target.closest("[data-action]");
     if (!btn || btn.disabled) return;
     const course = DB.get("courses", btn.dataset.id);
-    const label = `<strong>${Utils.escape(course.title)}</strong> (${Utils.escape(course.code)})`;
+    const label = `<strong>${Utils.escape(course.title)}</strong> (${Utils.escape(Utils.orDash(course.code))})`;
 
     if (btn.dataset.action === "delete") {
       const enrolled = Store.enrollmentsOf(course.id).length;
