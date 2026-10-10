@@ -1,73 +1,94 @@
-// Profil (semua role) — edit data diri, ganti password (validasi), pilihan tema, reset data demo
+// Profil (semua role) — edit data diri, ganti password, pilihan tema, reset data demo
+//
+// REFERENCE IMPLEMENTATION halaman yang sudah memakai Api (Sprint 1). Pola yang diikuti halaman lain:
+// 1. Semua kode di dalam App.ready((me) => …) — `me` adalah user dari Api.auth.me().
+// 2. Data dimuat dengan UI.load(container, loader, render) → otomatis loading / error + "Try again".
+// 3. Form: validasi ringan di klien (wajib isi), aturan lengkap diputuskan server (MockServer).
+//    Error server per field (ApiError.fields) ditampilkan dengan UI.applyFieldErrors, error lain → toast.
+// 4. Tombol submit dibungkus UI.busy agar tidak bisa diklik dua kali selama request berjalan.
+// 5. Tidak ada akses DB / Store / SEED / localStorage langsung dari halaman.
 
-App.ready(() => {
-  let me = Store.currentUser();
+App.ready((me) => {
   const infoForm = document.getElementById("info-form");
   const passwordForm = document.getElementById("password-form");
+  const details = document.getElementById("profile-details");
   const ID_LABEL = { student: "NIM", lecturer: "NIDN", admin: "Staff ID" };
 
-  function renderSummary() {
-    document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = me.name));
-    document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = Domain.userTitle(me)));
-    document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(me.name)));
-    document.getElementById("profile-email").textContent = me.email;
-    document.getElementById("profile-role").textContent = Domain.roleLabel(me.role);
-
-    const extra =
-      me.role === "student"
-        ? [["Courses", DB.where("enrollments", (e) => e.studentId === me.id).length], ["GPA", Store.gpa(me.id)?.toFixed(2) ?? "–"]]
-        : me.role === "lecturer"
-          ? [["Courses taught", Store.coursesOf(me.id).length]]
-          : [["Users managed", DB.all("users").length]];
-    document.getElementById("profile-details").innerHTML = [[ID_LABEL[me.role], me.idNumber], ["Department", me.department], ...extra]
-      .map(([label, value]) => `<dt>${label}</dt><dd>${Utils.escape(value)}</dd>`)
-      .join("");
+  /* ---------- Ringkasan profil ---------- */
+  // Nama, keterangan, dan avatar ikut diperbarui di sidebar & topbar
+  function renderIdentity(user) {
+    document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = user.name));
+    document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = Domain.userTitle(user)));
+    document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(user.name)));
+    document.getElementById("profile-email").textContent = user.email;
+    document.getElementById("profile-role").textContent = Domain.roleLabel(user.role);
   }
+
+  function renderDetails(stats) {
+    const extra =
+      stats.role === "student"
+        ? [["Courses", stats.courses], ["GPA", stats.gpa === null ? "–" : stats.gpa.toFixed(2)]]
+        : stats.role === "lecturer"
+          ? [["Courses taught", stats.coursesTaught]]
+          : [["Users managed", stats.usersManaged]];
+    const rows = [[ID_LABEL[me.role], me.idNumber], ["Department", me.department], ...extra];
+    details.innerHTML = `<dl class="detail-list">${rows
+      .map(([label, value]) => `<dt>${Utils.escape(label)}</dt><dd>${Utils.escape(value)}</dd>`)
+      .join("")}</dl>`;
+  }
+
+  const loadDetails = () => UI.load(details, () => Api.profile.stats(), renderDetails);
 
   /* ---------- Data diri ---------- */
   infoForm.elements.name.value = me.name;
   infoForm.elements.email.value = me.email;
   infoForm.elements.department.value = me.department;
 
-  infoForm.addEventListener("submit", (e) => {
+  infoForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = UI.formValues(infoForm);
     const rules = {
-      name: !v.name ? "Full name is required." : v.name.length < 3 ? "Name must be at least 3 characters." : !/^[A-Za-z.' -]+$/.test(v.name) ? "Use letters, spaces, dots, or apostrophes only." : "",
-      department: !v.department ? "Department is required." : v.department.length < 2 ? "Department is too short." : "",
+      name: v.name ? "" : "Full name is required.",
+      department: v.department ? "" : "Department is required.",
     };
     Object.entries(rules).forEach(([name, message]) => UI.fieldError(infoForm, name, message));
     const invalid = Object.keys(rules).find((name) => rules[name]);
     if (invalid) return infoForm.elements[invalid].focus();
 
-    me = DB.update("users", me.id, { name: v.name, department: v.department });
-    renderSummary();
-    UI.toast("Profile updated.");
+    try {
+      const user = await UI.busy(infoForm.querySelector('[type="submit"]'), Api.profile.update({ name: v.name, department: v.department }));
+      Object.assign(me, user);
+      renderIdentity(me);
+      loadDetails();
+      UI.toast("Profile updated.");
+    } catch (err) {
+      if (!UI.applyFieldErrors(infoForm, err)) UI.toast(err.message, "error");
+    }
   });
 
   /* ---------- Ganti password ---------- */
-  passwordForm.addEventListener("submit", (e) => {
+  passwordForm.elements.username.value = me.email;
+
+  passwordForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const v = { current: passwordForm.elements.current.value, next: passwordForm.elements.next.value, confirm: passwordForm.elements.confirm.value };
+    const { current, next, confirm } = passwordForm.elements;
     const rules = {
-      current: !v.current ? "Enter your current password." : v.current !== me.password ? "Current password is incorrect." : "",
-      next: !v.next
-        ? "Enter a new password."
-        : !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(v.next)
-          ? "Use at least 8 characters with letters and numbers."
-          : v.next === v.current
-            ? "The new password must be different from the current one."
-            : "",
-      confirm: !v.confirm ? "Confirm your new password." : v.confirm !== v.next ? "Passwords do not match." : "",
+      current: current.value ? "" : "Enter your current password.",
+      next: next.value ? "" : "Enter a new password.",
+      confirm: !confirm.value ? "Confirm your new password." : confirm.value !== next.value ? "Passwords do not match." : "",
     };
     Object.entries(rules).forEach(([name, message]) => UI.fieldError(passwordForm, name, message));
     const invalid = Object.keys(rules).find((name) => rules[name]);
     if (invalid) return passwordForm.elements[invalid].focus();
 
-    me = DB.update("users", me.id, { password: v.next });
-    Store.logActivity("Changed account password");
-    passwordForm.reset();
-    UI.toast("Password updated. Use it the next time you sign in.");
+    try {
+      await UI.busy(passwordForm.querySelector('[type="submit"]'), Api.auth.changePassword(current.value, next.value));
+      passwordForm.reset();
+      passwordForm.elements.username.value = me.email;
+      UI.toast("Password updated. Use it the next time you sign in.");
+    } catch (err) {
+      if (!UI.applyFieldErrors(passwordForm, err)) UI.toast(err.message, "error");
+    }
   });
 
   // Hapus pesan error saat pengguna mulai mengetik lagi
@@ -78,7 +99,7 @@ App.ready(() => {
     })
   );
 
-  /* ---------- Tema ---------- */
+  /* ---------- Tema (preferensi per perangkat, bukan data server) ---------- */
   const themeOptions = document.getElementById("theme-options");
   themeOptions.querySelector(`input[value="${Theme.get()}"]`).checked = true;
   themeOptions.addEventListener("change", (e) => {
@@ -93,14 +114,20 @@ App.ready(() => {
       body: "<p>All courses, users, progress, quiz attempts, and grades will return to the original mock data. You will be signed out.</p>",
       confirmText: "Reset data",
       variant: "danger",
-      onConfirm: () => {
-        Store.resetDemo();
+      onConfirm: async () => {
+        try {
+          await Api.dev.reset();
+        } catch (err) {
+          UI.toast(err.message, "error");
+          throw err; // modal tetap terbuka
+        }
         Api.session.clear();
-        Store.setFlash("Demo data has been reset.");
-        location.href = "../index.html";
+        UI.flash("Demo data has been reset.");
+        location.href = App.loginUrl;
       },
     });
   });
 
-  renderSummary();
+  renderIdentity(me);
+  loadDetails();
 });
