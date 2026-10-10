@@ -1,6 +1,6 @@
 // Detail Course · tab Modules — dosen menambah, mengedit, mengurutkan, dan menghapus modul materi
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const { course, canEdit } = CourseDetail;
   if (!course) return;
   const list = document.getElementById("module-rows");
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (move && !move.disabled) {
       const modules = Store.modulesOf(course.id);
-      const index = modules.findIndex((m) => m.id === Number(move.dataset.id));
+      const index = modules.findIndex((m) => m.id === move.dataset.id);
       const target = modules[index + Number(move.dataset.move)];
       [modules[index].order, target.order] = [target.order, modules[index].order];
       normalize();

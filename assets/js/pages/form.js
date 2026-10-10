@@ -1,7 +1,7 @@
 // Form Course (dosen) — buat / edit course milik sendiri, validasi input dengan JavaScript
 // Course baru dikirim ke admin untuk disetujui (status Pending).
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const form = document.getElementById("course-form");
   const el = form.elements;
   const me = Store.currentUser();
@@ -227,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
       semester: value("semester"),
       duration: Number(value("duration")) || null,
       startDate: value("startDate"),
-      code: value("code") || "—",
+      code: value("code"), // boleh kosong untuk Draft — ditampilkan "–"
       maxStudents: Number(value("maxStudents")) || null,
       enrollmentOpen: el.enrollmentOpen.checked,
       certificate: el.certificate.checked,

@@ -1,12 +1,10 @@
 // Halaman login — alur dua langkah (email → password), validasi form & autentikasi dengan akun hardcode (data.js)
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Sudah login → langsung ke dashboard sesuai role
-  const existing = Store.getSession();
-  if (existing) {
-    location.replace(`pages/${homeFor(existing.role)}`);
-    return;
-  }
+  // Sudah login (token masih berlaku) → langsung ke dashboard sesuai role
+  App.session
+    .then((user) => user && location.replace(`pages/${homeFor(user.role)}`))
+    .catch(() => {});
 
   const form = document.getElementById("login-form");
   const alertBox = document.getElementById("login-alert");
@@ -63,8 +61,14 @@ document.addEventListener("DOMContentLoaded", () => {
     showStep("email");
   });
 
-  form.addEventListener("submit", (e) => {
+  const showAlert = (message) => {
+    document.getElementById("login-alert-text").textContent = message;
+    alertBox.hidden = false;
+  };
+
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (submitBtn.disabled) return;
     alertBox.hidden = true;
 
     if (step === "email") {
@@ -80,17 +84,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const { session, error } = Store.login(emailInput.value, passwordInput.value);
-    if (!session) {
-      document.getElementById("login-alert-text").textContent = error;
-      alertBox.hidden = false;
-      passwordInput.value = "";
+    try {
+      const { user } = await UI.busy(submitBtn, Api.auth.login(emailInput.value.trim(), passwordInput.value));
+      UI.flash(`Welcome back, ${user.name}!`);
+      location.href = `pages/${homeFor(user.role)}`;
+    } catch (err) {
+      showAlert(err.message);
+      if (err.status === 401 || err.status === 403) passwordInput.value = "";
       passwordInput.focus();
-      return;
     }
-
-    Store.setFlash(`Welcome back, ${session.name}!`);
-    location.href = `pages/${homeFor(session.role)}`;
   });
 
   // Tampilkan / sembunyikan password
@@ -109,9 +111,14 @@ document.addEventListener("DOMContentLoaded", () => {
       body: "<p>All courses, users, progress, quiz attempts, and grades will return to the original mock data.</p>",
       confirmText: "Reset data",
       variant: "danger",
-      onConfirm: () => {
-        Store.resetDemo();
-        UI.toast("Demo data has been reset.");
+      onConfirm: async () => {
+        try {
+          await Api.dev.reset();
+          UI.toast("Demo data has been reset.");
+        } catch (err) {
+          UI.toast(err.message, "error");
+          throw err;
+        }
       },
     });
   });

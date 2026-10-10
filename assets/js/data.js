@@ -3,7 +3,7 @@
 // Naikkan `version` bila struktur data berubah agar database di browser di-seed ulang.
 
 const SEED = {
-  version: 3,
+  version: 4, // v4: ID string opaque + datetime ISO UTC (Sprint 1, DL-01)
 
   categories: ["Technology", "Science", "Design", "Humanities", "Mathematics"],
 
@@ -206,11 +206,12 @@ const SEED = {
     ],
   },
 
+  // time = ISO 8601 UTC (WIB − 7 jam); ditampilkan dalam waktu lokal oleh Domain.formatDateTime
   activities: [
-    { time: "2026-09-25T14:32", actor: "Admin User", action: "Approved course DES302 UI/UX Systems Design" },
-    { time: "2026-09-25T11:05", actor: "Alex Rivera", action: "Enrolled in CS101 Introduction to Computer Science" },
-    { time: "2026-09-24T16:48", actor: "Dr. Budi Santoso", action: "Uploaded module 5 to CS205 Web Programming" },
-    { time: "2026-09-24T09:20", actor: "Nadia Putri", action: "Completed the CS205 quiz with 100" },
-    { time: "2026-09-23T13:15", actor: "Admin User", action: "Archived course HIS101 World History I" },
+    { time: "2026-09-25T07:32:00.000Z", actor: "Admin User", action: "Approved course DES302 UI/UX Systems Design" },
+    { time: "2026-09-25T04:05:00.000Z", actor: "Alex Rivera", action: "Enrolled in CS101 Introduction to Computer Science" },
+    { time: "2026-09-24T09:48:00.000Z", actor: "Dr. Budi Santoso", action: "Uploaded module 5 to CS205 Web Programming" },
+    { time: "2026-09-24T02:20:00.000Z", actor: "Nadia Putri", action: "Completed the CS205 quiz with 100" },
+    { time: "2026-09-23T06:15:00.000Z", actor: "Admin User", action: "Archived course HIS101 World History I" },
   ],
 };

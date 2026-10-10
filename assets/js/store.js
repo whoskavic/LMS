@@ -21,11 +21,13 @@ const Storage = {
       return fallback;
     }
   },
+  // Mengembalikan false bila gagal (storage tidak tersedia / kuota penuh) — data hanya bertahan di halaman ini
   write(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      return true;
     } catch {
-      // Storage tidak tersedia (mode private) — data hanya bertahan di halaman ini
+      return false;
     }
   },
   remove(key) {
@@ -84,25 +86,41 @@ function seedAnswers(questions, correctCount) {
   return questions.map((q, i) => (i < correctCount ? q.answer : (q.answer + 1) % q.options.length));
 }
 
+// ID entity adalah string opaque. Data seed memakai ID berprefix yang deterministik (mis. "usr_1"),
+// record baru memakai UUID (lihat newId). Jangan pernah mengubah ID menjadi angka.
+const seedId = (prefix, n) => `${prefix}_${n}`;
+
+function newId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  // Cadangan untuk browser lama / konteks non-secure: UUID v4 dari getRandomValues
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 function buildDatabase() {
   const random = seededRandom(2026);
   const pick = (list) => list[Math.floor(random() * list.length)];
-  const withIds = (list) => list.map((item, i) => ({ id: i + 1, ...item }));
+  const withIds = (prefix, list) => list.map((item, i) => ({ id: seedId(prefix, i + 1), ...item }));
 
-  // --- Users ---
-  const users = SEED.users.map((u) => ({ ...u }));
+  // --- Users --- (ID numerik di SEED → string berprefix)
+  const users = SEED.users.map((u) => ({ ...u, id: seedId("usr", u.id) }));
   SEED.studentNames.forEach(([name, nim, department], i) => {
     const first = name.split(" ")[0].toLowerCase();
     const email = i === 0 ? "alex@learnova.ac.id" : `${first}.${nim}@learnova.ac.id`;
-    users.push({ id: users.length + 1, role: "student", name, email, password: "student123", idNumber: nim, department, status: "Active" });
+    users.push({ id: seedId("usr", users.length + 1), role: "student", name, email, password: "student123", idNumber: nim, department, status: "Active" });
   });
 
   // --- Courses, modules, quizzes ---
-  const courses = SEED.courses.map((c) => ({ ...c }));
+  const courses = SEED.courses.map((c) => ({ ...c, id: seedId("crs", c.id), lecturerId: seedId("usr", c.lecturerId) }));
   const modules = withIds(
+    "mod",
     courses.flatMap((c) => courseModules(c, SEED.courseTopics[c.code] || []).map((m, i) => ({ ...m, order: i + 1 })))
   );
   const quizzes = withIds(
+    "quz",
     courses
       .filter((c) => SEED.quizBank[c.code])
       .map((c) => ({
@@ -127,16 +145,16 @@ function buildDatabase() {
     const attempts = [];
     if (quiz && quizScore != null) {
       const correct = Math.round((quizScore / 100) * quiz.questions.length);
-      attempts.push({ quizId: quiz.id, score: quizScore, answers: seedAnswers(quiz.questions, correct), date: "2026-09-20T10:00" });
+      attempts.push({ quizId: quiz.id, score: quizScore, answers: seedAnswers(quiz.questions, correct), date: "2026-09-20T03:00:00.000Z" });
     }
     enrollments.push({
-      id: enrollments.length + 1,
+      id: seedId("enr", enrollments.length + 1),
       studentId,
       courseId: course.id,
       completedModules: done == null ? total : Math.min(done, total),
       attempts,
       finalScore: finalScore ?? null,
-      grade: finalScore != null ? Store.gradeFromScore(finalScore) : null,
+      grade: finalScore != null ? Domain.gradeFromScore(finalScore) : null,
     });
   };
 
@@ -167,7 +185,8 @@ function buildDatabase() {
     modules,
     quizzes,
     enrollments,
-    activities: withIds(SEED.activities),
+    activities: withIds("act", SEED.activities),
+    sessions: [], // sesi login MockServer: { id, token, userId, createdAt }
   };
 }
 
@@ -190,16 +209,22 @@ const DB = {
     return data;
   },
 
+  // false bila gagal menulis (mis. kuota penuh / mode private). MockServer memakai writeFailed → 500.
+  writeFailed: false,
+
   save() {
-    Storage.write(STORAGE_KEYS.db, this.load());
+    const ok = Storage.write(STORAGE_KEYS.db, this.load());
+    if (!ok) this.writeFailed = true;
+    return ok;
   },
 
   all(collection) {
     return this.load()[collection];
   },
 
+  // ID dibandingkan sebagai string (opaque) — tidak pernah diubah menjadi angka
   get(collection, id) {
-    return this.all(collection).find((item) => item.id === Number(id)) || null;
+    return this.all(collection).find((item) => item.id === String(id)) || null;
   },
 
   where(collection, predicate) {
@@ -208,7 +233,7 @@ const DB = {
 
   insert(collection, item) {
     const list = this.all(collection);
-    const record = { ...item, id: Math.max(0, ...list.map((x) => x.id)) + 1 };
+    const record = { ...item, id: newId() };
     list.push(record);
     this.save();
     return record;
@@ -224,7 +249,7 @@ const DB = {
 
   remove(collection, id) {
     const data = this.load();
-    data[collection] = data[collection].filter((item) => item.id !== Number(id));
+    data[collection] = data[collection].filter((item) => item.id !== String(id));
     this.save();
   },
 
@@ -236,54 +261,20 @@ const DB = {
 };
 
 /* =========================================================================
-   Store — logika domain (auth, course, progress, quiz, nilai)
+   Store — logika domain yang butuh data (auth, course, progress, quiz, nilai)
+   Perhitungan murni (skala nilai, IPK, progress, tanggal) ada di domain.js.
    ========================================================================= */
-const GRADE_SCALE = [
-  { min: 85, grade: "A", point: 4.0 },
-  { min: 80, grade: "A-", point: 3.7 },
-  { min: 75, grade: "B+", point: 3.3 },
-  { min: 70, grade: "B", point: 3.0 },
-  { min: 65, grade: "B-", point: 2.7 },
-  { min: 60, grade: "C+", point: 2.3 },
-  { min: 55, grade: "C", point: 2.0 },
-  { min: 45, grade: "D", point: 1.0 },
-  { min: 0, grade: "E", point: 0 },
-];
-
-const ROLE_LABELS = { admin: "Administrator", lecturer: "Lecturer", student: "Student" };
-
 const Store = {
-  /* ---------- Autentikasi ---------- */
-  login(email, password) {
-    const user = DB.all("users").find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-    if (!user || user.password !== password) return { error: "Email or password is incorrect." };
-    if (user.status !== "Active") return { error: "This account is inactive. Please contact the administrator." };
-    return { session: this.setSession(user) };
-  },
+  /* ---------- Sesi ----------
+     Login/logout lewat Api.auth (MockServer). Browser hanya menyimpan { token } di learnova.session;
+     identitas & role selalu dibaca dari data user, bukan dari localStorage. */
 
-  setSession(user) {
-    const session = { id: user.id, name: user.name, email: user.email, role: user.role, title: this.userTitle(user) };
-    Storage.write(STORAGE_KEYS.session, session);
-    return session;
-  },
-
-  getSession() {
-    return Storage.read(STORAGE_KEYS.session, null);
-  },
-
+  // User aktif pemilik token sesi saat ini (dipakai halaman yang belum dimigrasi ke Api)
   currentUser() {
-    const session = this.getSession();
-    return session ? DB.get("users", session.id) : null;
-  },
-
-  logout() {
-    Storage.remove(STORAGE_KEYS.session);
-  },
-
-  userTitle(user) {
-    if (user.role === "student") return `Student · NIM ${user.idNumber}`;
-    if (user.role === "lecturer") return `Lecturer · ${user.department}`;
-    return "System administrator";
+    const token = Storage.read(STORAGE_KEYS.session, null)?.token;
+    const session = token && DB.all("sessions").find((s) => s.token === token);
+    const user = session && DB.get("users", session.userId);
+    return user && user.status === "Active" ? user : null;
   },
 
   /* ---------- Pesan sekali tampil (setelah redirect) ---------- */
@@ -303,28 +294,27 @@ const Store = {
   },
 
   coursesOf(lecturerId) {
-    return DB.where("courses", (c) => c.lecturerId === Number(lecturerId));
+    return DB.where("courses", (c) => c.lecturerId === String(lecturerId));
   },
 
   modulesOf(courseId) {
-    return DB.where("modules", (m) => m.courseId === Number(courseId)).sort((a, b) => a.order - b.order);
+    return DB.where("modules", (m) => m.courseId === String(courseId)).sort((a, b) => a.order - b.order);
   },
 
   quizzesOf(courseId) {
-    return DB.where("quizzes", (q) => q.courseId === Number(courseId));
+    return DB.where("quizzes", (q) => q.courseId === String(courseId));
   },
 
   enrollmentsOf(courseId) {
-    return DB.where("enrollments", (e) => e.courseId === Number(courseId));
+    return DB.where("enrollments", (e) => e.courseId === String(courseId));
   },
 
   enrollment(studentId, courseId) {
-    return DB.all("enrollments").find((e) => e.studentId === Number(studentId) && e.courseId === Number(courseId)) || null;
+    return DB.all("enrollments").find((e) => e.studentId === String(studentId) && e.courseId === String(courseId)) || null;
   },
 
   progressOf(enrollment) {
-    const total = this.modulesOf(enrollment.courseId).length;
-    return total ? Math.round((Math.min(enrollment.completedModules, total) / total) * 100) : 0;
+    return Domain.progressPercent(enrollment.completedModules, this.modulesOf(enrollment.courseId).length);
   },
 
   // Ringkasan statistik satu course (dipakai dashboard, tabel, laporan)
@@ -333,8 +323,8 @@ const Store = {
     const quizScores = list.map((e) => this.averageQuiz(e)).filter((s) => s !== null);
     return {
       students: list.length,
-      avgProgress: Math.round(Utils.average(list.map((e) => this.progressOf(e)))),
-      avgQuiz: quizScores.length ? Math.round(Utils.average(quizScores)) : null,
+      avgProgress: Math.round(Domain.average(list.map((e) => this.progressOf(e)))),
+      avgQuiz: quizScores.length ? Math.round(Domain.average(quizScores)) : null,
       completed: list.filter((e) => this.progressOf(e) === 100).length,
       modules: this.modulesOf(courseId).length,
       quizzes: this.quizzesOf(courseId).length,
@@ -343,7 +333,7 @@ const Store = {
 
   // Course milik mahasiswa + progress & nilai (untuk dashboard mahasiswa)
   studentCourses(studentId) {
-    return DB.where("enrollments", (e) => e.studentId === Number(studentId))
+    return DB.where("enrollments", (e) => e.studentId === String(studentId))
       .map((enrollment) => {
         const course = DB.get("courses", enrollment.courseId);
         if (!course) return null;
@@ -407,7 +397,7 @@ const Store = {
     const finished = number >= this.modulesOf(enrollment.courseId).length;
     DB.update("enrollments", enrollment.id, {
       completedModules: number,
-      ...(finished && { completedAt: new Date().toISOString().slice(0, 10) }),
+      ...(finished && { completedAt: Domain.todayLocal() }),
     });
     return true;
   },
@@ -420,19 +410,17 @@ const Store = {
     const course = DB.get("courses", enrollment.courseId);
     if (!course?.certificate || !this.modulesOf(course.id).length || this.progressOf(enrollment) < 100) return null;
     // Data seed tidak punya tanggal selesai → pakai akhir course (paling lambat hari ini)
-    const today = new Date().toISOString().slice(0, 10);
-    const end = new Date(course.startDate);
-    end.setDate(end.getDate() + course.duration * 7);
-    const fallback = end.toISOString().slice(0, 10);
+    const today = Domain.todayLocal();
+    const fallback = Domain.addDays(course.startDate, course.duration * 7);
     return {
-      number: `LRN-${course.code}-${String(enrollment.id).padStart(5, "0")}`,
+      number: Domain.certificateNumber(course.code, enrollment.id),
       date: enrollment.completedAt || (fallback < today ? fallback : today),
     };
   },
 
   /* ---------- Quiz ---------- */
   attemptsOf(enrollment, quizId) {
-    return enrollment.attempts.filter((a) => a.quizId === Number(quizId));
+    return enrollment.attempts.filter((a) => a.quizId === String(quizId));
   },
 
   bestScore(enrollment, quizId) {
@@ -445,7 +433,7 @@ const Store = {
     const scores = this.quizzesOf(enrollment.courseId)
       .map((q) => this.bestScore(enrollment, q.id))
       .filter((s) => s !== null);
-    return scores.length ? Math.round(Utils.average(scores)) : null;
+    return scores.length ? Math.round(Domain.average(scores)) : null;
   },
 
   submitAttempt(enrollmentId, quizId, answers) {
@@ -456,7 +444,7 @@ const Store = {
       quizId: quiz.id,
       score: Math.round((correct / quiz.questions.length) * 100),
       answers,
-      date: new Date().toISOString().slice(0, 16),
+      date: Domain.nowIso(),
     };
     enrollment.attempts.push(attempt);
     DB.save();
@@ -465,26 +453,20 @@ const Store = {
 
   /* ---------- Nilai ---------- */
   gradeFromScore(score) {
-    return GRADE_SCALE.find((g) => score >= g.min).grade;
-  },
-
-  gradePoint(grade) {
-    return GRADE_SCALE.find((g) => g.grade === grade)?.point ?? null;
+    return Domain.gradeFromScore(score);
   },
 
   gpa(studentId) {
-    const points = DB.where("enrollments", (e) => e.studentId === Number(studentId) && e.grade)
-      .map((e) => this.gradePoint(e.grade))
-      .filter((p) => p !== null);
-    return points.length ? Utils.average(points) : null;
+    return Domain.gpa(DB.where("enrollments", (e) => e.studentId === String(studentId)).map((e) => e.grade));
   },
 
   /* ---------- Aktivitas & demo ---------- */
   logActivity(action) {
-    const session = this.getSession();
+    const user = this.currentUser();
     DB.insert("activities", {
-      time: new Date().toISOString().slice(0, 16),
-      actor: session ? session.name : "System",
+      time: Domain.nowIso(),
+      actor: user ? user.name : "System",
+      actorId: user?.id ?? null,
       action,
     });
   },

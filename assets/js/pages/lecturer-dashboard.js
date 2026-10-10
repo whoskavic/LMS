@@ -1,6 +1,6 @@
 // Dashboard Dosen — ringkasan course yang diajar, grafik per course, percobaan quiz terbaru
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   const setText = (id, value) => (document.getElementById(id).textContent = value);
 
@@ -42,10 +42,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const s = Store.courseStats(c.id);
           return `
           <li>
-            <span class="row-list__order" style="background: ${c.color}; color: #1f2937">${Utils.escape(c.code.slice(0, 3))}</span>
+            <span class="row-list__order" style="background: ${c.color}; color: var(--color-on-pastel)">${Utils.escape((c.code || "–").slice(0, 3))}</span>
             <div class="row-list__main">
               <a class="row-list__title" href="course-detail.html?id=${c.id}">${Utils.escape(c.title)}</a>
-              <p class="row-list__meta">${Utils.escape(c.code)} · ${s.students} students · ${s.modules} modules · ${s.quizzes} quizzes</p>
+              <p class="row-list__meta">${Utils.escape(Utils.orDash(c.code))} ·${s.students} students · ${s.modules} modules · ${s.quizzes} quizzes</p>
             </div>
             ${Utils.statusBadge(c.status)}
           </li>`;
@@ -60,6 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
         ...a,
         student: DB.get("users", e.studentId)?.name || "Student",
         course: DB.get("courses", e.courseId).code,
+        // Lulus/tidak mengikuti nilai lulus quiz masing-masing (bukan angka tetap)
+        passed: a.score >= (DB.get("quizzes", a.quizId)?.passingScore ?? 70),
       }))
     )
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -71,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
           (a) => `
         <li class="list-row">
           <span>${Utils.escape(a.student)} · ${Utils.escape(a.course)}</span>
-          <span class="badge ${a.score >= 70 ? "badge--success" : "badge--danger"}">${a.score}</span>
+          <span class="badge ${a.passed ? "badge--success" : "badge--danger"}" title="${a.passed ? "Passed" : "Not passed"}">${a.score}</span>
         </li>`
         )
         .join("")

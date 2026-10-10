@@ -96,7 +96,7 @@
             <p class="profile-card__name" data-user-name>User</p>
             <p class="text-muted" id="profile-email"></p>
             <p class="mt-5"><span class="badge badge--primary" id="profile-role"></span></p>
-            <dl class="detail-list" id="profile-details"></dl>
+            <div id="profile-details"></div>
           </aside>
 
           <div class="stack">
@@ -127,6 +127,8 @@
             <section class="card" aria-labelledby="password-title">
               <h2 class="card__title card__header" id="password-title">Change password</h2>
               <form class="form-stack" id="password-form" novalidate>
+                <!-- Membantu password manager mengenali akun; tidak terlihat & tidak bisa difokus -->
+                <input type="email" name="username" autocomplete="username" hidden>
                 <div class="field" data-field="current">
                   <label class="field__label" for="current">Current password <span class="required">*</span></label>
                   <input class="field__input" id="current" name="current" type="password" autocomplete="current-password">
@@ -177,7 +179,12 @@
   </div>
 
   <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/domain.js"></script>
   <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/api/client.js"></script>
+  <script src="../assets/js/api/transport-local.js"></script>
+  <script src="../assets/js/api/transport-http.js"></script>
+  <script src="../assets/js/api/services.js"></script>
   <script src="../assets/js/main.js"></script>
   <script src="../assets/js/pages/profile.js"></script>
 </body>

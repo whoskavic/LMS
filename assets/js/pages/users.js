@@ -1,6 +1,6 @@
 // Manajemen User (admin) — tab per role, cari, filter, sortir, tambah/edit (modal + validasi), nonaktifkan, hapus
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const PAGE_SIZE = 8;
   const me = Store.currentUser();
   const table = document.getElementById("user-table");
@@ -170,7 +170,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = { name: v.name, email: v.email, idNumber: v.idNumber, department: v.department, status: v.status };
         if (user) {
           DB.update("users", user.id, data);
-          if (user.id === me.id) Store.setSession(DB.get("users", me.id));
           Store.logActivity(`Updated ${info.label} account ${v.name}`);
           UI.toast(`${v.name} updated.`);
         } else {

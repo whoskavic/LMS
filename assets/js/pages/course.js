@@ -1,6 +1,6 @@
 // Halaman belajar mahasiswa — daftar modul, konten materi (dari dosen), tandai selesai, navigasi, daftar quiz
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   const params = Utils.params();
   const course = DB.get("courses", params.get("id"));

@@ -74,12 +74,17 @@ const Utils = {
     })[ch]);
   },
 
+  // Nilai kosong (null / undefined / "") ditampilkan sebagai "–", mis. field course Draft
+  orDash(value) {
+    return value === null || value === undefined || value === "" ? "–" : value;
+  },
+
   number(value) {
     return Number(value).toLocaleString("en-US");
   },
 
   average(values) {
-    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+    return Domain.average(values);
   },
 
   unique(values) {
@@ -118,12 +123,9 @@ const Utils = {
       .toUpperCase();
   },
 
-  // "2026-09-25T14:32" → "25 Sep 2026, 14:32"
-  formatDate(iso, withTime = true) {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return iso;
-    const day = date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-    return withTime ? `${day}, ${date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : day;
+  // Kompatibilitas halaman lama — logika ada di Domain.formatDate / Domain.formatDateTime
+  formatDate(value, withTime = true) {
+    return withTime ? Domain.formatDateTime(value) : Domain.formatDate(value);
   },
 
   // Urutkan salinan array berdasarkan key (angka / teks), null selalu di akhir
@@ -160,7 +162,7 @@ const Charts = {
       primary: v("--color-primary"),
       success: v("--color-success"),
       warning: v("--color-warning"),
-      series: [v("--color-primary"), v("--color-success"), v("--color-warning"), "#ec4899", "#0ea5e9", "#8b5cf6"],
+      series: [v("--color-primary"), v("--color-success"), v("--color-warning"), v("--chart-4"), v("--chart-5"), v("--chart-6")],
     };
   },
 
@@ -230,11 +232,30 @@ const UI = {
     }, 3200);
   },
 
+  /* ---------- Pesan sekali tampil setelah pindah halaman (preferensi UI, bukan data) ---------- */
+  flash(message, type = "success") {
+    try {
+      localStorage.setItem("learnova.flash", JSON.stringify({ message, type }));
+    } catch {}
+  },
+
+  takeFlash() {
+    try {
+      const flash = JSON.parse(localStorage.getItem("learnova.flash"));
+      localStorage.removeItem("learnova.flash");
+      return flash;
+    } catch {
+      return null;
+    }
+  },
+
   /**
    * Tampilkan modal.
    * options: { title, body (HTML), confirmText, cancelText, variant: "primary"|"danger", size: "lg", onConfirm, onOpen }
    * - Tanpa onConfirm → modal informasi dengan satu tombol tutup.
    * - onConfirm(modalEl) mengembalikan false → modal tetap terbuka (mis. validasi form gagal).
+   * - onConfirm boleh async (mengembalikan Promise): tombol konfirmasi busy selama proses,
+   *   modal tertutup bila Promise resolve selain false; bila reject modal tetap terbuka.
    */
   modal({ title, body = "", confirmText = "Confirm", cancelText = "Cancel", variant = "primary", size = "", onConfirm, onOpen }) {
     const previousFocus = document.activeElement;
@@ -264,8 +285,18 @@ const UI = {
     modal.querySelectorAll("[data-modal-close]").forEach((el) => el.addEventListener("click", close));
     const confirmBtn = modal.querySelector("[data-modal-confirm]");
     if (confirmBtn) {
-      confirmBtn.addEventListener("click", () => {
-        if (onConfirm(modal) !== false) close();
+      confirmBtn.addEventListener("click", async () => {
+        const result = onConfirm(modal);
+        if (!result || typeof result.then !== "function") {
+          if (result !== false) close();
+          return;
+        }
+        // onConfirm async: tombol busy selama proses; resolve false / reject → modal tetap terbuka
+        try {
+          if ((await UI.busy(confirmBtn, result)) !== false) close();
+        } catch {
+          // pemanggil yang menampilkan pesan error (toast / error field)
+        }
       });
     }
 
@@ -283,6 +314,121 @@ const UI = {
     const firstField = modal.querySelector("input:not([type=hidden]), select, textarea");
     (firstField || confirmBtn || modal.querySelector("[data-modal-close].btn")).focus();
     return modal;
+  },
+
+  /* ---------- State view: loading / empty / error ----------
+     Dipakai pada container apa pun. Bila container adalah <tbody>, markup dibungkus <tr><td colspan>. */
+  _setState(el, html) {
+    if (el.tagName === "TBODY") {
+      const columns = el.closest("table")?.querySelectorAll("thead th").length || 1;
+      el.innerHTML = `<tr class="state-row"><td colspan="${columns}">${html}</td></tr>`;
+    } else {
+      el.innerHTML = html;
+    }
+    renderIcons(el);
+  },
+
+  /** Tampilkan indikator loading dan tandai container aria-busy. */
+  loading(el, { label = "Loading…" } = {}) {
+    el.setAttribute("aria-busy", "true");
+    UI._setState(
+      el,
+      `<div class="state state--loading" role="status"><span class="spinner" aria-hidden="true"></span><p class="state__text">${Utils.escape(label)}</p></div>`
+    );
+  },
+
+  /**
+   * Empty state. action: { label, href } untuk link, atau { label, onClick } untuk tombol.
+   * icon: nama ikon dari ICONS (default "layers").
+   */
+  empty(el, { title = "Nothing here yet", text = "", action, icon = "layers" } = {}) {
+    el.removeAttribute("aria-busy");
+    const button = !action
+      ? ""
+      : action.href
+        ? `<a class="btn btn--primary" href="${Utils.escape(action.href)}">${Utils.escape(action.label)}</a>`
+        : `<button class="btn btn--outline" type="button" data-state-action>${Utils.escape(action.label)}</button>`;
+    UI._setState(
+      el,
+      `<div class="state state--empty">
+        <span class="state__icon"><i data-icon="${Utils.escape(icon)}"></i></span>
+        <p class="state__title">${Utils.escape(title)}</p>
+        ${text ? `<p class="state__text">${Utils.escape(text)}</p>` : ""}
+        ${button}
+      </div>`
+    );
+    if (action?.onClick) el.querySelector("[data-state-action]").addEventListener("click", action.onClick);
+  },
+
+  /** Error state dari ApiError (atau Error biasa) dengan tombol Retry opsional. */
+  error(el, err, onRetry, { title = "Could not load this section" } = {}) {
+    el.removeAttribute("aria-busy");
+    const message = err?.message || "Something went wrong. Please try again.";
+    UI._setState(
+      el,
+      `<div class="state state--error" role="alert">
+        <span class="state__icon"><i data-icon="alert"></i></span>
+        <p class="state__title">${Utils.escape(title)}</p>
+        <p class="state__text">${Utils.escape(message)}</p>
+        ${onRetry ? '<button class="btn btn--outline" type="button" data-state-retry><i data-icon="refresh" class="icon--sm"></i>Try again</button>' : ""}
+      </div>`
+    );
+    if (onRetry) el.querySelector("[data-state-retry]").addEventListener("click", onRetry);
+  },
+
+  /**
+   * Muat data ke container: loading → render(data) | empty | error (dengan Retry).
+   * options.empty: argumen UI.empty, dipakai bila data kosong (array / { items: [] } / null).
+   * Mengembalikan data, atau undefined bila gagal.
+   */
+  async load(el, loader, render, options = {}) {
+    UI.loading(el, options);
+    try {
+      const data = await loader();
+      el.removeAttribute("aria-busy");
+      const items = Array.isArray(data) ? data : data?.items;
+      if (options.empty && (data == null || (Array.isArray(items) && !items.length))) UI.empty(el, options.empty);
+      else render(data);
+      return data;
+    } catch (err) {
+      UI.error(el, err, () => UI.load(el, loader, render, options));
+      return undefined;
+    }
+  },
+
+  /**
+   * Tombol busy selama task berjalan: disabled + spinner + aria-busy, dipulihkan setelah selesai
+   * (berhasil maupun gagal). task: Promise atau fungsi yang mengembalikan Promise. Hasil/error diteruskan.
+   */
+  async busy(button, task) {
+    if (!button) return typeof task === "function" ? task() : task;
+    const wasDisabled = button.disabled;
+    const spinner = document.createElement("span");
+    spinner.className = "spinner spinner--sm";
+    spinner.setAttribute("aria-hidden", "true");
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-busy");
+    button.prepend(spinner);
+    try {
+      return await (typeof task === "function" ? task() : task);
+    } finally {
+      spinner.remove();
+      button.classList.remove("is-busy");
+      button.removeAttribute("aria-busy");
+      button.disabled = wasDisabled;
+    }
+  },
+
+  /**
+   * Tampilkan error ApiError pada form: pesan per field (err.fields) ke .field[data-field],
+   * fokus ke field pertama yang salah. Mengembalikan true bila ada field yang ditandai.
+   */
+  applyFieldErrors(form, err) {
+    const names = Object.keys(err?.fields || {}).filter((name) => form.querySelector(`[data-field="${name}"]`));
+    names.forEach((name) => UI.fieldError(form, name, err.fields[name]));
+    if (names.length) form.elements[names[0]]?.focus();
+    return names.length > 0;
   },
 
   /**
@@ -388,31 +534,121 @@ const UI = {
 };
 
 /* =========================================================================
-   Auth guard — <body data-role="admin lecturer"> : hanya role tersebut yang boleh masuk
+   Sesi & guard — <body data-role="admin lecturer"> : hanya role tersebut yang boleh masuk
+   Identitas & role selalu berasal dari Api.auth.me() (data user di server),
+   browser hanya menyimpan token sesi.
    ========================================================================= */
-const allowedRoles = (document.body.dataset.role || "").split(" ").filter(Boolean);
-let session = Store.getSession();
+const App = {
+  user: null,
+  allowedRoles: (document.body.dataset.role || "").split(" ").filter(Boolean),
+  loginUrl: location.pathname.includes("/pages/") ? "../index.html" : "index.html",
+};
 
-// Sesi tidak berlaku lagi bila user dihapus / dinonaktifkan admin
-if (session) {
-  const user = DB.get("users", session.id);
-  if (!user || user.status !== "Active") {
-    Store.logout();
-    session = null;
+// Promise<user | null> — null bila belum login (halaman publik) atau sedang dialihkan
+App.session = (async () => {
+  const protectedPage = App.allowedRoles.length > 0;
+  if (!Api.session.token()) {
+    if (protectedPage) location.replace(App.loginUrl);
+    return null;
   }
-}
+  try {
+    const user = await Api.auth.me();
+    App.user = user;
+    if (protectedPage && !App.allowedRoles.includes(user.role)) {
+      location.replace(homeFor(user.role));
+      return null;
+    }
+    return user;
+  } catch (err) {
+    // 401: sesi habis / user dihapus / dinonaktifkan → kembali ke login dengan pesan.
+    // Halaman publik (login) tidak butuh sesi, jadi error apa pun diabaikan.
+    if (err.status === 401 || !protectedPage) {
+      if (protectedPage) {
+        UI.flash(err.message, "error");
+        location.replace(App.loginUrl);
+      }
+      return null;
+    }
+    throw err;
+  }
+})();
 
-if (allowedRoles.length) {
-  if (!session) {
-    location.replace("../index.html");
-  } else if (!allowedRoles.includes(session.role)) {
-    location.replace(homeFor(session.role));
-  }
+/*
+ * App.ready(fn) — satu-satunya titik masuk script halaman.
+ * fn(user) dipanggil setelah DOM siap DAN sesi terverifikasi untuk role halaman ini, sesuai urutan
+ * pendaftaran. Bila user tidak berhak / sedang dialihkan, fn tidak pernah dipanggil sehingga data
+ * role lain tidak pernah dirender. Halaman terlindungi tetap tersembunyi (CSS body:not(.is-ready))
+ * sampai semua fn awal selesai.
+ */
+const domReady = new Promise((resolve) =>
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", resolve, { once: true }) : resolve()
+);
+
+App.verified = (async () => {
+  await domReady;
+  const user = await App.session;
+  if (App.allowedRoles.length && !user) return new Promise(() => {}); // sedang dialihkan: jangan jalankan halaman
+  if (user) applyUserToLayout(user);
+  return user;
+})();
+
+App.ready = (fn) => {
+  App.verified.then(fn).catch((err) => {
+    if (err instanceof ApiError) return; // ditangani showBootError
+    console.error(err);
+  });
+};
+
+// Tampilkan halaman setelah semua script halaman menjalankan render awalnya
+App.verified.then(() => setTimeout(() => document.body.classList.add("is-ready"), 0)).catch(showBootError);
+
+// Sesi tidak bisa diverifikasi (server error / ?mock=…): tampilkan error dengan tombol coba lagi
+function showBootError(err) {
+  const box = document.createElement("div");
+  box.className = "boot-error";
+  box.innerHTML = '<section class="card"></section>';
+  document.body.append(box);
+  document.body.classList.add("boot-failed");
+  UI.error(box.firstElementChild, err, () => location.reload(), { title: "Could not load this page" });
 }
 
 /* =========================================================================
    Layout: sidebar, menu aktif, info user, notifikasi, logout, search
    ========================================================================= */
+
+// Bagian layout yang bergantung pada user yang login
+function applyUserToLayout(user) {
+  document.querySelectorAll(".nav [data-nav-role]").forEach((item) => {
+    if (!item.dataset.navRole.split(" ").includes(user.role)) item.remove();
+  });
+  // Elemen konten khusus role tertentu (tombol, kolom tabel, filter)
+  document.querySelectorAll("[data-show-role]").forEach((el) => {
+    if (!el.dataset.showRole.split(" ").includes(user.role)) el.remove();
+  });
+
+  document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = user.name));
+  document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = Domain.userTitle(user)));
+  document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(user.name)));
+
+  const globalSearch = document.getElementById("global-search");
+  const placeholders = { lecturer: "Search your courses...", student: "Search your courses..." };
+  if (globalSearch && placeholders[user.role]) globalSearch.placeholder = placeholders[user.role];
+
+  const notifList = document.querySelector("[data-notifications]");
+  if (notifList) {
+    Api.meta
+      .notifications()
+      .then((items) => {
+        notifList.innerHTML = items.length
+          ? items.map((n) => `<li class="notif"><p class="notif__text">${Utils.escape(n.text)}</p><p class="notif__time">${Utils.escape(n.time)}</p></li>`).join("")
+          : '<li class="notif"><p class="notif__time">No notifications.</p></li>';
+      })
+      .catch(() => {
+        notifList.innerHTML = '<li class="notif"><p class="notif__time">Notifications are unavailable right now.</p></li>';
+      });
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const body = document.body;
 
@@ -428,17 +664,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape") setSidebar(false);
   });
 
-  // --- Menu sesuai role & menu aktif ---
-  if (session) {
-    document.querySelectorAll(".nav [data-nav-role]").forEach((item) => {
-      if (!item.dataset.navRole.split(" ").includes(session.role)) item.remove();
-    });
-    // Elemen konten khusus role tertentu (tombol, kolom tabel, filter)
-    document.querySelectorAll("[data-show-role]").forEach((el) => {
-      if (!el.dataset.showRole.split(" ").includes(session.role)) el.remove();
-    });
-  }
-
   // Halaman di luar menu (mis. detail course) menandai menu induknya lewat data-nav-active
   const current = body.dataset.navActive || location.pathname.split("/").pop() || "index.html";
   const links = document.querySelectorAll(".nav__link");
@@ -450,17 +675,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     match.classList.add("is-active");
     match.setAttribute("aria-current", "page");
-  }
-
-  // --- Info user yang login ---
-  if (session) {
-    document.querySelectorAll("[data-user-name]").forEach((el) => (el.textContent = session.name));
-    document.querySelectorAll("[data-user-title]").forEach((el) => (el.textContent = session.title));
-    document.querySelectorAll("[data-avatar]").forEach((el) => (el.textContent = Utils.initials(session.name)));
-
-    const globalSearch = document.getElementById("global-search");
-    const placeholders = { lecturer: "Search your courses...", student: "Search your courses..." };
-    if (globalSearch && placeholders[session.role]) globalSearch.placeholder = placeholders[session.role];
   }
 
   // --- Tombol tema terang / gelap ---
@@ -490,13 +704,6 @@ document.addEventListener("DOMContentLoaded", () => {
   new MutationObserver(labelTables).observe(document.body, { childList: true, subtree: true });
 
   // --- Dropdown notifikasi ---
-  const notifList = document.querySelector("[data-notifications]");
-  if (notifList && session) {
-    notifList.innerHTML = (SEED.notifications[session.role] || [])
-      .map((n) => `<li class="notif"><p class="notif__text">${Utils.escape(n.text)}</p><p class="notif__time">${Utils.escape(n.time)}</p></li>`)
-      .join("");
-  }
-
   document.querySelectorAll("[data-dropdown-toggle]").forEach((toggle) => {
     const menu = toggle.nextElementSibling;
     const setOpen = (open) => {
@@ -524,9 +731,9 @@ document.addEventListener("DOMContentLoaded", () => {
         body: "<p>You will need to sign in again to access the panel.</p>",
         confirmText: "Sign out",
         variant: "danger",
-        onConfirm: () => {
-          Store.logout();
-          location.href = "../index.html";
+        onConfirm: async () => {
+          await Api.auth.logout();
+          location.href = App.loginUrl;
         },
       });
     });
@@ -539,14 +746,16 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       if (body.dataset.search === "local") return;
       const q = searchForm.querySelector("input").value.trim();
-      const target = session?.role === "student" ? "student-dashboard.html" : "data-master.html";
+      const target = App.user?.role === "student" ? "student-dashboard.html" : "data-master.html";
       location.href = `${target}${q ? `?q=${encodeURIComponent(q)}` : ""}`;
     });
   }
 
   renderIcons();
+});
 
-  // --- Pesan dari halaman sebelumnya (mis. setelah simpan form) ---
-  const flash = Store.takeFlash();
+// --- Pesan dari halaman sebelumnya (mis. setelah simpan form) — tidak dipakai bila halaman dialihkan ---
+App.ready(() => {
+  const flash = UI.takeFlash();
   if (flash) UI.toast(flash.message, flash.type);
 });

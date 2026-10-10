@@ -1,6 +1,6 @@
 // Detail Course · tab Students & Grades — progress & skor quiz mahasiswa, dosen mengisi nilai akhir
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const { course, canEdit } = CourseDetail;
   if (!course) return;
 
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       },
       onConfirm: (modal) => {
-        const ids = [...modal.querySelectorAll("#enroll-list input:checked")].map((el) => Number(el.value));
+        const ids = [...modal.querySelectorAll("#enroll-list input:checked")].map((el) => el.value);
         if (!ids.length) {
           UI.toast("Select at least one student.", "error");
           return false;
@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
   tbody.addEventListener("input", (e) => {
     const input = e.target.closest("[data-score]");
     if (!input) return;
-    const id = Number(input.dataset.score);
+    const id = input.dataset.score;
     const original = Store.enrollmentsOf(course.id).find((x) => x.id === id).finalScore ?? "";
     const value = input.value.trim();
     if (value === String(original)) drafts.delete(id);

@@ -17,6 +17,8 @@
   - data-role pada <body>      : role yang boleh membuka halaman (admin / lecturer / student, pisahkan dengan spasi)
   - data-nav-role pada <li>    : menu hanya tampil untuk role tersebut
   - data-nav-active pada <body>: menu yang disorot untuk halaman yang tidak ada di menu
+  - Script halaman ditulis di dalam App.ready((user) => { ... }) — dijalankan setelah sesi terverifikasi.
+    Halaman ber-data-role tetap tersembunyi sampai saat itu. Ambil data lewat Api.* (lihat pages/profile.js).
 -->
 <body data-role="admin lecturer student">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -152,7 +154,12 @@
   </div>
 
   <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/domain.js"></script>
   <script src="../assets/js/store.js"></script>
+  <script src="../assets/js/api/client.js"></script>
+  <script src="../assets/js/api/transport-local.js"></script>
+  <script src="../assets/js/api/transport-http.js"></script>
+  <script src="../assets/js/api/services.js"></script>
   <script src="../assets/js/main.js"></script>
 </body>
 </html>

@@ -20,7 +20,7 @@ const CourseDetail = {
   },
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+App.ready(() => {
   const me = Store.currentUser();
   const course = DB.get("courses", Utils.params().get("id"));
   const allowed = course && (me.role === "admin" || course.lecturerId === me.id);
@@ -41,11 +41,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ---------- Header ---------- */
   function renderHeader() {
-    document.title = `${course.code} · ${course.title} | Learnova LMS`;
-    setText("crumb-course", course.code);
+    const dash = Utils.orDash;
+    document.title = `${course.code ? `${course.code} · ` : ""}${course.title} | Learnova LMS`;
+    setText("crumb-course", course.code || course.title);
     setText("course-title", course.title);
     document.getElementById("course-status").innerHTML = Utils.statusBadge(course.status);
-    setText("course-meta", `${course.code} · ${Store.lecturerName(course.lecturerId)} · ${course.category} · ${course.semester}`);
+    setText("course-meta", `${dash(course.code)} · ${Store.lecturerName(course.lecturerId)} · ${dash(course.category)} · ${dash(course.semester)}`);
 
     const buttons = [];
     if (me.role === "admin") {
@@ -83,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     UI.modal({
       title: cfg.title,
-      body: `<p><strong>${Utils.escape(course.title)}</strong> (${Utils.escape(course.code)}) ${cfg.text}</p>`,
+      body: `<p><strong>${Utils.escape(course.title)}</strong> (${Utils.escape(Utils.orDash(course.code))}) ${cfg.text}</p>`,
       confirmText: cfg.button,
       variant: cfg.danger ? "danger" : "primary",
       onConfirm: () => {
@@ -122,21 +123,24 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ---------- Overview ---------- */
   const stats = Store.courseStats(course.id);
   setText("ov-students", stats.students);
-  setText("ov-capacity", `of ${course.maxStudents} seats · enrollment ${course.enrollmentOpen ? "open" : "closed"}`);
+  setText(
+    "ov-capacity",
+    `${course.maxStudents ? `of ${course.maxStudents} seats` : "capacity not set"} · enrollment ${course.enrollmentOpen ? "open" : "closed"}`
+  );
   setText("ov-progress", `${stats.avgProgress}%`);
   document.getElementById("ov-progress-bar").style.width = `${stats.avgProgress}%`;
   setText("ov-quiz", stats.avgQuiz ?? "–");
   setText("ov-completed", stats.completed);
-  setText("ov-description", course.description);
+  setText("ov-description", course.description || "No description yet.");
 
   const details = [
-    ["Course code", course.code],
+    ["Course code", Utils.orDash(course.code)],
     ["Lecturer", Store.lecturerName(course.lecturerId)],
-    ["Category", course.category],
-    ["Semester", course.semester],
-    ["Start date", Utils.formatDate(course.startDate, false)],
-    ["Duration", `${course.duration} weeks`],
-    ["Capacity", `${course.maxStudents} students`],
+    ["Category", Utils.orDash(course.category)],
+    ["Semester", Utils.orDash(course.semester)],
+    ["Start date", Utils.orDash(Utils.formatDate(course.startDate, false))],
+    ["Duration", course.duration ? `${course.duration} weeks` : "–"],
+    ["Capacity", course.maxStudents ? `${course.maxStudents} students` : "–"],
     ["Certificate", course.certificate ? "Issued on completion" : "Not issued"],
   ];
   document.getElementById("ov-details").innerHTML = details
