@@ -30,9 +30,7 @@ def _ensure_database(url: str) -> None:
     target = make_url(url)
     admin = create_engine(target.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
-        exists = conn.execute(
-            text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": target.database}
-        ).scalar()
+        exists = conn.execute(text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": target.database}).scalar()
         if not exists:
             conn.execute(text(f'CREATE DATABASE "{target.database}"'))
     admin.dispose()

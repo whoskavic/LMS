@@ -41,9 +41,7 @@ def course_counts(db: Session, users: list[User]) -> dict[uuid.UUID, int]:
     )
     enrolled = dict(
         db.execute(
-            select(Enrollment.user_id, func.count())
-            .where(Enrollment.user_id.in_(ids))
-            .group_by(Enrollment.user_id)
+            select(Enrollment.user_id, func.count()).where(Enrollment.user_id.in_(ids)).group_by(Enrollment.user_id)
         ).all()
     )
     return {u.id: (teaching.get(u.id, 0) if u.role == "instructor" else enrolled.get(u.id, 0)) for u in users}
@@ -78,16 +76,12 @@ def list_users(
         stmt = stmt.where(User.is_active == (status == "Active"))
     if q and q.strip():
         needle = f"%{q.strip()}%"
-        stmt = stmt.where(
-            or_(User.name.ilike(needle), User.email.ilike(needle), User.id_number.ilike(needle))
-        )
+        stmt = stmt.where(or_(User.name.ilike(needle), User.email.ilike(needle), User.id_number.ilike(needle)))
     users = list(db.scalars(stmt))
     return paginate(user_rows(db, users), page, page_size, sort, "name")
 
 
-def assert_unique(
-    db: Session, email: str, id_number: str | None, role: str, except_id: uuid.UUID | None = None
-):
+def assert_unique(db: Session, email: str, id_number: str | None, role: str, except_id: uuid.UUID | None = None):
     fields: dict[str, str] = {}
     base = select(User.id).where(User.id != except_id) if except_id else select(User.id)
     if db.scalar(base.where(func.lower(User.email) == email.lower())):
@@ -173,8 +167,7 @@ def delete_user(db: Session, actor: User, user_id: str) -> None:
         s = "s" if enrolled > 1 else ""
         raise conflict(
             "USER_HAS_ENROLLMENTS",
-            f"{target.name} has {enrolled} course enrollment{s}. "
-            "Deactivate the account instead to keep their history.",
+            f"{target.name} has {enrolled} course enrollment{s}. Deactivate the account instead to keep their history.",
         )
     db.delete(target)
     db.commit()
@@ -183,9 +176,7 @@ def delete_user(db: Session, actor: User, user_id: str) -> None:
 def update_profile(db: Session, user: User, data: ProfileUpdate) -> User:
     name = clean(data.name if data.name is not None else user.name)
     department = clean(data.department if data.department is not None else user.department)
-    assert_valid(
-        {"name": rules.name_error(name), "department": rules.department_error(department, required=False)}
-    )
+    assert_valid({"name": rules.name_error(name), "department": rules.department_error(department, required=False)})
     user.name, user.department = name, department or None
     db.commit()
     return user

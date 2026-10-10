@@ -34,9 +34,7 @@ def test_migration_creates_full_schema():
     } <= tables
     with engine.connect() as conn:
         assert conn.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'")).scalar() == 1
-        indexes = {
-            r[0] for r in conn.execute(text("SELECT indexname FROM pg_indexes WHERE schemaname='public'"))
-        }
+        indexes = {r[0] for r in conn.execute(text("SELECT indexname FROM pg_indexes WHERE schemaname='public'"))}
     assert {
         "ix_courses_title_trgm",
         "uq_quiz_attempts_one_in_progress",

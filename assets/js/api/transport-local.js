@@ -873,7 +873,7 @@ const MockServer = (() => {
     [...new Set(DB.all("users").filter((u) => !query.role || u.role === query.role).map((u) => u.department))].sort()
   );
 
-  route("GET", "/meta/lecturers", { roles: ["admin"] }, () =>
+  route("GET", "/meta/instructors", { roles: ["admin"] }, () =>
     DB.where("users", (u) => u.role === "instructor").map((u) => pick(u, ["id", "name", "department", "status"])).sort((a, b) => a.name.localeCompare(b.name))
   );
 

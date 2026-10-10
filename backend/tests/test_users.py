@@ -63,9 +63,7 @@ def test_delete_user_with_courses_or_enrollments_conflicts(client, db):
     admin = make_user(db, role="admin")
     instructor = make_user(db, role="instructor")
     student = make_user(db)
-    course = Course(
-        instructor_id=instructor.id, title="Web Programming", slug="web-programming", status="active"
-    )
+    course = Course(instructor_id=instructor.id, title="Web Programming", slug="web-programming", status="active")
     db.add(course)
     db.flush()
     db.add(Enrollment(user_id=student.id, course_id=course.id))
@@ -81,9 +79,7 @@ def test_delete_user_with_courses_or_enrollments_conflicts(client, db):
 def test_departments_meta(client, db):
     admin = make_user(db, role="admin", department="Ops")
     make_user(db, department="Design")
-    assert client.get("/api/v1/meta/departments", params={"role": "student"}, headers=auth(admin)).json() == [
-        "Design"
-    ]
+    assert client.get("/api/v1/meta/departments", params={"role": "student"}, headers=auth(admin)).json() == ["Design"]
     student = make_user(db)
     assert client.get("/api/v1/meta/departments", headers=auth(student)).status_code == 403
 
@@ -94,6 +90,12 @@ def test_seed_creates_demo_accounts(client, db):
     seed(db)
     res = client.post("/api/v1/auth/login", json={"email": "admin@learnova.ac.id", "password": "admin123"})
     assert res.status_code == 200 and res.json()["user"]["role"] == "admin"
+    catalog = client.get("/api/v1/catalog/courses", params={"pageSize": 50}).json()
+    assert catalog["total"] == 9  # course Active dari mock data
+    admin = client.get(
+        "/api/v1/courses", params={"status": "Pending"}, headers={"Authorization": f"Bearer {res.json()['token']}"}
+    )
+    assert [c["code"] for c in admin.json()["items"]] == ["MOB301"]
 
 
 def test_notifications_for_admin_list_pending_courses(client, db):

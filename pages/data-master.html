@@ -100,7 +100,7 @@
               <div class="search">
                 <i data-icon="search" class="icon--sm"></i>
                 <label class="visually-hidden" for="course-search">Search courses</label>
-                <input class="search__input" id="course-search" type="search" placeholder="Search by course name, code, or lecturer..." autocomplete="off">
+                <input class="search__input" id="course-search" type="search" placeholder="Search by course name, code, or instructor..." autocomplete="off">
               </div>
               <label class="visually-hidden" for="filter-category">Category</label>
               <select class="field__input" id="filter-category"><option value="">Category: All</option></select>
@@ -113,8 +113,8 @@
                 <option value="Rejected">Rejected</option>
                 <option value="Archived">Archived</option>
               </select>
-              <label class="visually-hidden" for="filter-lecturer" data-show-role="admin">Lecturer</label>
-              <select class="field__input" id="filter-lecturer" data-show-role="admin"><option value="">Lecturer: All</option></select>
+              <label class="visually-hidden" for="filter-instructor" data-show-role="admin">Instructor</label>
+              <select class="field__input" id="filter-instructor" data-show-role="admin"><option value="">Instructor: All</option></select>
             </div>
           </section>
 
@@ -125,7 +125,7 @@
                 <thead>
                   <tr>
                     <th scope="col" data-sort="title">Course name</th>
-                    <th scope="col" data-sort="lecturer" data-show-role="admin">Lecturer</th>
+                    <th scope="col" data-sort="instructorName" data-show-role="admin">Instructor</th>
                     <th scope="col" data-sort="category">Category</th>
                     <th scope="col" data-sort="students">Students</th>
                     <th scope="col" data-sort="avgProgress">Avg progress</th>
@@ -148,7 +148,7 @@
       <!-- Footer -->
       <footer class="footer">
         <p>&copy; 2026 Learnova LMS</p>
-        <p>Pemrograman Web 2 &middot; Mock data</p>
+        <p>Pemrograman Web 2 &middot; FastAPI + PostgreSQL</p>
       </footer>
     </div>
   </div>

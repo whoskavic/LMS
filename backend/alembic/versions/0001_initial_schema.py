@@ -113,9 +113,7 @@ def upgrade() -> None:
         postgresql_using="gin",
         postgresql_ops={"title": "gin_trgm_ops"},
     )
-    op.create_index(
-        "uq_courses_code", "courses", ["code"], unique=True, postgresql_where=sa.text("code IS NOT NULL")
-    )
+    op.create_index("uq_courses_code", "courses", ["code"], unique=True, postgresql_where=sa.text("code IS NOT NULL"))
     op.create_table(
         "course_status_logs",
         sa.Column("course_id", sa.Uuid(), nullable=False),
@@ -147,21 +145,15 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("course_id", sa.Uuid(), nullable=False),
         sa.Column("status", sa.String(length=20), server_default=sa.text("'active'"), nullable=False),
-        sa.Column(
-            "progress_pct", sa.Numeric(precision=5, scale=2), server_default=sa.text("0"), nullable=False
-        ),
+        sa.Column("progress_pct", sa.Numeric(precision=5, scale=2), server_default=sa.text("0"), nullable=False),
         sa.Column("final_score", sa.Numeric(precision=5, scale=2), nullable=True),
         sa.Column("grade_letter", sa.String(length=2), nullable=True),
         sa.Column("enrolled_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.CheckConstraint("status IN ('active', 'completed')", name=op.f("ck_enrollments_status")),
-        sa.CheckConstraint(
-            "final_score >= 0 AND final_score <= 100", name=op.f("ck_enrollments_final_score_range")
-        ),
-        sa.CheckConstraint(
-            "progress_pct >= 0 AND progress_pct <= 100", name=op.f("ck_enrollments_progress_pct_range")
-        ),
+        sa.CheckConstraint("final_score >= 0 AND final_score <= 100", name=op.f("ck_enrollments_final_score_range")),
+        sa.CheckConstraint("progress_pct >= 0 AND progress_pct <= 100", name=op.f("ck_enrollments_progress_pct_range")),
         sa.ForeignKeyConstraint(
             ["course_id"], ["courses.id"], name=op.f("fk_enrollments_course_id_courses"), ondelete="RESTRICT"
         ),
@@ -216,9 +208,7 @@ def upgrade() -> None:
         "module_progress",
         sa.Column("enrollment_id", sa.Uuid(), nullable=False),
         sa.Column("module_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "completed_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
-        ),
+        sa.Column("completed_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.ForeignKeyConstraint(
             ["enrollment_id"],
@@ -233,9 +223,7 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_module_progress")),
-        sa.UniqueConstraint(
-            "enrollment_id", "module_id", name=op.f("uq_module_progress_enrollment_id_module_id")
-        ),
+        sa.UniqueConstraint("enrollment_id", "module_id", name=op.f("uq_module_progress_enrollment_id_module_id")),
     )
     op.create_table(
         "quizzes",
@@ -251,9 +239,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.CheckConstraint("duration_minutes > 0", name=op.f("ck_quizzes_duration_positive")),
         sa.CheckConstraint("max_attempts >= 1", name=op.f("ck_quizzes_max_attempts_min")),
-        sa.CheckConstraint(
-            "passing_score >= 0 AND passing_score <= 100", name=op.f("ck_quizzes_passing_score_range")
-        ),
+        sa.CheckConstraint("passing_score >= 0 AND passing_score <= 100", name=op.f("ck_quizzes_passing_score_range")),
         sa.ForeignKeyConstraint(
             ["course_id"], ["courses.id"], name=op.f("fk_quizzes_course_id_courses"), ondelete="CASCADE"
         ),
@@ -288,9 +274,7 @@ def upgrade() -> None:
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("score", sa.Numeric(precision=5, scale=2), nullable=True),
         sa.Column("id", sa.Uuid(), nullable=False),
-        sa.CheckConstraint(
-            "status IN ('in_progress', 'submitted', 'expired')", name=op.f("ck_quiz_attempts_status")
-        ),
+        sa.CheckConstraint("status IN ('in_progress', 'submitted', 'expired')", name=op.f("ck_quiz_attempts_status")),
         sa.ForeignKeyConstraint(
             ["enrollment_id"],
             ["enrollments.id"],
@@ -369,9 +353,7 @@ def upgrade() -> None:
             ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_attempt_answers")),
-        sa.UniqueConstraint(
-            "attempt_id", "question_id", name=op.f("uq_attempt_answers_attempt_id_question_id")
-        ),
+        sa.UniqueConstraint("attempt_id", "question_id", name=op.f("uq_attempt_answers_attempt_id_question_id")),
     )
 
 

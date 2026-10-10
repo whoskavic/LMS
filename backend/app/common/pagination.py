@@ -4,9 +4,7 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 
-def clamp_page(
-    total: int, page: int | None, page_size: int | None, default_size: int = 50
-) -> tuple[int, int]:
+def clamp_page(total: int, page: int | None, page_size: int | None, default_size: int = 50) -> tuple[int, int]:
     size = min(max(page_size or default_size, 1), 200)
     pages = max(1, -(-total // size))
     return min(max(page or 1, 1), pages), size

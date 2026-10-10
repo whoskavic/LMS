@@ -1,31 +1,29 @@
-// Form Course (dosen) — buat / edit course milik sendiri, validasi input dengan JavaScript
-// Course baru dikirim ke admin untuk disetujui (status Pending).
+// Form Course (instructor) — buat / edit course milik sendiri. Validasi cepat di klien, aturan lengkap di server.
+// "Save draft" menyimpan tanpa mengajukan; "Submit for approval" menyimpan lalu mengirim transisi submit (Pending).
 
-App.ready(() => {
+App.ready(async (me) => {
   const form = document.getElementById("course-form");
   const el = form.elements;
-  const me = Store.currentUser();
   const editId = Utils.params().get("id");
-  const found = editId ? DB.get("courses", editId) : null;
-  const editing = found && found.lecturerId === me.id ? found : null;
+  const submitButtons = document.querySelectorAll('button[type="submit"][form="course-form"]');
 
-  if (editId && !editing) {
-    Store.setFlash("Course not found or you are not its lecturer.", "error");
+  // --- Muat data (kategori + course yang diedit) ---
+  submitButtons.forEach((btn) => (btn.disabled = true));
+  let editing = null;
+  try {
+    const [categories, course] = await Promise.all([Api.meta.categories(), editId ? Api.courses.get(editId) : null]);
+    el.category.insertAdjacentHTML(
+      "beforeend",
+      categories.map((v) => `<option value="${Utils.escape(v)}">${Utils.escape(v)}</option>`).join("")
+    );
+    if (course && course.instructorId !== me.id) throw new ApiError(403, "FORBIDDEN", "You are not the instructor of this course.");
+    editing = course;
+  } catch (err) {
+    UI.flash(err.status === 404 || err.status === 403 ? "Course not found or you are not its instructor." : err.message, "error");
     location.replace("data-master.html");
     return;
   }
-
-  // --- Opsi select ---
-  const courses = DB.all("courses");
-  el.category.insertAdjacentHTML(
-    "beforeend",
-    Utils.unique([...SEED.categories, ...courses.map((c) => c.category)])
-      .map((v) => `<option value="${Utils.escape(v)}">${Utils.escape(v)}</option>`)
-      .join("")
-  );
-
-  // Warna thumbnail course baru
-  const COLORS = ["#c7d2fe", "#bbf7d0", "#fbcfe8", "#fef3c7", "#bae6fd", "#ddd6fe", "#fed7aa", "#cffafe"];
+  submitButtons.forEach((btn) => (btn.disabled = false));
 
   // --- Mode edit: isi form dengan data lama ---
   if (editing) {
@@ -33,15 +31,15 @@ App.ready(() => {
     document.title = "Edit Course | Learnova LMS";
     document.getElementById("form-title").textContent = "Edit Course";
     document.getElementById("crumb-current").textContent = `Edit ${editing.code}`;
-    if (published || editing.status === "Pending") {
+    if (!["Draft", "Rejected"].includes(editing.status)) {
       document.querySelectorAll("[data-label-edit]").forEach((btn) => (btn.textContent = btn.dataset.labelEdit));
     }
-    // Course yang sudah terbit tidak bisa dikembalikan ke draft
-    if (published) document.querySelectorAll('[data-action="draft"]').forEach((btn) => btn.remove());
+    // Course yang sudah diajukan / terbit tidak punya tombol "Save draft" (status hanya berubah lewat transisi)
+    if (published || editing.status === "Pending") document.querySelectorAll('[data-action="draft"]').forEach((btn) => btn.remove());
     document.getElementById("approval-note").textContent = {
       Active: "This course is published. Changes are visible to students immediately.",
       Pending: "This course is waiting for administrator approval.",
-      Rejected: "This course was rejected. Update it and submit again for approval.",
+      Rejected: `This course was rejected${editing.rejectionReason ? `: “${editing.rejectionReason}”` : ""}. Update it and submit again for approval.`,
       Draft: "This course is a draft. Submit it when it is ready for review.",
       Archived: "This course is archived and hidden from new students.",
     }[editing.status];
@@ -52,9 +50,9 @@ App.ready(() => {
     el.certificate.checked = editing.certificate;
   }
 
+
   // --- Aturan validasi ---
-  const today = new Date().toISOString().slice(0, 10);
-  const normalizeCode = (v) => v.replace("-", "");
+  const today = Domain.todayLocal();
 
   const rules = {
     title: (v) => {
@@ -83,15 +81,13 @@ App.ready(() => {
     code: (v) => {
       if (!v) return "Course code is required.";
       if (!/^[A-Z]{2,5}-?\d{3}$/.test(v)) return "Use a format like DES-405 or CS101.";
-      const taken = courses.some((c) => c.id !== editing?.id && normalizeCode(c.code) === normalizeCode(v));
-      if (taken) return "This course code is already used by another course.";
       return "";
     },
     maxStudents: (v) => {
       const n = Number(v);
       if (!v) return "Maximum students is required.";
       if (!Number.isInteger(n) || n < 1 || n > 500) return "Enter a whole number between 1 and 500.";
-      const enrolled = editing ? Store.enrollmentsOf(editing.id).length : 0;
+      const enrolled = editing?.students || 0;
       if (n < enrolled) return `Cannot be lower than current enrollment (${enrolled}).`;
       return "";
     },
@@ -204,9 +200,10 @@ App.ready(() => {
   );
 
   // --- Simpan (draft / publish) ---
-  form.addEventListener("submit", (e) => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const action = e.submitter?.dataset.action || "publish";
+    const submitter = e.submitter;
+    const action = submitter?.dataset.action || "publish";
 
     // Draft cukup judul; publish wajib semua field valid
     const fields = action === "draft" ? ["title"] : Object.keys(rules);
@@ -225,30 +222,36 @@ App.ready(() => {
       description: value("description"),
       category: value("category"),
       semester: value("semester"),
-      duration: Number(value("duration")) || null,
+      duration: value("duration") === "" ? null : Number(value("duration")),
       startDate: value("startDate"),
       code: value("code"), // boleh kosong untuk Draft — ditampilkan "–"
-      maxStudents: Number(value("maxStudents")) || null,
+      maxStudents: value("maxStudents") === "" ? null : Number(value("maxStudents")),
       enrollmentOpen: el.enrollmentOpen.checked,
       certificate: el.certificate.checked,
     };
 
-    // Status: draft → Draft; kirim → Pending (menunggu admin); course yang sudah Active/Pending tetap
-    const current = editing?.status;
-    if (action === "draft") data.status = "Draft";
-    else data.status = current === "Active" || current === "Archived" ? current : "Pending";
+    const save = async () => {
+      const saved = editing ? await Api.courses.update(editing.id, data) : await Api.courses.create(data);
+      editing = saved;
+      // Draft / Rejected + "Submit for approval" → transisi submit (status Pending)
+      if (action === "publish" && ["Draft", "Rejected"].includes(saved.status)) {
+        return Api.courses.transition(saved.id, "submit");
+      }
+      return saved;
+    };
 
-    let saved;
-    if (editing) {
-      saved = DB.update("courses", editing.id, data);
-    } else {
-      saved = DB.insert("courses", { ...data, lecturerId: me.id, color: COLORS[courses.length % COLORS.length] });
+    try {
+      const saved = await UI.busy(submitter, save);
+      dirty = false;
+      const note = { Draft: "saved as draft", Pending: "submitted for admin approval" }[saved.status] || "updated";
+      UI.flash(`"${saved.title}" ${note}.`);
+      location.href = `course-detail.html?id=${encodeURIComponent(saved.id)}`;
+    } catch (err) {
+      // Error per field dari server (mis. kode course sudah dipakai, data belum lengkap)
+      Object.entries(err.fields || {}).forEach(([name, message]) => form.querySelector(`[data-field="${name}"]`) && setError(name, message));
+      UI.toast(err.message, "error");
+      // Course baru sudah tersimpan sebagai Draft tetapi gagal diajukan → lanjutkan sebagai edit
+      if (editing && !editId) history.replaceState(null, "", `?id=${encodeURIComponent(editing.id)}`);
     }
-    Store.logActivity(`${editing ? "Updated" : "Created"} course ${saved.code} ${saved.title} (${saved.status})`);
-
-    dirty = false;
-    const note = { Draft: "saved as draft", Pending: "submitted for admin approval" }[saved.status] || "updated";
-    Store.setFlash(`"${saved.title}" ${note}.`);
-    location.href = `course-detail.html?id=${saved.id}`;
   });
 });

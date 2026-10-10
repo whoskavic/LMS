@@ -2,7 +2,7 @@
 
 Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
 
-> **Status:** backend FastAPI berjalan dengan auth JWT dan manajemen user. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** backend FastAPI berjalan dengan auth JWT, manajemen user, course + modul + alur approval, dan katalog publik dengan pencarian. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Fitur
 
@@ -12,11 +12,14 @@ Legenda: ✅ terhubung ke backend · 🟡 belum dimigrasi (masih kode mock)
 |---|---|---|
 | Admin | Dashboard (statistik, grafik, pending approvals, aktivitas) | 🟡 |
 | Admin | Manajemen user (CRUD, aktif/nonaktif, hapus dengan aturan bisnis) | ✅ |
-| Admin | Approve / reject / archive / restore course | 🟡 |
+| Admin | Approve / reject (dengan alasan) / archive / restore course, riwayat status | ✅ |
+| Admin | Kategori course (API) | ✅ |
 | Admin | Laporan progress & nilai, cetak, export CSV | 🟡 |
-| Instructor | Membuat & mengedit course, submit untuk approval | 🟡 |
-| Instructor | Modul materi, quiz pilihan ganda, nilai akhir | 🟡 |
-| Student | Browse & enroll course, belajar modul, progress | 🟡 |
+| Instructor | Membuat & mengedit course, submit untuk approval | ✅ |
+| Instructor | Modul materi (urutkan, video URL) | ✅ |
+| Instructor | Quiz pilihan ganda, nilai akhir | 🟡 |
+| Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline | ✅ |
+| Student | Enroll course, belajar modul, progress | 🟡 |
 | Student | Quiz dengan timer & review, nilai akhir, IPK, sertifikat | 🟡 |
 | Semua | Login, registrasi publik (student/instructor), profil, ganti password, tema terang/gelap | ✅ |
 
@@ -48,6 +51,7 @@ Backend adalah modular monolith: satu folder per domain (`auth`, `users`, `cours
 LMS/
 ├── index.html              ← Login
 ├── register.html           ← Registrasi publik
+├── catalog.html            ← Katalog course publik (tanpa login)
 ├── pages/                  ← Halaman aplikasi per role
 ├── assets/
 │   ├── css/style.css
@@ -85,7 +89,7 @@ git clone https://github.com/whoskavic/LMS.git && cd LMS
 # 1. Backend + database
 docker compose up -d --build
 docker compose exec api alembic upgrade head      # migrasi
-docker compose exec api python -m app.seed        # data demo (pakai --reset untuk mengisi ulang)
+docker compose exec api python -m app.seed        # data demo: akun, 5 kategori, 13 course + modul (--reset untuk mengisi ulang)
 curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"ok"}
 # Swagger: http://localhost:8000/docs
 
@@ -135,6 +139,8 @@ Hasil `python -m app.seed`:
 
 Akun baru juga bisa dibuat lewat halaman **Sign up** (`register.html`) sebagai student atau instructor.
 
+Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller.
+
 ## API
 
 Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/openapi.json`. Semua endpoint memakai prefix `/api/v1`, JSON camelCase, dan error berbentuk `{ "error": { "code", "message", "fields"? } }`.
@@ -154,6 +160,21 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET / PATCH / DELETE | `/api/v1/users/{id}` | admin |
 | GET | `/api/v1/meta/departments` | admin |
 | GET | `/api/v1/meta/notifications` | login |
+| GET | `/api/v1/meta/instructors` | admin |
+| GET | `/api/v1/catalog/courses` (`q, category, sort, page, pageSize`) | publik |
+| GET | `/api/v1/catalog/courses/{id atau slug}` | publik |
+| GET | `/api/v1/categories`, `/api/v1/meta/categories` | publik |
+| POST / PATCH / DELETE | `/api/v1/categories[/{id}]` | admin |
+| GET | `/api/v1/courses` (`q, status, category, semester, instructorId, open, sort, page, pageSize`) | admin (semua), instructor (miliknya), student (`open=true`) |
+| POST | `/api/v1/courses` | instructor |
+| GET | `/api/v1/courses/{id}` | admin, instructor pemilik, student terdaftar / course terbuka |
+| PATCH | `/api/v1/courses/{id}` | instructor pemilik |
+| DELETE | `/api/v1/courses/{id}` | instructor pemilik / admin (hanya Draft tanpa enrollment) |
+| POST | `/api/v1/courses/{id}/transitions` (`submit, approve, reject, archive, restore`) | instructor pemilik (submit) / admin |
+| GET | `/api/v1/courses/{id}/status-logs`, `/api/v1/courses/{id}/stats` | admin, instructor pemilik |
+| GET / POST | `/api/v1/courses/{id}/modules` | lihat: yang boleh melihat course · tambah: instructor pemilik |
+| PUT | `/api/v1/courses/{id}/modules/order` | instructor pemilik |
+| PATCH / DELETE | `/api/v1/modules/{id}` | instructor pemilik |
 
 Autentikasi: header `Authorization: Bearer <token>` dari `/auth/login`.
 
@@ -188,10 +209,10 @@ Roadmap integrasi backend (satu PR per fase):
 1. ✅ Dokumentasi & rencana
 2. ✅ Backend skeleton (FastAPI, Alembic, Docker, CI)
 3. ✅ Auth & users
-4. Courses & katalog publik
+4. ✅ Courses & katalog publik
 5. Enrollment & progress
 6. Quiz dinilai di server
 7. Nilai akhir, IPK, sertifikat, laporan, dashboard
 8. Siap deploy
 
-Known issues saat ini: halaman course, dashboard, quiz, dan laporan belum dimigrasi ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
+Known issues saat ini: dashboard, halaman belajar student, quiz, nilai, dan laporan belum dimigrasi ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).

@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 
 from app.auth.deps import DB, require_roles
 from app.common.schemas import Page
@@ -58,3 +59,13 @@ def delete_user(user_id: str, admin: Admin, db: DB) -> dict:
 @router.get("/meta/departments", response_model=list[str], tags=["meta"])
 def departments(_: Admin, db: DB, role: str | None = None):
     return service.departments(db, role)
+
+
+@router.get("/meta/instructors", tags=["meta"])
+def instructors(_: Admin, db: DB) -> list[dict]:
+    """Daftar instructor untuk filter (admin)."""
+    rows = db.scalars(select(User).where(User.role == "instructor").order_by(User.name))
+    return [
+        {"id": str(u.id), "name": u.name, "department": u.department, "status": "Active" if u.is_active else "Inactive"}
+        for u in rows
+    ]

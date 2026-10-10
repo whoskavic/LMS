@@ -26,9 +26,7 @@ class Enrollment(UUIDPk, Base):
     progress_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal(0), server_default=text("0"))
     final_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     grade_letter: Mapped[str | None] = mapped_column(String(2))
-    enrolled_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, server_default=func.now()
-    )
+    enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user = relationship("User", lazy="joined")
@@ -41,18 +39,12 @@ class ModuleProgress(UUIDPk, Base):
 
     enrollment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("enrollments.id", ondelete="CASCADE"))
     module_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("modules.id", ondelete="CASCADE"))
-    completed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, server_default=func.now()
-    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())
 
 
 class Certificate(UUIDPk, Base):
     __tablename__ = "certificates"
 
-    enrollment_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("enrollments.id", ondelete="RESTRICT"), unique=True
-    )
+    enrollment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("enrollments.id", ondelete="RESTRICT"), unique=True)
     code: Mapped[str] = mapped_column(String(32), unique=True)
-    issued_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, server_default=func.now()
-    )
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, server_default=func.now())

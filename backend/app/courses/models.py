@@ -38,9 +38,7 @@ class Course(UUIDPk, Timestamps, Base):
         Index("ix_courses_status", "status"),
         Index("ix_courses_category_id", "category_id"),
         Index("ix_courses_instructor_id", "instructor_id"),
-        Index(
-            "ix_courses_title_trgm", "title", postgresql_using="gin", postgresql_ops={"title": "gin_trgm_ops"}
-        ),
+        Index("ix_courses_title_trgm", "title", postgresql_using="gin", postgresql_ops={"title": "gin_trgm_ops"}),
         Index(
             "ix_courses_description_trgm",
             "description",

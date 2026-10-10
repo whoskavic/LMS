@@ -5,7 +5,7 @@ description = "Learnova LMS — FastAPI backend"
 requires-python = ">=3.12"
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
 extend-exclude = [".venv"]
 

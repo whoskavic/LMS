@@ -27,9 +27,7 @@ def get_current_user(db: DB, authorization: Annotated[str | None, Header()] = No
     if not user:
         raise ApiError(401, "UNAUTHENTICATED", "Please sign in to continue.")
     if not user.is_active:
-        raise ApiError(
-            401, "ACCOUNT_INACTIVE", "Your account has been deactivated. Please contact the administrator."
-        )
+        raise ApiError(401, "ACCOUNT_INACTIVE", "Your account has been deactivated. Please contact the administrator.")
     return user
 
 
