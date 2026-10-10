@@ -1,7 +1,6 @@
 // Learnova LMS — service API yang dipanggil halaman
 // Satu fungsi = satu endpoint REST. Semua mengembalikan Promise dan melempar ApiError bila gagal.
 // Query list yang umum: { q, sort ("title" | "-title"), page, pageSize } + filter per endpoint.
-// Endpoint attempt quiz (start / simpan jawaban / submit) ditambahkan di QZ-01.
 
 Object.assign(Api, {
   auth: {
@@ -81,6 +80,16 @@ Object.assign(Api, {
     create: (courseId, data) => Api.post(apiPath`/courses/${courseId}/quizzes`, data),
     update: (id, patch) => Api.patch(apiPath`/quizzes/${id}`, patch),
     remove: (id) => Api.del(apiPath`/quizzes/${id}`),
+  },
+
+  // Attempt quiz — soal tanpa kunci, skor dihitung server, kunci hanya muncul setelah submit
+  attempts: {
+    start: (quizId) => Api.post(apiPath`/quizzes/${quizId}/attempts`),
+    mine: (quizId) => Api.get(apiPath`/quizzes/${quizId}/attempts`),
+    get: (attemptId) => Api.get(apiPath`/attempts/${attemptId}`),
+    /** answers: { [questionId]: optionId } */
+    save: (attemptId, answers) => Api.patch(apiPath`/attempts/${attemptId}`, { answers }),
+    submit: (attemptId, answers) => Api.post(apiPath`/attempts/${attemptId}/submit`, { answers }),
   },
 
   enrollments: {

@@ -20,6 +20,7 @@ from app.courses.models import Category, Course, CourseStatusLog, Module
 from app.db import Base, SessionLocal
 from app.enrollments.models import Enrollment, ModuleProgress
 from app.enrollments.service import apply_progress
+from app.quizzes.models import AttemptAnswer, Question, QuestionOption, Quiz, QuizAttempt
 from app.users.models import User
 
 # Diekspor dari assets/js/data.js (SEED) agar data demo sama dengan prototipe
@@ -220,10 +221,88 @@ def seed_enrollments(db: Session, users: dict[str, User], courses: dict[str, Cou
     return enrollments
 
 
+def seed_quizzes(db: Session, courses: dict[str, Course]) -> dict[str, Quiz]:
+    """1 quiz (5 soal) per course yang punya bank soal di mock: lulus 70, maksimal 3 attempt, 10 menit."""
+    quizzes = {}
+    for code, bank in DATA["quizBank"].items():
+        quiz = Quiz(
+            course_id=courses[code].id,
+            title=f"{code} Quiz 1 · Fundamentals",
+            passing_score=70,
+            max_attempts=3,
+            duration_minutes=10,
+        )
+        db.add(quiz)
+        db.flush()
+        for position, item in enumerate(bank, start=1):
+            question = Question(quiz_id=quiz.id, text=item["text"], points=1, position=position)
+            db.add(question)
+            db.flush()
+            for i, option_text in enumerate(item["options"]):
+                db.add(
+                    QuestionOption(
+                        question_id=question.id, text=option_text, position=i + 1, is_correct=i == item["answer"]
+                    )
+                )
+        db.flush()
+        db.refresh(quiz)
+        quizzes[code] = quiz
+    return quizzes
+
+
+QUIZ_SCORES = {
+    # Skor quiz demo mock (demoEnrollments.quiz) untuk Alex; student lain mengikuti pola serupa
+    "nadia@learnova.ac.id": {"MATH201": 100, "DATA200": 80, "CS205": 60},
+    "marcus@learnova.ac.id": {"BIO210": 40, "PHY110": 80},
+}
+
+
+def seed_attempts(db: Session, users: dict[str, User], enrollments: list[Enrollment], quizzes: dict[str, Quiz]):
+    alex = users["alex@learnova.ac.id"].id
+    scores = {(alex, e["code"]): e["quiz"] for e in DATA["demoEnrollments"] if e.get("quiz") is not None}
+    for email, items in QUIZ_SCORES.items():
+        scores.update({(users[email].id, code): score for code, score in items.items()})
+    taken_at = datetime(2026, 9, 20, 3, 0, tzinfo=UTC)
+    for enrollment in enrollments:
+        code = enrollment.course.code
+        score = scores.get((enrollment.user_id, code))
+        quiz = quizzes.get(code)
+        if score is None or quiz is None:
+            continue
+        correct = round(score / 100 * len(quiz.questions))
+        attempt = QuizAttempt(
+            enrollment_id=enrollment.id,
+            quiz_id=quiz.id,
+            attempt_number=1,
+            status="submitted",
+            started_at=taken_at,
+            expires_at=taken_at + timedelta(minutes=quiz.duration_minutes),
+            submitted_at=taken_at + timedelta(minutes=6),
+            score=score,
+        )
+        db.add(attempt)
+        db.flush()
+        for i, question in enumerate(quiz.questions):
+            options = list(question.options)
+            right = next(o for o in options if o.is_correct)
+            chosen = right if i < correct else options[(options.index(right) + 1) % len(options)]
+            db.add(
+                AttemptAnswer(
+                    attempt_id=attempt.id,
+                    question_id=question.id,
+                    selected_option_id=chosen.id,
+                    is_correct=chosen.id == right.id,
+                )
+            )
+    db.flush()
+
+
 def seed(db: Session) -> None:
     users = seed_users(db)
     courses = seed_courses(db, users)
-    seed_enrollments(db, users, courses)
+    enrollments = seed_enrollments(db, users, courses)
+    quizzes = seed_quizzes(db, courses)
+    seed_attempts(db, users, enrollments, quizzes)
     db.commit()
 
 

@@ -2,7 +2,7 @@
 
 Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
 
-> **Status:** backend FastAPI berjalan dengan auth JWT, manajemen user, course + modul + alur approval, katalog publik dengan pencarian, serta enrollment + progress belajar. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** backend FastAPI berjalan dengan auth JWT, manajemen user, course + modul + alur approval, katalog publik dengan pencarian, enrollment + progress belajar, serta quiz yang dinilai di server. Frontend memakai backend lewat `assets/js/config.js` (`transport: "http"`). Halaman yang belum dimigrasi (ditandai 🟡) masih membaca mock data lama dan belum berfungsi penuh dengan backend sampai fase berikutnya. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
 
 ## Fitur
 
@@ -17,11 +17,12 @@ Legenda: ✅ terhubung ke backend · 🟡 belum dimigrasi (masih kode mock)
 | Admin | Laporan progress & nilai, cetak, export CSV | 🟡 |
 | Instructor | Membuat & mengedit course, submit untuk approval | ✅ |
 | Instructor | Modul materi (urutkan, video URL) | ✅ |
-| Instructor | Quiz pilihan ganda, nilai akhir | 🟡 |
+| Instructor | Quiz pilihan ganda (editor soal, statistik attempt) | ✅ |
+| Instructor | Nilai akhir student | 🟡 |
 | Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline | ✅ |
 | Student | Enroll course gratis (katalog / dashboard), belajar modul berurutan, progress dihitung server | ✅ |
 | Student | Dashboard: course per semester, progress, IPK, unduh sertifikat | ✅ |
-| Student | Quiz dengan timer & review | 🟡 |
+| Student | Quiz: soal tanpa kunci, timer & batas attempt dari server, lanjut setelah refresh, skor & review setelah submit | ✅ |
 | Semua | Login, registrasi publik (student/instructor), profil, ganti password, tema terang/gelap | ✅ |
 
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
@@ -140,7 +141,7 @@ Hasil `python -m app.seed`:
 
 Akun baru juga bisa dibuat lewat halaman **Sign up** (`register.html`) sebagai student atau instructor.
 
-Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress & nilai demo dari prototipe (8 course, IPK 3.67); Nadia dan Marcus masing-masing 4 course.
+Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress, skor quiz, & nilai demo dari prototipe (8 course, IPK 3.67); Nadia dan Marcus masing-masing 4 course. Ada 9 quiz (5 soal, lulus 70, 3 attempt, 10 menit) dari bank soal mock.
 
 ## API
 
@@ -180,6 +181,13 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET | `/api/v1/courses/{id}/enrollment` | student (enrollment miliknya di course itu) |
 | GET | `/api/v1/me/enrollments` (`semester, status, q, sort, page, pageSize`) | student |
 | POST | `/api/v1/enrollments/{id}/completed-modules` (`{ moduleId }`) | student pemilik enrollment |
+| GET | `/api/v1/courses/{id}/quizzes` | instructor/admin (dengan kunci) · student terdaftar (tanpa soal & kunci) |
+| POST | `/api/v1/courses/{id}/quizzes` | instructor pemilik |
+| GET / PATCH / DELETE | `/api/v1/quizzes/{id}` | GET: yang boleh melihat course · ubah: instructor pemilik |
+| POST | `/api/v1/quizzes/{id}/attempts` (mulai / lanjutkan) | student terdaftar |
+| GET | `/api/v1/quizzes/{id}/attempts` (riwayat) | student |
+| GET / PATCH | `/api/v1/attempts/{id}` (review / simpan jawaban sementara) | student pemilik |
+| POST | `/api/v1/attempts/{id}/submit` | student pemilik (ditolak 409 bila lewat `expiresAt` + 30 detik) |
 
 Autentikasi: header `Authorization: Bearer <token>` dari `/auth/login`.
 
@@ -216,8 +224,8 @@ Roadmap integrasi backend (satu PR per fase):
 3. ✅ Auth & users
 4. ✅ Courses & katalog publik
 5. ✅ Enrollment & progress
-6. Quiz dinilai di server
+6. ✅ Quiz dinilai di server
 7. Nilai akhir, IPK, sertifikat, laporan, dashboard
 8. Siap deploy
 
-Known issues saat ini: dashboard admin & instructor, quiz, nilai, dan laporan belum dimigrasi (daftar quiz di halaman belajar menampilkan error sampai endpoint quiz tersedia) ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
+Known issues saat ini: dashboard admin & instructor, nilai akhir (Students & Grades), dan laporan belum dimigrasi ke backend (masih kode mock, data/role tidak cocok dengan akun backend); tombol *Reset demo data* hanya muncul di mode `local`. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
