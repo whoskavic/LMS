@@ -1,0 +1,40 @@
+# Blueprint Render (https://render.com/docs/blueprint-spec): backend Docker + PostgreSQL + frontend statis.
+# Render → New → Blueprint → pilih repo ini. Setelah dibuat:
+#   1. Isi CORS_ORIGINS di service learnova-api dengan URL static site (mis. https://learnova-web.onrender.com).
+#   2. Ganti PRODUCTION_API_URL di assets/js/config.js dengan URL learnova-api + /api/v1, lalu push.
+databases:
+  - name: learnova-db
+    databaseName: learnova
+    user: learnova
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: learnova-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: learnova-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_MINUTES
+        value: "720"
+      - key: SEED_DEMO
+        value: "true"
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: learnova-web
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
