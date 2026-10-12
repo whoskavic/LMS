@@ -55,11 +55,15 @@ def change_password(db: Session, user: User, data: PasswordChange) -> None:
     db.commit()
 
 
-def become_instructor(db: Session, user: User) -> User:
-    """ "Mulai Mengajar": student → instructor. Idempoten untuk instructor; admin ditolak."""
+def become_instructor(db: Session, user: User, headline: str | None = None, bio: str | None = None) -> User:
+    """ "Mulai Mengajar": student → instructor. Idempoten untuk instructor; admin ditolak.
+
+    `headline`/`bio` opsional disimpan ke profil publik instructor."""
+    from app.users.service import apply_instructor_profile
+
     if user.role == "admin":
         raise ApiError(403, "FORBIDDEN", "Administrator accounts cannot become instructors.")
-    if user.role != "instructor":
-        user.role = "instructor"
-        db.commit()
+    apply_instructor_profile(user, headline, bio)
+    user.role = "instructor"
+    db.commit()
     return user

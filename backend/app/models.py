@@ -3,6 +3,7 @@
 from app.courses.models import Category, Course, CourseStatusLog, Module
 from app.enrollments.models import Certificate, Enrollment, ModuleProgress
 from app.quizzes.models import AttemptAnswer, Question, QuestionOption, Quiz, QuizAttempt
+from app.reviews.models import Review
 from app.users.models import User
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "QuestionOption",
     "Quiz",
     "QuizAttempt",
+    "Review",
     "User",
 ]

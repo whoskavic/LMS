@@ -20,8 +20,12 @@ Legenda: ✅ terhubung ke backend
 | Instructor | Quiz pilihan ganda (editor soal, statistik attempt) | ✅ |
 | Instructor | Dashboard (course per status, progress & skor per course, attempt terbaru) | ✅ |
 | Instructor | Students (read-only): peserta, progress, skor quiz terbaik, status selesai & sertifikat, export CSV | ✅ |
-| Publik | **Katalog** (halaman utama publik): cari, chip kategori, sort (terpopuler / terbaru / judul), pagination; kartu dengan instructor, jumlah learner, modul + total durasi, label Free | ✅ |
-| Publik | **Course landing page**: deskripsi, instructor, kurikulum accordion (ikon kunci sebelum enroll), tombol sesuai status: Enroll for free (belum login → login lalu kembali), Continue learning, Manage course | ✅ |
+| Publik | **Katalog** (halaman utama publik): cari, chip kategori, sort (terpopuler / rating tertinggi / terbaru / judul), pagination; kartu dengan instructor, rating rata-rata + jumlah ulasan, jumlah learner, modul + total durasi, label Free | ✅ |
+| Publik | **Course landing page**: deskripsi, instructor (headline + tautan profil), kurikulum accordion (ikon kunci sebelum enroll), tombol sesuai status: Enroll for free (belum login → login lalu kembali), Continue learning, Manage course | ✅ |
+| Publik | **Ulasan course**: ringkasan rating + distribusi bintang, daftar ulasan terbaru ("Show more") | ✅ |
+| Learner | Menulis satu ulasan per course yang diikuti (rating 1–5 + komentar opsional), edit & hapus ulasan sendiri; admin bisa menghapus ulasan apa pun | ✅ |
+| Publik | **Profil instructor** (`instructor.html?id=`): headline, bio, statistik (course, learner, ulasan, rating), daftar course Active | ✅ |
+| Instructor | Headline & bio profil publik (diisi saat "Start teaching" atau di Profile) | ✅ |
 | Learner | Enroll course gratis (course Active selalu terbuka), belajar modul berurutan, progress dihitung server | ✅ |
 | Learner | **My Learning**: tab sedang dipelajari / selesai / sertifikat, "Continue learning" ke modul berikutnya, unduh & verifikasi sertifikat | ✅ |
 | Publik | Verifikasi sertifikat berdasarkan nomor (`verify.html`) | ✅ |
@@ -61,7 +65,8 @@ Backend adalah modular monolith: satu folder per domain (`auth`, `users`, `cours
 LMS/
 ├── index.html              ← Login
 ├── register.html           ← Registrasi publik
-├── catalog.html            ← Katalog course publik (tanpa login)
+├── catalog.html            ← Katalog course publik + course landing page (tanpa login)
+├── instructor.html         ← Profil publik instructor (tanpa login)
 ├── verify.html             ← Verifikasi sertifikat publik
 ├── pages/                  ← Halaman aplikasi per role
 ├── assets/
@@ -160,6 +165,8 @@ Hasil `python -m app.seed`:
 
 Akun baru bisa dibuat lewat halaman **Sign up** (`register.html`); semua akun baru adalah learner (student) dan bisa menjadi instructor lewat tombol **Start teaching** di My Learning atau Profile.
 
+Instructor demo punya headline & bio, dan ada 9 ulasan demo dari Alex, Nadia, dan Marcus. Bila database sudah berisi data (mis. produksi yang di-seed sebelum migrasi `0002`), `python -m app.seed` dan build Vercel dengan `SEED_DEMO=true` hanya **melengkapi** data demo tambahan ini (headline/bio yang masih kosong dan ulasan yang belum ada) tanpa mengubah data lain — idempoten.
+
 Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress, skor quiz, & nilai demo dari prototipe (8 course, IPK 3.67); Nadia dan Marcus masing-masing 4 course. Ada 9 quiz (5 soal, lulus 70, 3 attempt, 10 menit) dari bank soal mock.
 
 ## API
@@ -174,7 +181,7 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | POST | `/api/v1/auth/logout` | publik (JWT stateless) |
 | GET | `/api/v1/auth/me` | login |
 | POST | `/api/v1/auth/password` | login |
-| PATCH | `/api/v1/me` | login |
+| PATCH | `/api/v1/me` (`{ name, headline?, bio? }` — headline/bio hanya instructor) | login |
 | GET | `/api/v1/me/stats` | login |
 | POST | `/api/v1/me/become-instructor` (`{ headline?, bio? }`) | student / instructor (idempoten), admin → 403 |
 | GET | `/api/v1/users` (`role, q, status, sort, page, pageSize`) | admin |
@@ -182,8 +189,13 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET / PATCH / DELETE | `/api/v1/users/{id}` | admin |
 | GET | `/api/v1/meta/notifications` | login |
 | GET | `/api/v1/meta/instructors` | admin |
-| GET | `/api/v1/catalog/courses` (`q, category, sort=popular|newest|title, page, pageSize`) | publik |
-| GET | `/api/v1/catalog/courses/{id atau slug}` | publik (dengan token: `viewer` = status enroll/pemilik) |
+| GET | `/api/v1/catalog/courses` (`q, category, sort=popular|rating|newest|title, page, pageSize`; kartu berisi `ratingAverage`, `reviewCount`) | publik |
+| GET | `/api/v1/catalog/courses/{id atau slug}` | publik (dengan token: `viewer` = status enroll/pemilik + `canReview`, `myReview`) |
+| GET | `/api/v1/instructors/{id}` | publik (profil instructor: headline, bio, statistik, course Active) |
+| GET | `/api/v1/courses/{id}/reviews` (`page, pageSize`; + `summary { average, count, distribution }`) | publik (course Active) |
+| POST | `/api/v1/courses/{id}/reviews` (`{ rating, comment? }`) | learner terdaftar (satu per enrollment → 409 `ALREADY_REVIEWED`; belum enroll → 403 `NOT_ENROLLED`; pemilik → 403) |
+| PATCH | `/api/v1/reviews/{id}` | penulis ulasan |
+| DELETE | `/api/v1/reviews/{id}` | penulis ulasan / admin |
 | GET | `/api/v1/categories`, `/api/v1/meta/categories` | publik |
 | POST / PATCH / DELETE | `/api/v1/categories[/{id}]` | admin |
 | GET | `/api/v1/courses` (`q, status, category, instructorId, open, sort, page, pageSize`) | admin (semua), instructor (miliknya), student (`open=true`) |
@@ -220,7 +232,7 @@ Endpoint berikutnya mengikuti kontrak `MockServer` (`assets/js/api/transport-loc
 
 ## Database
 
-PostgreSQL 16 dengan 13 tabel: `users`, `categories`, `courses`, `course_status_logs`, `modules`, `quizzes`, `questions`, `question_options`, `enrollments`, `module_progress`, `quiz_attempts`, `attempt_answers`, `certificates`. Primary key UUID, enum disimpan sebagai string + CHECK constraint, extension `pg_trgm` untuk pencarian course. Diagram, relasi, dan daftar index: [docs/ERD.md](docs/ERD.md).
+PostgreSQL 16 dengan 14 tabel: `users`, `categories`, `courses`, `course_status_logs`, `modules`, `quizzes`, `questions`, `question_options`, `enrollments`, `module_progress`, `quiz_attempts`, `attempt_answers`, `certificates`, `reviews`. Migrasi: `0001` skema awal, `0002` ulasan + profil instructor (aditif). Primary key UUID, enum disimpan sebagai string + CHECK constraint, extension `pg_trgm` untuk pencarian course. Diagram, relasi, dan daftar index: [docs/ERD.md](docs/ERD.md).
 
 ## Testing
 
@@ -306,11 +318,11 @@ Roadmap integrasi backend (satu PR per fase):
 
 Transformasi platform kursus publik (Oktober 2026):
 
-- A. Dokumentasi rencana (ADR-008 model akun, ADR-009 penghapusan konsep akademik)
-- B. Model akun: registrasi tanpa role, `POST /me/become-instructor`, instructor bisa belajar, pengalih mode Learn/Teach
-- C. Hapus konsep akademik dari UI & API; halaman Students read-only; laporan admin tanpa IPK
-- D. My Learning, katalog sebagai halaman utama publik, course landing page dengan kurikulum & total durasi
-- E. Ulasan course + profil instructor publik (migrasi aditif: `reviews`, `users.headline`, `users.bio`)
+- ✅ A. Dokumentasi rencana (ADR-008 model akun, ADR-009 penghapusan konsep akademik)
+- ✅ B. Model akun: registrasi tanpa role, `POST /me/become-instructor`, instructor bisa belajar, pengalih mode Learn/Teach
+- ✅ C. Hapus konsep akademik dari UI & API; halaman Students read-only; laporan admin tanpa IPK
+- ✅ D. My Learning, katalog sebagai halaman utama publik, course landing page dengan kurikulum & total durasi
+- ✅ E. Ulasan course + profil instructor publik (migrasi aditif: `reviews`, `users.headline`, `users.bio`)
 - F. Polish copywriting, state loading/empty/error, README final
 
 Berikutnya: upload thumbnail/video ke object storage, refresh token + rate limiting login, reset password via email, editor bobot soal, course berbayar (kolom `price` sudah ada, saat ini selalu 0), log audit umum, pembersihan kolom akademik lama di database.

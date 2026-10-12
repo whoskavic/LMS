@@ -54,8 +54,8 @@ def update_me(body: ProfileUpdate, user: CurrentUser, db: DB):
 def become_instructor(user: CurrentUser, db: DB, body: BecomeInstructorIn | None = None):
     """ "Mulai Mengajar": ubah akun student menjadi instructor (idempoten; admin → 403).
 
-    `headline` dan `bio` opsional; disimpan setelah kolom profil instructor tersedia (ADR-008)."""
-    return UserOut.of(service.become_instructor(db, user))
+    `headline` (maks 120) dan `bio` opsional, ditampilkan di profil publik instructor."""
+    return UserOut.of(service.become_instructor(db, user, body.headline if body else None, body.bio if body else None))
 
 
 @router.get("/me/stats", tags=["users"])

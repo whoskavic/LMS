@@ -155,14 +155,18 @@ def module_totals(db: Session, course_ids: list[uuid.UUID]) -> dict[uuid.UUID, t
 
 
 def course_views(db: Session, courses: list[Course]) -> list[dict]:
+    from app.reviews.service import rating_stats
+
     ids = [c.id for c in courses]
     stats = enrollment_stats(db, ids)
+    ratings = rating_stats(db, ids)
     totals = module_totals(db, ids)
     reasons = rejection_reasons(db, courses)
     views = []
     for c in courses:
         s = stats[c.id]
         modules, minutes = totals.get(c.id, (0, 0))
+        rating, reviews = ratings.get(c.id, (None, 0))
         views.append(
             {
                 "id": str(c.id),
@@ -182,6 +186,8 @@ def course_views(db: Session, courses: list[Course]) -> list[dict]:
                 "avgProgress": s["avgProgress"],
                 "modules": modules,
                 "totalMinutes": minutes,
+                "ratingAverage": rating,
+                "reviewCount": reviews,
                 "rejectionReason": reasons.get(c.id),
                 "submittedAt": iso(c.submitted_at),
                 "publishedAt": iso(c.published_at),
@@ -475,6 +481,8 @@ CATALOG_KEYS = (
     "students",
     "modules",
     "totalMinutes",
+    "ratingAverage",
+    "reviewCount",
     "publishedAt",
 )
 
@@ -512,8 +520,17 @@ def catalog(
     learners = (
         select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
     )
+    from app.reviews.models import Review
+
+    avg_rating = (
+        select(func.avg(Review.rating)).where(Review.course_id == Course.id).correlate(Course).scalar_subquery()
+    )
+    review_count = (
+        select(func.count(Review.id)).where(Review.course_id == Course.id).correlate(Course).scalar_subquery()
+    )
     order = {
         "newest": [Course.published_at.desc().nullslast()],
+        "rating": [avg_rating.desc().nullslast(), review_count.desc(), learners.desc()],
         "title": [Course.title.asc()],
         "-title": [Course.title.desc()],
     }.get(sort or "", [learners.desc(), Course.title.asc()])  # default "popular": jumlah peserta
@@ -536,6 +553,7 @@ def catalog_detail(db: Session, id_or_slug: str, user: User | None = None) -> di
         {"order": m.position, "title": m.title, "type": TYPE_LABEL[m.type], "minutes": m.minutes} for m in modules
     ]
     view["quizzes"] = quizzes
+    view["instructorHeadline"] = course.instructor.headline if course.instructor else None
     view["viewer"] = viewer_status(db, course, user)
     return view
 
@@ -562,7 +580,42 @@ def viewer_status(db: Session, course: Course, user: User | None) -> dict:
             nextModuleNumber=view["nextModuleNumber"],
             completed=view["learningStatus"] == "Completed",
         )
+        from app.reviews.service import my_review, review_view
+
+        review = my_review(db, user, course)
+        status.update(canReview=review is None, myReview=review_view(review) if review else None)
     return status
+
+
+def instructor_profile(db: Session, user_id: str) -> dict:
+    """Profil publik instructor: headline, bio, statistik, dan course Active miliknya."""
+    uid = parse_uuid(user_id)
+    instructor = db.get(User, uid) if uid else None
+    if not instructor or instructor.role != "instructor" or not instructor.is_active:
+        raise not_found("Instructor")
+    courses = list(
+        db.scalars(
+            select(Course)
+            .where(Course.instructor_id == instructor.id, Course.status == "active")
+            .order_by(Course.published_at.desc().nullslast(), Course.title)
+        ).unique()
+    )
+    cards = [catalog_card(v) for v in course_views(db, courses)]
+    reviews = sum(c["reviewCount"] for c in cards)
+    weighted = sum((c["ratingAverage"] or 0) * c["reviewCount"] for c in cards)
+    return {
+        "id": str(instructor.id),
+        "name": instructor.name,
+        "headline": instructor.headline,
+        "bio": instructor.bio,
+        "stats": {
+            "courses": len(cards),
+            "learners": sum(c["students"] for c in cards),
+            "reviews": reviews,
+            "rating": round(weighted / reviews, 1) if reviews else None,
+        },
+        "courses": cards,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ from app.db import SessionLocal
 from app.enrollments.router import router as enrollments_router
 from app.quizzes.router import router as quizzes_router
 from app.reports.router import router as reports_router
+from app.reviews.router import router as reviews_router
 from app.users.router import router as users_router
 
 settings = get_settings()
@@ -53,4 +54,5 @@ api.include_router(courses_router)
 api.include_router(enrollments_router)
 api.include_router(quizzes_router)
 api.include_router(reports_router)
+api.include_router(reviews_router)
 app.include_router(api)

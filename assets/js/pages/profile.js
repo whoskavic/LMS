@@ -45,19 +45,27 @@ App.ready((me) => {
   /* ---------- Data diri ---------- */
   infoForm.elements.name.value = me.name;
   infoForm.elements.email.value = me.email;
+  const isInstructor = me.role === "instructor";
+  if (isInstructor) {
+    infoForm.elements.headline.value = me.headline || "";
+    infoForm.elements.bio.value = me.bio || "";
+    document.getElementById("public-profile-link").href = `../instructor.html?id=${encodeURIComponent(me.id)}`;
+  }
 
   infoForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = UI.formValues(infoForm);
     const rules = {
       name: v.name ? "" : "Full name is required.",
+      headline: isInstructor && v.headline.length > 120 ? "Headline must be at most 120 characters." : "",
+      bio: isInstructor && v.bio.length > 2000 ? "Bio must be at most 2000 characters." : "",
     };
     Object.entries(rules).forEach(([name, message]) => UI.fieldError(infoForm, name, message));
     const invalid = Object.keys(rules).find((name) => rules[name]);
     if (invalid) return infoForm.elements[invalid].focus();
 
     try {
-      const user = await UI.busy(infoForm.querySelector('[type="submit"]'), Api.profile.update({ name: v.name }));
+      const user = await UI.busy(infoForm.querySelector('[type="submit"]'), Api.profile.update(isInstructor ? { name: v.name, headline: v.headline, bio: v.bio } : { name: v.name }));
       Object.assign(me, user);
       renderIdentity(me);
       loadDetails();

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, CheckConstraint, Index, String, text
+from sqlalchemy import Boolean, CheckConstraint, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.models import Timestamps, UUIDPk, check_in
@@ -22,3 +22,6 @@ class User(UUIDPk, Timestamps, Base):
     # Tambahan dari prototipe (NIM / NIDN / Staff ID dan departemen) — lihat docs/DECISIONS.md ADR-006
     id_number: Mapped[str | None] = mapped_column(String(20))
     department: Mapped[str | None] = mapped_column(String(60))
+    # Profil instructor publik (ADR-008)
+    headline: Mapped[str | None] = mapped_column(String(120))
+    bio: Mapped[str | None] = mapped_column(Text)

@@ -28,7 +28,7 @@ Object.assign(Api, {
   },
 
   profile: {
-    update: (patch) => Api.patch("/me", patch), // { name }
+    update: (patch) => Api.patch("/me", patch), // { name, headline?, bio? } — headline/bio hanya instructor
     stats: () => Api.get("/me/stats"),
     /** "Start teaching": student → instructor ({ headline?, bio? }) */
     becomeInstructor: (data = {}) => Api.post("/me/become-instructor", data),
@@ -59,8 +59,21 @@ Object.assign(Api, {
 
   // Katalog publik (tanpa login): hanya course Active
   catalog: {
-    list: (query) => Api.get("/catalog/courses", query), // { q, category, sort, page, pageSize }
+    list: (query) => Api.get("/catalog/courses", query), // { q, category, sort: popular|newest|rating|title, page, pageSize }
     get: (idOrSlug) => Api.get(apiPath`/catalog/courses/${idOrSlug}`),
+  },
+
+  // Profil publik instructor (tanpa login)
+  instructors: {
+    get: (id) => Api.get(apiPath`/instructors/${id}`),
+  },
+
+  // Ulasan course: daftar publik; tulis hanya learner yang terdaftar (satu per enrollment)
+  reviews: {
+    list: (courseId, query) => Api.get(apiPath`/courses/${courseId}/reviews`, query), // + summary { average, count, distribution }
+    create: (courseId, data) => Api.post(apiPath`/courses/${courseId}/reviews`, data), // { rating 1–5, comment? }
+    update: (id, data) => Api.patch(apiPath`/reviews/${id}`, data),
+    remove: (id) => Api.del(apiPath`/reviews/${id}`),
   },
 
   categories: {

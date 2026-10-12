@@ -154,5 +154,28 @@ def update_profile(db: Session, user: User, data: ProfileUpdate) -> User:
     name = clean(data.name if data.name is not None else user.name)
     assert_valid({"name": rules.name_error(name)})
     user.name = name
+    if user.role == "instructor":
+        apply_instructor_profile(user, data.headline, data.bio)
     db.commit()
     return user
+
+
+HEADLINE_MAX, BIO_MAX = 120, 2000
+
+
+def apply_instructor_profile(user: User, headline: str | None, bio: str | None) -> None:
+    """Set headline/bio instructor (None = tidak diubah, string kosong = dikosongkan)."""
+    headline = clean(headline) if headline is not None else None
+    bio = bio.strip() if bio is not None else None
+    assert_valid(
+        {
+            "headline": f"Headline must be at most {HEADLINE_MAX} characters."
+            if headline and len(headline) > HEADLINE_MAX
+            else "",
+            "bio": f"Bio must be at most {BIO_MAX} characters." if bio and len(bio) > BIO_MAX else "",
+        }
+    )
+    if headline is not None:
+        user.headline = headline or None
+    if bio is not None:
+        user.bio = bio or None

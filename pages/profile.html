@@ -116,6 +116,19 @@
                     <p class="field__hint" id="email-hint">Contact the administrator to change your email.</p>
                   </div>
                 </div>
+                <!-- Profil publik instructor (tampil di halaman instructor & landing page course) -->
+                <div class="field" data-field="headline" data-show-role="instructor">
+                  <label class="field__label" for="headline">Headline</label>
+                  <input class="field__input" id="headline" name="headline" type="text" maxlength="120" placeholder="e.g. Web developer &amp; teacher" aria-describedby="headline-hint">
+                  <p class="field__hint" id="headline-hint">Shown under your name on course pages. Up to 120 characters.</p>
+                  <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                </div>
+                <div class="field" data-field="bio" data-show-role="instructor">
+                  <label class="field__label" for="bio">About you</label>
+                  <textarea class="field__input" id="bio" name="bio" rows="4" maxlength="2000" placeholder="Tell learners about your experience"></textarea>
+                  <p class="field__hint"><a id="public-profile-link" href="../instructor.html" target="_blank" rel="noopener">View your public profile</a></p>
+                  <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
+                </div>
                 <div><button class="btn btn--primary" type="submit"><i data-icon="check" class="icon--sm"></i>Save changes</button></div>
               </form>
             </section>

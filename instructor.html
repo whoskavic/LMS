@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instructor | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/theme.js"></script>
+</head>
+<body class="auth catalog-page">
+  <header class="auth-nav">
+    <a class="auth-nav__brand" href="catalog.html">
+      <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+      <span class="brand-name">Learnova</span>
+    </a>
+    <p class="auth-nav__tagline">Free courses for everyone</p>
+    <div class="catalog-nav">
+      <a class="btn btn--outline" href="index.html" id="nav-account">Log in</a>
+      <a class="btn btn--primary" href="register.html" id="nav-signup">Sign up</a>
+      <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+    </div>
+  </header>
+
+  <main class="content catalog" id="main">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="catalog.html">Courses</a>
+      <span aria-hidden="true">/</span>
+      <span id="instructor-crumb" aria-current="page">Instructor</span>
+    </nav>
+    <div id="instructor-view" class="mt-5" aria-live="polite"></div>
+  </main>
+
+  <script src="assets/js/domain.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/api/client.js"></script>
+  <script src="assets/js/api/transport-http.js"></script>
+  <script src="assets/js/api/services.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/catalog-card.js"></script>
+  <script src="assets/js/pages/instructor.js"></script>
+</body>
+</html>

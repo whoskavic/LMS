@@ -2,7 +2,7 @@
 
 Diagram ini mengikuti implementasi nyata di `backend/app/*/models.py` dan migrasi Alembic `backend/alembic/versions/`. Kolom bertanda *(prototipe)* adalah tambahan dari mock data (lihat [DECISIONS.md](DECISIONS.md) ADR-006).
 
-Migrasi: `0001` (skema awal).
+Migrasi: `0001` (skema awal), `0002` (tabel `reviews`, kolom `users.headline` & `users.bio` — aditif, aman untuk data yang sudah ada).
 
 ```mermaid
 erDiagram
@@ -25,6 +25,9 @@ erDiagram
     QUESTIONS ||--o{ ATTEMPT_ANSWERS : "dijawab"
     QUESTION_OPTIONS |o--o{ ATTEMPT_ANSWERS : "dipilih"
     ENROLLMENTS ||--o| CERTIFICATES : "menghasilkan"
+    ENROLLMENTS ||--o| REVIEWS : "diulas (maks 1)"
+    COURSES ||--o{ REVIEWS : "menerima"
+    USERS ||--o{ REVIEWS : "menulis"
 
     USERS {
         uuid id PK
@@ -35,6 +38,8 @@ erDiagram
         bool is_active "default true"
         varchar20 id_number UK "nullable, NIM/NIDN/Staff ID (prototipe)"
         varchar60 department "nullable (prototipe)"
+        varchar120 headline "nullable, profil publik instructor (0002)"
+        text bio "nullable, profil publik instructor (0002)"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -156,6 +161,16 @@ erDiagram
         varchar32 code UK "acak"
         timestamptz issued_at
     }
+    REVIEWS {
+        uuid id PK
+        uuid enrollment_id FK,UK "enrollments, CASCADE"
+        uuid course_id FK "courses, CASCADE"
+        uuid user_id FK "users, CASCADE"
+        int rating "1..5"
+        text comment "nullable, maks 1000 karakter (validasi API)"
+        timestamptz created_at
+        timestamptz updated_at
+    }
 ```
 
 ## Relasi
@@ -168,6 +183,7 @@ erDiagram
 - **Enrollment** menghubungkan student dan course (unik per pasangan). Progress per modul di **module_progress**.
 - **Quiz attempt** milik enrollment + quiz; jawaban per soal di **attempt_answers**.
 - **Certificate** maksimal satu per enrollment; enrollment bersertifikat tidak bisa dihapus (`RESTRICT`).
+- **Review** maksimal satu per enrollment (hanya learner yang terdaftar); ikut terhapus bila enrollment, course, atau user dihapus (`CASCADE`). `course_id` dan `user_id` disimpan agar agregat rating (rata-rata + jumlah) per course cukup satu query; agregat tidak disimpan di `courses`.
 
 ## Index & constraint
 
@@ -186,5 +202,6 @@ erDiagram
 | quiz_attempts | `UNIQUE(enrollment_id, quiz_id, attempt_number)`, partial `UNIQUE(enrollment_id, quiz_id) WHERE status = 'in_progress'`, `CHECK status` |
 | attempt_answers | `UNIQUE(attempt_id, question_id)` |
 | certificates | `UNIQUE(enrollment_id)`, `UNIQUE(code)` |
+| reviews | `UNIQUE(enrollment_id)`, `INDEX(course_id, created_at)`, `CHECK rating 1..5` |
 
 Extension: `pg_trgm` (dibuat oleh migrasi `0001`).

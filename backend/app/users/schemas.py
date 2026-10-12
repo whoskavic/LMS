@@ -12,6 +12,8 @@ class UserOut(CamelModel):
     name: str
     email: str
     status: ApiStatus
+    headline: str | None = None
+    bio: str | None = None
 
     @classmethod
     def of(cls, user: User) -> "UserOut":
@@ -21,6 +23,8 @@ class UserOut(CamelModel):
             name=user.name,
             email=user.email,
             status="Active" if user.is_active else "Inactive",
+            headline=user.headline,
+            bio=user.bio,
         )
 
 
@@ -44,3 +48,5 @@ class UserUpdate(CamelModel):
 
 class ProfileUpdate(CamelModel):
     name: str | None = None
+    headline: str | None = None  # hanya instructor (profil publik)
+    bio: str | None = None
