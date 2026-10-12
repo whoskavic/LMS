@@ -509,16 +509,20 @@ def catalog(
         )
     total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     page, size = clamp_page(total, page, page_size, default_size=12)
+    learners = (
+        select(func.count(Enrollment.id)).where(Enrollment.course_id == Course.id).correlate(Course).scalar_subquery()
+    )
     order = {
-        "newest": Course.published_at.desc().nullslast(),
-        "-title": Course.title.desc(),
-    }.get(sort or "", Course.title.asc())
-    courses = list(db.scalars(stmt.order_by(order, Course.id).offset((page - 1) * size).limit(size)).unique())
+        "newest": [Course.published_at.desc().nullslast()],
+        "title": [Course.title.asc()],
+        "-title": [Course.title.desc()],
+    }.get(sort or "", [learners.desc(), Course.title.asc()])  # default "popular": jumlah peserta
+    courses = list(db.scalars(stmt.order_by(*order, Course.id).offset((page - 1) * size).limit(size)).unique())
     items = [catalog_card(v) for v in course_views(db, courses)]
     return {"items": items, "total": total, "page": page, "pageSize": size}
 
 
-def catalog_detail(db: Session, id_or_slug: str) -> dict:
+def catalog_detail(db: Session, id_or_slug: str, user: User | None = None) -> dict:
     uid = parse_uuid(id_or_slug)
     course = db.get(Course, uid) if uid else db.scalar(select(Course).where(Course.slug == id_or_slug))
     if not course or course.status != "active":
@@ -532,7 +536,33 @@ def catalog_detail(db: Session, id_or_slug: str) -> dict:
         {"order": m.position, "title": m.title, "type": TYPE_LABEL[m.type], "minutes": m.minutes} for m in modules
     ]
     view["quizzes"] = quizzes
+    view["viewer"] = viewer_status(db, course, user)
     return view
+
+
+def viewer_status(db: Session, course: Course, user: User | None) -> dict:
+    """Status pengunjung landing page: menentukan tombol Enroll / Continue learning / Manage course."""
+    if not user:
+        return {"loggedIn": False, "role": None, "isOwner": False, "enrolled": False, "canEnroll": False}
+    enrollment = db.scalar(select(Enrollment).where(Enrollment.user_id == user.id, Enrollment.course_id == course.id))
+    status = {
+        "loggedIn": True,
+        "role": user.role,
+        "isOwner": is_owner(user, course),
+        "enrolled": enrollment is not None,
+        "canEnroll": user.role in LEARNER_ROLES and not is_owner(user, course) and enrollment is None,
+    }
+    if enrollment is not None:
+        from app.enrollments.service import enrollment_view
+
+        view = enrollment_view(db, enrollment)
+        status.update(
+            enrollmentId=view["id"],
+            progress=view["progress"],
+            nextModuleNumber=view["nextModuleNumber"],
+            completed=view["learningStatus"] == "Completed",
+        )
+    return status
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from app.auth.deps import DB, CurrentUser, require_roles
+from app.auth.deps import DB, CurrentUser, OptionalUser, require_roles
 from app.courses import service
 from app.courses.schemas import CategoryIn, CourseIn, ModuleIn, OrderIn, TransitionIn
 from app.users.models import User
@@ -19,7 +19,7 @@ def catalog(
     db: DB,
     q: str | None = None,
     category: str | None = None,
-    sort: str | None = Query(None, description='"title" (default), "-title", atau "newest"'),
+    sort: str | None = Query(None, description='"popular" (default, jumlah peserta), "newest", "title", "-title"'),
     page: int | None = None,
     page_size: PageSize = None,
 ) -> dict:
@@ -30,9 +30,11 @@ def catalog(
 
 
 @router.get("/catalog/courses/{id_or_slug}", tags=["catalog"])
-def catalog_detail(id_or_slug: str, db: DB) -> dict:
-    """Detail course publik + outline modul (tanpa isi materi)."""
-    return service.catalog_detail(db, id_or_slug)
+def catalog_detail(id_or_slug: str, db: DB, user: OptionalUser) -> dict:
+    """Course landing page publik: info course, instructor, kurikulum (tanpa isi materi).
+
+    Bila ada token valid, `viewer` berisi status pengunjung (terdaftar / pemilik) untuk tombol enroll."""
+    return service.catalog_detail(db, id_or_slug, user)
 
 
 # ---------------- Kategori ----------------

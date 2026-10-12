@@ -2,7 +2,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
   // Sudah login → langsung ke dashboard
-  App.session.then((user) => user && location.replace(`pages/${homeFor(user.role)}`)).catch(() => {});
+  App.session.then((user) => user && location.replace(nextAfterLogin(user.role))).catch(() => {});
 
   const form = document.getElementById("register-form");
   const alertBox = document.getElementById("register-alert");
@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const { user } = await UI.busy(submitBtn, Api.auth.register({ name: v.name, email: v.email, password: v.password }));
       UI.flash(`Welcome to Learnova, ${user.name}!`);
-      location.href = `pages/${homeFor(user.role)}`;
+      location.href = nextAfterLogin(user.role);
     } catch (err) {
       if (!UI.applyFieldErrors(form, err)) {
         document.getElementById("register-alert-text").textContent = err.message;

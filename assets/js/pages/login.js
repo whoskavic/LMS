@@ -3,8 +3,12 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Sudah login (token masih berlaku) → langsung ke dashboard sesuai role
   App.session
-    .then((user) => user && location.replace(`pages/${homeFor(user.role)}`))
+    .then((user) => user && location.replace(nextAfterLogin(user.role)))
     .catch(() => {});
+
+  // Bawa ?next= ke halaman Sign up agar setelah registrasi kembali ke course yang dipilih
+  const next = new URLSearchParams(location.search).get("next");
+  if (next) document.querySelectorAll("[data-keep-next]").forEach((a) => (a.href = `register.html?next=${encodeURIComponent(next)}`));
 
   const form = document.getElementById("login-form");
   const alertBox = document.getElementById("login-alert");
@@ -87,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const { user } = await UI.busy(submitBtn, Api.auth.login(emailInput.value.trim(), passwordInput.value));
       UI.flash(`Welcome back, ${user.name}!`);
-      location.href = `pages/${homeFor(user.role)}`;
+      location.href = nextAfterLogin(user.role);
     } catch (err) {
       showAlert(err.message);
       if (err.status === 401 || err.status === 403) passwordInput.value = "";

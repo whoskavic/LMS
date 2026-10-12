@@ -245,3 +245,41 @@ def test_categories_admin_only(client, db):
     assert client.get("/api/v1/categories").json()[0]["name"] == "UX Design"
     assert client.get("/api/v1/meta/categories").json() == ["UX Design"]
     assert client.delete(f"/api/v1/categories/{cid}", headers=auth(admin)).status_code == 200
+
+
+def test_catalog_sorts_by_popularity_by_default(client, db):
+    owner = make_user(db, role="instructor")
+    quiet = make_course(db, owner, title="Aaa Quiet Course")
+    busy = make_course(db, owner, title="Zzz Busy Course")
+    for _ in range(2):
+        db.add(Enrollment(user_id=make_user(db).id, course_id=busy.id))
+    db.add(Enrollment(user_id=make_user(db).id, course_id=quiet.id))
+    db.commit()
+    titles = [c["title"] for c in client.get("/api/v1/catalog/courses").json()["items"]]
+    assert titles == ["Zzz Busy Course", "Aaa Quiet Course"]
+    titles = [c["title"] for c in client.get("/api/v1/catalog/courses", params={"sort": "title"}).json()["items"]]
+    assert titles == ["Aaa Quiet Course", "Zzz Busy Course"]
+
+
+def test_catalog_detail_viewer_status(client, db):
+    owner = make_user(db, role="instructor")
+    learner = make_user(db)
+    admin = make_user(db, role="admin")
+    course = make_course(db, owner, title="Landing Course")
+    make_module(db, course)
+    url = f"/api/v1/catalog/courses/{course.slug}"
+    assert client.get(url).json()["viewer"] == {
+        "loggedIn": False,
+        "role": None,
+        "isOwner": False,
+        "enrolled": False,
+        "canEnroll": False,
+    }
+    assert client.get(url, headers=auth(owner)).json()["viewer"]["isOwner"] is True
+    assert client.get(url, headers=auth(admin)).json()["viewer"]["canEnroll"] is False
+    assert client.get(url, headers=auth(learner)).json()["viewer"]["canEnroll"] is True
+    client.post(f"/api/v1/courses/{course.id}/enrollments", headers=auth(learner))
+    viewer = client.get(url, headers=auth(learner)).json()["viewer"]
+    assert viewer["enrolled"] is True and viewer["nextModuleNumber"] == 1 and viewer["progress"] == 0
+    detail = client.get(url).json()
+    assert detail["totalMinutes"] == 10 and detail["outline"][0]["minutes"] == 10
