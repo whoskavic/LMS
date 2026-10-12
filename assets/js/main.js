@@ -543,7 +543,8 @@ const UI = {
    Preferensi UI saja (bukan data bisnis), disimpan di localStorage. Instructor adalah superset student. */
 const Mode = {
   KEY: "learnova.mode",
-  LEARN_PAGES: ["student-dashboard.html", "course.html", "quiz.html"],
+  // browse.html (katalog di dalam aplikasi) termasuk mode belajar: instructor melihat menu learner + "Browse courses"
+  LEARN_PAGES: ["student-dashboard.html", "browse.html", "course.html", "quiz.html"],
   get() {
     try {
       return localStorage.getItem(this.KEY) === "learn" ? "learn" : "teach";
@@ -564,11 +565,13 @@ const Mode = {
   },
 };
 
-// Tujuan setelah login/registrasi dari ?next= (hanya halaman internal: katalog atau pages/…), selain itu home role
+// Tujuan setelah login/registrasi dari ?next= (hanya halaman internal, lihat Domain.isSafeNext), selain itu home role.
+// Halaman katalog publik dipetakan ke katalog di dalam aplikasi (pages/browse.html).
 function nextAfterLogin(role) {
   const next = new URLSearchParams(location.search).get("next");
-  if (next && /^(catalog\.html|pages\/[\w-]+\.html)(\?[^#]*)?$/.test(next)) return next;
-  return `pages/${homeFor(role)}`;
+  if (!Domain.isSafeNext(next)) return `pages/${homeFor(role)}`;
+  const [page, query = ""] = next.split("?");
+  return ["catalog.html", "instructor.html"].includes(page) ? Domain.appCatalogUrl(page, query) : next;
 }
 
 // Halaman awal sesuai role (path relatif dari folder pages/)
@@ -725,7 +728,10 @@ function applyUserToLayout(user) {
 
   const globalSearch = document.getElementById("global-search");
   const placeholders = { instructor: "Search your courses...", student: "Search your courses..." };
-  if (globalSearch && placeholders[user.role]) globalSearch.placeholder = placeholders[user.role];
+  // Halaman katalog (browse.html): search header mencari di katalog, placeholder tidak diganti
+  if (globalSearch && placeholders[user.role] && document.body.dataset.search !== "catalog") {
+    globalSearch.placeholder = placeholders[user.role];
+  }
 
   const notifList = document.querySelector("[data-notifications]");
   if (notifList) {
@@ -763,14 +769,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // Halaman di luar menu (mis. detail course) menandai menu induknya lewat data-nav-active
   const current = body.dataset.navActive || location.pathname.split("/").pop() || "index.html";
   const links = document.querySelectorAll(".nav__link");
-  const match = [...links].find((link) => link.getAttribute("href") === current);
-  if (match) {
+  // Satu halaman bisa punya beberapa item menu per role (mis. browse.html: "Catalog" admin & "Browse courses" learner)
+  const matches = [...links].filter((link) => link.getAttribute("href") === current);
+  if (matches.length) {
     links.forEach((link) => {
       link.classList.remove("is-active");
       link.removeAttribute("aria-current");
     });
-    match.classList.add("is-active");
-    match.setAttribute("aria-current", "page");
+    matches.forEach((match) => {
+      match.classList.add("is-active");
+      match.setAttribute("aria-current", "page");
+    });
   }
 
   // --- Tombol tema terang / gelap ---
@@ -845,7 +854,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      if (body.dataset.search === "local") return;
+      if (body.dataset.search === "local" || body.dataset.search === "catalog") return; // halaman memfilter sendiri
       const q = searchForm.querySelector("input").value.trim();
       const target = App.user?.role === "student" ? "student-dashboard.html" : "data-master.html";
       location.href = `${target}${q ? `?q=${encodeURIComponent(q)}` : ""}`;

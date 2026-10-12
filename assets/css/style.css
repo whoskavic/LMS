@@ -3275,3 +3275,25 @@ img.course-card__thumb {
   margin: 0;
   color: var(--color-warning);
 }
+
+/* =========================================================================
+   Katalog: grid kartu menyesuaikan lebar konten (publik penuh, aplikasi dengan sidebar)
+   ========================================================================= */
+.catalog-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+/* Shell aplikasi (pages/browse.html): hero lebih ringkas, landing page satu kolom lebih awal */
+.catalog-hero--app {
+  padding-top: 0;
+}
+.catalog-hero--app .catalog-hero__title {
+  font-size: 26px;
+}
+@media (max-width: 1240px) {
+  .catalog-app .landing {
+    grid-template-columns: 1fr;
+  }
+  .catalog-app .landing__aside {
+    position: static;
+  }
+}

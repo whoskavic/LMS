@@ -92,13 +92,13 @@ App.ready(async (me) => {
         title: "Start your learning journey",
         text: "Every course on Learnova is free. Find one you like in the catalog and enroll in one click.",
         icon: "book",
-        action: { label: "Browse courses", href: "../catalog.html" },
+        action: { label: "Browse courses", href: "browse.html" },
       });
       return;
     }
     if (!list.length) {
       const empty = {
-        active: { title: q ? "No courses match your search" : "Nothing in progress", text: "Pick a new course from the catalog.", action: { label: "Browse courses", href: "../catalog.html" } },
+        active: { title: q ? "No courses match your search" : "Nothing in progress", text: "Pick a new course from the catalog.", action: { label: "Browse courses", href: "browse.html" } },
         completed: { title: q ? "No courses match your search" : "No completed courses yet", text: "Finish every module of a course to see it here." },
         certificates: { title: "No certificates yet", text: "Complete a course that offers a certificate to earn one." },
       }[state.tab];

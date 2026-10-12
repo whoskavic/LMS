@@ -86,3 +86,37 @@ test("roleLabel & userTitle untuk tampilan user", () => {
   assert.equal(Domain.userTitle({ role: "instructor" }), "Instructor · Learner");
   assert.equal(Domain.userTitle({ role: "admin" }), "Platform administrator");
 });
+test("catalogLinks: tautan tetap di shell aktif (publik vs aplikasi)", () => {
+  const pub = Domain.catalogLinks("public");
+  const app = Domain.catalogLinks("app");
+  assert.equal(pub.list(), "catalog.html");
+  assert.equal(app.list({ q: "web dev", category: "", page: 2 }), "browse.html?q=web+dev&page=2");
+  assert.equal(pub.course("web-programming"), "catalog.html?course=web-programming");
+  assert.equal(app.course("web-programming"), "browse.html?course=web-programming");
+  assert.equal(pub.instructor("u-1"), "instructor.html?id=u-1");
+  assert.equal(app.instructor("u-1"), "browse.html?instructor=u-1");
+  assert.equal(pub.learn("c-1", 3), "pages/course.html?id=c-1&m=3");
+  assert.equal(app.learn("c-1"), "course.html?id=c-1");
+  assert.equal(pub.manage("c-1"), "pages/course-detail.html?id=c-1");
+  assert.equal(app.manage("c-1"), "course-detail.html?id=c-1");
+  // guest yang menekan Enroll kembali ke landing page di shell aplikasi setelah login
+  assert.equal(pub.login("web-programming"), "index.html?next=pages%2Fbrowse.html%3Fcourse%3Dweb-programming");
+  assert.ok(Domain.isSafeNext(decodeURIComponent(pub.login("web-programming").split("next=")[1])));
+});
+
+test("isSafeNext hanya menerima halaman internal", () => {
+  ["pages/browse.html?course=web", "pages/student-dashboard.html", "catalog.html?q=x", "instructor.html?id=1"].forEach((v) =>
+    assert.equal(Domain.isSafeNext(v), true, v)
+  );
+  ["https://evil.example", "//evil.example", "pages/../index.html", "javascript:alert(1)", "pages/browse.html#x", "", null].forEach((v) =>
+    assert.equal(Domain.isSafeNext(v), false, String(v))
+  );
+});
+
+test("appCatalogUrl memetakan halaman publik ke pages/browse.html", () => {
+  assert.equal(Domain.appCatalogUrl("catalog.html", ""), "pages/browse.html");
+  assert.equal(Domain.appCatalogUrl("catalog.html", "?course=web-programming"), "pages/browse.html?course=web-programming");
+  assert.equal(Domain.appCatalogUrl("catalog.html", "?q=data&sort=rating"), "pages/browse.html?q=data&sort=rating");
+  assert.equal(Domain.appCatalogUrl("instructor.html", "?id=abc"), "pages/browse.html?instructor=abc");
+  assert.equal(Domain.appCatalogUrl("instructor.html", ""), "pages/browse.html");
+});

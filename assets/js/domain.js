@@ -103,6 +103,49 @@ const Domain = {
     const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
     return `${Domain.formatDate(date)}, ${time}`;
   },
+
+  /* ---------- Navigasi katalog: satu renderer, dua shell ----------
+     shell "public" → halaman di root (catalog.html, instructor.html, pages/… untuk aplikasi)
+     shell "app"    → pages/browse.html (sidebar + header aplikasi; semua tautan relatif ke pages/) */
+  catalogLinks(shell) {
+    const app = shell === "app";
+    const enc = encodeURIComponent;
+    const qs = (query = {}) => {
+      const params = new URLSearchParams();
+      Object.entries(query).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+      });
+      const text = params.toString();
+      return text ? `?${text}` : "";
+    };
+    const pages = app ? "" : "pages/";
+    return {
+      list: (query) => `${app ? "browse.html" : "catalog.html"}${qs(query)}`,
+      course: (slug) => `${app ? "browse.html" : "catalog.html"}?course=${enc(slug)}`,
+      instructor: (id) => (app ? `browse.html?instructor=${enc(id)}` : `instructor.html?id=${enc(id)}`),
+      learn: (courseId, moduleNumber) => `${pages}course.html?id=${enc(courseId)}${moduleNumber ? `&m=${enc(moduleNumber)}` : ""}`,
+      manage: (courseId) => `${pages}course-detail.html?id=${enc(courseId)}`,
+      // Guest → login/daftar lalu kembali ke landing page yang sama di shell aplikasi
+      login: (slug) => `index.html?next=${enc(`pages/browse.html?course=${slug}`)}`,
+      register: (slug) => `register.html?next=${enc(`pages/browse.html?course=${slug}`)}`,
+    };
+  },
+
+  // ?next= hanya boleh menuju halaman internal (katalog publik atau pages/*.html) — cegah open redirect
+  isSafeNext(next) {
+    return typeof next === "string" && /^(catalog\.html|instructor\.html|pages\/[\w-]+\.html)(\?[^#]*)?$/.test(next);
+  },
+
+  // URL shell aplikasi yang setara untuk halaman katalog publik (dipakai saat user login membuka catalog.html / instructor.html)
+  appCatalogUrl(page, search = "") {
+    const params = new URLSearchParams(search);
+    if (page === "instructor.html") {
+      const id = params.get("id");
+      return id ? `pages/browse.html?instructor=${encodeURIComponent(id)}` : "pages/browse.html";
+    }
+    const text = params.toString();
+    return `pages/browse.html${text ? `?${text}` : ""}`;
+  },
 };
 
 if (typeof module !== "undefined") module.exports = Domain;

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="assets/css/style.css">
   <script src="assets/js/theme.js"></script>
 </head>
-<body class="auth catalog-page">
+<body class="auth catalog-page" data-catalog-shell="public">
   <header class="auth-nav">
     <a class="auth-nav__brand" href="catalog.html">
       <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
@@ -19,56 +19,15 @@
     </a>
     <p class="auth-nav__tagline">Free courses for everyone</p>
     <div class="catalog-nav">
-      <a class="btn btn--outline" href="index.html" id="nav-account">Log in</a>
-      <a class="btn btn--primary" href="register.html" id="nav-signup">Sign up</a>
+      <a class="btn btn--outline" href="index.html">Log in</a>
+      <a class="btn btn--primary" href="register.html">Sign up</a>
       <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
     </div>
   </header>
 
   <main class="content catalog" id="main">
-    <!-- Daftar course -->
-    <section id="catalog-list-view">
-      <section class="catalog-hero">
-        <p class="page-header__eyebrow">Free courses for everyone</p>
-        <h1 class="catalog-hero__title">Learn something new today</h1>
-        <p class="page-header__subtitle">Every course on Learnova is free. Search a topic, enroll in one click, and learn at your own pace.</p>
-        <form class="search catalog-hero__search" id="catalog-search" role="search">
-          <i data-icon="search" class="icon--sm"></i>
-          <label class="visually-hidden" for="catalog-q">Search courses</label>
-          <input class="search__input" id="catalog-q" name="q" type="search" placeholder="What do you want to learn?" autocomplete="off">
-        </form>
-      </section>
-
-      <div class="catalog-toolbar">
-        <div class="chips" id="catalog-chips" role="group" aria-label="Filter by category">
-          <button class="chip is-active" type="button" data-category="" aria-pressed="true">All</button>
-        </div>
-        <label class="visually-hidden" for="catalog-sort">Sort</label>
-        <select class="field__input field__input--auto" id="catalog-sort" name="sort">
-          <option value="popular">Most popular</option>
-          <option value="rating">Highest rated</option>
-          <option value="newest">Newest</option>
-          <option value="title">Title A–Z</option>
-        </select>
-      </div>
-
-      <p class="text-muted mt-5" id="catalog-summary" aria-live="polite"></p>
-      <div class="grid grid--3 mt-5" id="catalog-grid"></div>
-      <div class="table-footer">
-        <p></p>
-        <nav class="pagination" id="catalog-pagination" aria-label="Pagination"></nav>
-      </div>
-    </section>
-
-    <!-- Detail course -->
-    <section id="catalog-detail-view" hidden>
-      <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="catalog.html" id="back-to-catalog">Courses</a>
-        <span aria-hidden="true">/</span>
-        <span id="detail-crumb" aria-current="page">Course</span>
-      </nav>
-      <div id="catalog-detail"></div>
-    </section>
+    <!-- Dirender oleh assets/js/catalog-view.js (shell publik). User yang login dialihkan ke pages/browse.html -->
+    <div id="catalog-root"></div>
   </main>
 
   <script src="assets/js/domain.js"></script>
@@ -77,8 +36,7 @@
   <script src="assets/js/api/transport-http.js"></script>
   <script src="assets/js/api/services.js"></script>
   <script src="assets/js/main.js"></script>
-  <script src="assets/js/catalog-card.js"></script>
-  <script src="assets/js/pages/catalog.js"></script>
+  <script src="assets/js/catalog-view.js"></script>
   <script src="assets/js/pages/course-reviews.js"></script>
 </body>
 </html>
