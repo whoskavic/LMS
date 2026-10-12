@@ -3265,3 +3265,13 @@ img.course-card__thumb {
 .course-card__instructor a:hover {
   color: var(--color-primary);
 }
+
+/* Petunjuk di samping tombol "Submit for approval" (course tanpa modul) */
+.course-actions__hint {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-warning);
+}

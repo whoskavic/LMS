@@ -406,6 +406,8 @@ def transition(db: Session, user: User, course_id: str, action: str, reason: str
                 "Complete all required course details before submitting for approval.",
                 errors,
             )
+        if not db.scalar(select(func.count()).select_from(Module).where(Module.course_id == course.id)):
+            raise ApiError(400, "COURSE_HAS_NO_MODULES", "Add at least one module before submitting for approval.")
         course.submitted_at = now()
     if action == "approve" and not course.published_at:
         course.published_at = now()

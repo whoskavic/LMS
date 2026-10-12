@@ -15,7 +15,7 @@ Legenda: ✅ terhubung ke backend
 | Admin | Approve / reject (dengan alasan) / archive / restore course, riwayat status | ✅ |
 | Admin | Kategori course (API) | ✅ |
 | Admin | Laporan: total learner/instructor/enrollment, completion rate, rata-rata quiz, course terpopuler, tabel progress (filter, sortir, pagination), cetak, export CSV | ✅ |
-| Instructor | Membuat & mengedit course (judul, deskripsi, kategori, thumbnail URL, sertifikat), submit untuk approval | ✅ |
+| Instructor | Membuat & mengedit course (judul, deskripsi, kategori, thumbnail URL, sertifikat), submit untuk approval (wajib minimal satu modul) | ✅ |
 | Instructor | Modul materi (urutkan, video URL) | ✅ |
 | Instructor | Quiz pilihan ganda (editor soal, statistik attempt) | ✅ |
 | Instructor | Dashboard (course per status, progress & skor per course, attempt terbaru) | ✅ |
@@ -37,7 +37,7 @@ Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 
 Dihapus dari UI & API (ADR-009): IPK, nilai akhir & grade huruf, semester, NIM/NIDN, departemen, kode course, durasi minggu, tanggal mulai, kapasitas, input nilai & batch enroll. Endpoint `/courses/{id}/grades`, `/courses/{id}/candidates`, `/courses/{id}/enrollments/batch`, `DELETE /enrollments/{id}`, dan `/meta/departments` sudah tidak ada (404).
 
-Alur utama: **Sign up** (selalu learner) → jelajahi katalog → **Enroll for free** → belajar modul & quiz → sertifikat saat progress 100% → tulis ulasan. Dari My Learning atau Profile, **Start teaching** mengubah akun menjadi instructor (tetap bisa belajar); instructor membuat course → submit → admin approve → course tampil di katalog. Keputusan desain: [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
+Alur utama: **Sign up** (selalu learner) → jelajahi katalog → **Enroll for free** → belajar modul & quiz → sertifikat saat progress 100% → tulis ulasan. Dari My Learning atau Profile, **Start teaching** mengubah akun menjadi instructor (tetap bisa belajar); instructor membuat course → menambah minimal satu modul → submit → admin approve → course tampil di katalog. Keputusan desain: [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
 
 ## Tech stack
 
@@ -204,7 +204,7 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET | `/api/v1/courses/{id}` | admin, instructor pemilik, student terdaftar / course terbuka |
 | PATCH | `/api/v1/courses/{id}` | instructor pemilik |
 | DELETE | `/api/v1/courses/{id}` | instructor pemilik / admin (hanya Draft tanpa enrollment) |
-| POST | `/api/v1/courses/{id}/transitions` (`submit, approve, reject, archive, restore`) | instructor pemilik (submit) / admin |
+| POST | `/api/v1/courses/{id}/transitions` (`submit, approve, reject, archive, restore`) | instructor pemilik (submit; detail belum lengkap → 400 `INCOMPLETE_COURSE`, belum ada modul → 400 `COURSE_HAS_NO_MODULES`) / admin |
 | GET | `/api/v1/courses/{id}/status-logs`, `/api/v1/courses/{id}/stats` | admin, instructor pemilik |
 | GET / POST | `/api/v1/courses/{id}/modules` | lihat: yang boleh melihat course · tambah: instructor pemilik |
 | PUT | `/api/v1/courses/{id}/modules/order` | instructor pemilik |

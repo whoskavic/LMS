@@ -92,6 +92,19 @@ def test_seed_creates_demo_accounts(client, db):
         "/api/v1/courses", params={"status": "Pending"}, headers={"Authorization": f"Bearer {res.json()['token']}"}
     )
     assert [c["title"] for c in admin.json()["items"]] == ["Mobile Programming"]
+    # aturan submit: course demo Pending/Active selalu punya modul
+    from sqlalchemy import func, select
+
+    from app.courses.models import Module
+
+    empty = db.scalars(
+        select(Course.title)
+        .outerjoin(Module, Module.course_id == Course.id)
+        .where(Course.status.in_(("pending", "active")))
+        .group_by(Course.id)
+        .having(func.count(Module.id) == 0)
+    ).all()
+    assert empty == []
 
 
 def test_seed_extras_fill_existing_data_idempotently(client, db):

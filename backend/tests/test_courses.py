@@ -2,6 +2,8 @@ from app.courses.models import CourseStatusLog
 from app.enrollments.models import Enrollment
 from tests.helpers import FULL_COURSE, auth, make_category, make_course, make_module, make_user
 
+MODULE = {"title": "Getting started", "type": "Lecture", "minutes": 10, "content": "Welcome to the course."}
+
 
 def test_instructor_creates_draft_and_submits_admin_approves(client, db):
     make_category(db)
@@ -20,6 +22,17 @@ def test_instructor_creates_draft_and_submits_admin_approves(client, db):
     assert res.status_code == 200, res.text
     assert res.json()["category"] == "Technology" and res.json()["totalMinutes"] == 0
 
+    # Course tanpa modul tidak bisa diajukan
+    res = client.post(f"/api/v1/courses/{draft['id']}/transitions", json={"action": "submit"}, headers=auth(instructor))
+    assert res.status_code == 400
+    assert res.json()["error"] == {
+        "code": "COURSE_HAS_NO_MODULES",
+        "message": "Add at least one module before submitting for approval.",
+    }
+    assert client.get(f"/api/v1/courses/{draft['id']}", headers=auth(instructor)).json()["status"] == "Draft"
+
+    res = client.post(f"/api/v1/courses/{draft['id']}/modules", json=MODULE, headers=auth(instructor))
+    assert res.status_code == 201, res.text
     res = client.post(f"/api/v1/courses/{draft['id']}/transitions", json={"action": "submit"}, headers=auth(instructor))
     assert res.json()["status"] == "Pending" and res.json()["submittedAt"]
 
@@ -47,7 +60,10 @@ def test_reject_stores_note_and_resubmit(client, db):
     instructor = make_user(db, role="instructor")
     admin = make_user(db, role="admin")
     course = client.post("/api/v1/courses", json=FULL_COURSE, headers=auth(instructor)).json()
-    client.post(f"/api/v1/courses/{course['id']}/transitions", json={"action": "submit"}, headers=auth(instructor))
+    client.post(f"/api/v1/courses/{course['id']}/modules", json=MODULE, headers=auth(instructor))
+    submit = {"action": "submit"}
+    res = client.post(f"/api/v1/courses/{course['id']}/transitions", json=submit, headers=auth(instructor))
+    assert res.json()["status"] == "Pending"
     res = client.post(
         f"/api/v1/courses/{course['id']}/transitions",
         json={"action": "reject", "reason": "Add syllabus"},
