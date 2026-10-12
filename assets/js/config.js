@@ -4,6 +4,9 @@
 //   - dibuka dari localhost / 127.0.0.1 / file:// → backend lokal (docker compose) di port 8000
 //   - selain itu (static site produksi)          → PRODUCTION_API_URL di bawah
 // Saat deploy: ganti PRODUCTION_API_URL dengan URL backend Anda (lihat README › Deploy), termasuk /api/v1.
+//   - Vercel (project learnova-api): "https://<domain-learnova-api>.vercel.app/api/v1"
+//   - Render: "https://<nama-service>.onrender.com/api/v1"
+// Nilai di bawah hanya contoh; ganti setelah URL backend diketahui.
 // transport: "http" (backend FastAPI). MockServer lama (transport-local.js) tidak lagi dimuat halaman;
 // file tersebut disimpan sebagai spesifikasi kontrak yang diuji `node --test`.
 const PRODUCTION_API_URL = "https://learnova-api.onrender.com/api/v1";

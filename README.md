@@ -133,7 +133,9 @@ Backend membaca variabel berikut (lihat `backend/.env.example`):
 | `JWT_EXPIRES_MINUTES` | Masa berlaku token (menit) | `720` |
 | `CORS_ORIGINS` | Origin frontend yang diizinkan, dipisah koma (`*` = semua) | `https://learnova-web.onrender.com` |
 | `PORT` | Port uvicorn di image produksi (diisi otomatis oleh Railway/Render) | `8000` |
-| `SEED_DEMO` | `true` → image produksi mengisi data demo saat start bila database kosong | `true` |
+| `SEED_DEMO` | `true` → isi data demo bila database kosong: saat start (image Docker) atau saat build (Vercel) | `true` |
+| `DATABASE_URL_UNPOOLED` | Hanya Vercel + Neon (disuntikkan integrasi Neon): koneksi direct untuk migrasi saat build; `DATABASE_URL` (pooled) dipakai runtime | `postgresql://…@ep-xxx.neon.tech/neondb?sslmode=require` |
+| `VERCEL` | Diset otomatis oleh Vercel; bila ada, engine database memakai `NullPool` (tanpa pool di proses) | `1` |
 
 Frontend tidak memakai environment variable: URL API produksi ditulis di `assets/js/config.js` (`PRODUCTION_API_URL`). Saat dibuka dari `localhost`, frontend otomatis memakai `http://localhost:8000/api/v1`.
 
@@ -234,6 +236,19 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) menjalankan `node --test`, ruff,
 ## Deploy
 
 Arsitektur produksi: **backend** (image Docker `backend/Dockerfile`) + **PostgreSQL 16** + **frontend statis** (folder root repo, tanpa build). Image produksi menjalankan `alembic upgrade head` setiap start, lalu `python -m app.seed` bila `SEED_DEMO=true` (dilewati bila data sudah ada), lalu uvicorn di `$PORT`.
+
+### Opsi Vercel (disarankan untuk demo kuliah)
+
+Dua project Vercel dari repo yang sama + database Neon Postgres (Vercel Marketplace). API berjalan sebagai Vercel Function (FastAPI zero-config, entrypoint `backend/app/main.py`, objek `app`). Migrasi Alembic dan seed demo dijalankan saat **build** oleh `backend/vercel_build.py` (dipanggil dari `[tool.vercel.scripts] build` di `backend/pyproject.toml`).
+
+a. **Project API** — Vercel → **Add New → Project** → import repo, nama `learnova-api`, **Root Directory** `backend`. Framework **FastAPI** terdeteksi otomatis; **Build Command dibiarkan kosong**.
+b. **Database** — di project `learnova-api` buka tab **Storage** → buat/hubungkan database **Neon** untuk environment Production, Preview, dan Development. Integrasi ini menyuntikkan `DATABASE_URL` (pooled) dan `DATABASE_URL_UNPOOLED` (direct).
+c. **Environment variable** (Settings → Environment Variables):
+   `APP_ENV=production`, `JWT_SECRET` (acak ≥ 32 karakter, mis. `python -c "import secrets; print(secrets.token_urlsafe(48))"`), `JWT_EXPIRES_MINUTES=720`, `SEED_DEMO=true`, `CORS_ORIGINS` (diisi setelah langkah e).
+d. **Redeploy** `learnova-api`, lalu cek `https://<api>.vercel.app/api/v1/health` → `{"status":"ok","database":"ok"}`. Log build menampilkan baris `[vercel-build]` (migrasi + seed).
+e. **Project web** — isi `PRODUCTION_API_URL` di `assets/js/config.js` dengan `https://<api>.vercel.app/api/v1`, commit & push. Import repo lagi sebagai project `learnova-web`: **Root Directory** = root repo, **Framework Preset** "Other", tanpa Build Command, **Output Directory** `.`.
+f. **CORS** — isi `CORS_ORIGINS` di `learnova-api` dengan domain `learnova-web`, mis. `https://learnova-web.vercel.app` (tanpa garis miring di akhir), lalu redeploy `learnova-api`.
+g. **Catatan** — setiap build menjalankan migrasi + seed otomatis (seed dilewati bila data sudah ada). Untuk reset data demo, jalankan dari lokal: `cd backend && DATABASE_URL="<DATABASE_URL_UNPOOLED dari Neon>" python -m app.seed --reset`.
 
 ### Opsi A — Render (blueprint)
 
