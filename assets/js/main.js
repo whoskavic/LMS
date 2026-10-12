@@ -379,6 +379,7 @@ const UI = {
   /**
    * Muat data ke container: loading → render(data) | empty | error (dengan Retry).
    * options.empty: argumen UI.empty, dipakai bila data kosong (array / { items: [] } / null).
+   * options.errorTitle: judul state error (default "Could not load this section").
    * Mengembalikan data, atau undefined bila gagal.
    */
   async load(el, loader, render, options = {}) {
@@ -391,7 +392,7 @@ const UI = {
       else render(data);
       return data;
     } catch (err) {
-      UI.error(el, err, () => UI.load(el, loader, render, options));
+      UI.error(el, err, () => UI.load(el, loader, render, options), { title: options.errorTitle });
       return undefined;
     }
   },
@@ -683,7 +684,7 @@ function startTeaching() {
       <p class="text-muted">Create free courses for everyone. You keep your learner account — switch between <strong>Learn</strong> and <strong>Teach</strong> at any time.</p>
       <form class="form-stack mt-5" novalidate>
         ${UI.field({ name: "headline", label: "Headline", required: false, placeholder: "e.g. Web developer & teacher", attrs: 'maxlength="120"' })}
-        ${UI.field({ name: "bio", label: "About you", type: "textarea", required: false, placeholder: "Tell learners about your experience", attrs: 'maxlength="1000"' })}
+        ${UI.field({ name: "bio", label: "About you", type: "textarea", required: false, placeholder: "Tell learners about your experience", attrs: 'maxlength="2000"' })}
       </form>`,
     onConfirm: async (modal) => {
       const v = UI.formValues(modal.querySelector("form"));

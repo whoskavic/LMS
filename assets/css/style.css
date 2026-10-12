@@ -3095,3 +3095,173 @@ img.course-card__thumb {
 .course-card__title a:hover {
   color: var(--color-primary);
 }
+
+/* --- Ulasan course (landing page) --- */
+.stars {
+  color: var(--color-warning);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.stars__off {
+  color: var(--color-border);
+}
+.review-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-5, 20px);
+  align-items: center;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.review-summary__score {
+  text-align: center;
+}
+.review-summary__value {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text-heading, inherit);
+}
+.review-summary__bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.review-summary__bars li {
+  display: grid;
+  grid-template-columns: 36px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.review-summary__bars .progress {
+  display: block;
+  margin: 0;
+}
+.review-summary__bars .progress__bar {
+  display: block;
+  background: var(--color-warning);
+}
+.review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.review {
+  display: flex;
+  gap: 12px;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.review:last-child {
+  border-bottom: 0;
+}
+.review__body {
+  flex: 1;
+  min-width: 0;
+}
+.review__body p {
+  margin: 0 0 4px;
+}
+.review__comment {
+  color: var(--color-text-body);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.review__actions {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+.review-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--space-4);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+}
+.review-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5, 20px);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.review-form__title {
+  font-size: 16px;
+  margin: 0;
+}
+.review-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+.rating-input {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.rating-input__stars {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  gap: 2px;
+}
+.rating-input__stars input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.rating-input__stars label {
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-border);
+  transition: color 0.15s;
+}
+.rating-input__stars input:checked ~ label,
+.rating-input__stars label:hover,
+.rating-input__stars label:hover ~ label {
+  color: var(--color-warning);
+}
+.rating-input__stars input:focus-visible + label {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.rating-input.is-invalid .field__error {
+  display: flex;
+}
+@media (max-width: 640px) {
+  .review-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Profil publik instructor --- */
+.instructor-hero {
+  display: flex;
+  gap: var(--space-5, 20px);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.instructor-hero .avatar {
+  width: 88px;
+  height: 88px;
+  font-size: 30px;
+}
+.instructor-bio {
+  white-space: pre-line;
+  color: var(--color-text-body);
+}
+.course-card__instructor a {
+  color: inherit;
+}
+.course-card__instructor a:hover {
+  color: var(--color-primary);
+}

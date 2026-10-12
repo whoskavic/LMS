@@ -20,6 +20,7 @@ from app.db import Base, SessionLocal
 from app.enrollments.models import Enrollment, ModuleProgress
 from app.enrollments.service import apply_progress
 from app.quizzes.models import AttemptAnswer, Question, QuestionOption, Quiz, QuizAttempt
+from app.reviews.models import Review
 from app.users.models import User
 
 # Diekspor dari assets/js/data.js (SEED) agar data demo sama dengan prototipe
@@ -293,6 +294,65 @@ def seed_attempts(db: Session, users: dict[str, User], enrollments: list[Enrollm
     db.flush()
 
 
+# Data demo tambahan (PR E). Diterapkan juga pada database yang sudah berisi data (idempoten):
+# hanya mengisi headline/bio yang masih kosong dan ulasan yang belum ada, khusus akun demo di atas.
+INSTRUCTOR_PROFILES = {
+    "budi@learnova.ac.id": (
+        "Software engineer & web development instructor",
+        "Budi has built web applications for over ten years and teaches practical, project-based courses "
+        "on programming fundamentals and modern web development.",
+    ),
+    "adam@learnova.ac.id": (
+        "Data scientist and mathematics educator",
+        "Adam helps learners build intuition for mathematics, statistics, and science through clear "
+        "explanations and plenty of worked examples.",
+    ),
+}
+
+DEMO_REVIEWS = [
+    ("alex@learnova.ac.id", "PHY110", 5, "Clear explanations and great practice problems. Highly recommended!"),
+    ("alex@learnova.ac.id", "DATA200", 4, "A solid introduction to data science. The quizzes really help."),
+    ("alex@learnova.ac.id", "HIS101", 4, "Engaging lessons. I would love a few more reading resources."),
+    ("alex@learnova.ac.id", "CS101", 5, "Perfect starting point if you are new to programming."),
+    ("nadia@learnova.ac.id", "MATH201", 5, "The best linear algebra course I have taken. Well structured."),
+    ("nadia@learnova.ac.id", "DATA200", 5, None),
+    ("nadia@learnova.ac.id", "CS205", 4, "Practical and up to date. The project modules are fun."),
+    ("marcus@learnova.ac.id", "PHY110", 4, "Challenging but rewarding. Take notes as you go."),
+    ("marcus@learnova.ac.id", "CS101", 3, "Good content, although the pace is a bit slow at first."),
+]
+
+
+def seed_extras(db: Session) -> int:
+    """Isi profil instructor demo dan ulasan demo yang belum ada. Mengembalikan jumlah perubahan."""
+    changes = 0
+    for email, (headline, bio) in INSTRUCTOR_PROFILES.items():
+        user = db.scalar(select(User).where(User.email == email))
+        if user and user.role == "instructor" and not user.headline and not user.bio:
+            user.headline, user.bio = headline, bio
+            changes += 1
+    for email, code, rating, comment in DEMO_REVIEWS:
+        enrollment = db.scalar(
+            select(Enrollment)
+            .join(User, Enrollment.user_id == User.id)
+            .join(Course, Enrollment.course_id == Course.id)
+            .where(User.email == email, Course.code == code)
+        )
+        if not enrollment or db.scalar(select(Review.id).where(Review.enrollment_id == enrollment.id)):
+            continue
+        db.add(
+            Review(
+                enrollment_id=enrollment.id,
+                course_id=enrollment.course_id,
+                user_id=enrollment.user_id,
+                rating=rating,
+                comment=comment,
+            )
+        )
+        changes += 1
+    db.commit()
+    return changes
+
+
 def seed(db: Session) -> None:
     users = seed_users(db)
     courses = seed_courses(db, users)
@@ -300,12 +360,16 @@ def seed(db: Session) -> None:
     quizzes = seed_quizzes(db, courses)
     seed_attempts(db, users, enrollments, quizzes)
     db.commit()
+    seed_extras(db)
 
 
 def seed_if_empty() -> bool:
-    """Isi data demo bila tabel users masih kosong. True bila seed dijalankan (dipakai main & vercel_build.py)."""
+    """Isi data demo bila tabel users masih kosong. True bila seed dijalankan (dipakai main & vercel_build.py).
+
+    Bila data sudah ada, hanya data demo tambahan (profil instructor, ulasan) yang dilengkapi (idempoten)."""
     with SessionLocal() as db:
         if db.scalar(select(func.count()).select_from(User)):
+            seed_extras(db)
             return False
         seed(db)
         return True
@@ -323,7 +387,7 @@ def main() -> None:
     elif seed_if_empty():
         print("Seed selesai.")
     else:
-        print("Data sudah ada — seed dilewati. Pakai --reset untuk mengisi ulang.")
+        print("Data sudah ada — seed dilewati (data demo tambahan dilengkapi). Pakai --reset untuk mengisi ulang.")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from app.courses.models import Course
 from app.enrollments.models import Enrollment
+from app.users.models import User
 from tests.helpers import auth, make_user
 
 NEW_STUDENT = {
@@ -91,6 +92,26 @@ def test_seed_creates_demo_accounts(client, db):
         "/api/v1/courses", params={"status": "Pending"}, headers={"Authorization": f"Bearer {res.json()['token']}"}
     )
     assert [c["title"] for c in admin.json()["items"]] == ["Mobile Programming"]
+
+
+def test_seed_extras_fill_existing_data_idempotently(client, db):
+    from sqlalchemy import func, select
+
+    from app.reviews.models import Review
+    from app.seed import DEMO_REVIEWS, seed, seed_extras
+
+    seed(db)
+    assert db.scalar(select(func.count()).select_from(Review)) == len(DEMO_REVIEWS)
+    # simulasikan database lama (sebelum PR E): tanpa ulasan dan profil instructor
+    db.query(Review).delete()
+    budi = db.scalar(select(User).where(User.email == "budi@learnova.ac.id"))
+    budi.headline = budi.bio = None
+    db.commit()
+    assert seed_extras(db) == len(DEMO_REVIEWS) + 1
+    assert seed_extras(db) == 0  # idempoten
+    assert budi.headline
+    profile = client.get(f"/api/v1/instructors/{budi.id}").json()
+    assert profile["stats"]["courses"] > 0 and profile["bio"]
 
 
 def test_notifications_for_admin_list_pending_courses(client, db):

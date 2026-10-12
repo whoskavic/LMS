@@ -1,7 +1,7 @@
 // Katalog publik (halaman utama publik) — cari, chip kategori, sort, pagination, dan course landing page.
 // Bisa dibuka tanpa login. Tombol di landing page mengikuti status pengunjung (dari `viewer` di respons API):
 // belum login → login lalu kembali ke sini · learner → Enroll for free · sudah enroll → Continue learning ·
-// pemilik course → Manage course.
+// pemilik course → Manage course. Bagian ulasan dirender oleh course-reviews.js (event "landing:rendered").
 
 document.addEventListener("DOMContentLoaded", () => {
   const PAGE_SIZE = 9;
@@ -54,30 +54,9 @@ document.addEventListener("DOMContentLoaded", () => {
     history.replaceState(null, "", `catalog.html${query.toString() ? `?${query}` : ""}`);
   };
 
-  const thumb = (c, cls = "course-card__thumb") =>
-    c.thumbnailUrl
-      ? `<img class="${cls}" src="${Utils.escape(c.thumbnailUrl)}" alt="" loading="lazy">`
-      : `<div class="${cls}" style="background: ${Utils.escape(c.color || "var(--color-primary-soft)")}"></div>`;
-
-  // Rating rata-rata + jumlah ulasan (tersedia bila backend mengirim field rating)
-  const ratingLine = (c) =>
-    c.reviewCount ? `<p class="course-card__rating"><strong>★ ${Number(c.ratingAverage).toFixed(1)}</strong> (${c.reviewCount} review${c.reviewCount === 1 ? "" : "s"})</p>` : "";
-
-  const cardTemplate = (c) => `
-    <article class="card course-card">
-      <div class="course-card__body">
-        ${thumb(c)}
-        <p class="course-card__code">${Utils.escape(Utils.orDash(c.category))}</p>
-        <h3 class="course-card__title"><a href="catalog.html?course=${encodeURIComponent(c.slug)}" data-open="${Utils.escape(c.slug)}">${Utils.escape(c.title)}</a></h3>
-        <p class="course-card__instructor">${Utils.escape(c.instructorName)}</p>
-        ${ratingLine(c)}
-        <p class="course-card__meta">${Utils.number(c.students)} learner${c.students === 1 ? "" : "s"} · ${Domain.courseLength(c.modules, c.totalMinutes)}</p>
-        <span class="badge badge--free">Free</span>
-      </div>
-      <div class="course-card__footer">
-        <a class="btn btn--primary" href="catalog.html?course=${encodeURIComponent(c.slug)}">View course <i data-icon="arrow-right" class="icon--sm"></i></a>
-      </div>
-    </article>`;
+  const thumb = Catalog.thumb;
+  const ratingLine = Catalog.ratingLine;
+  const cardTemplate = Catalog.card;
 
   async function renderList() {
     const id = ++requestId;
@@ -175,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <h1 class="page-header__title">${Utils.escape(course.title)}</h1>
               <p class="page-header__subtitle">${Utils.escape(course.description || "")}</p>
               ${ratingLine(course)}
-              <p class="text-muted">Created by <strong>${Utils.escape(course.instructorName)}</strong>${
+              <p class="text-muted">Created by <a href="instructor.html?id=${encodeURIComponent(course.instructorId)}"><strong>${Utils.escape(course.instructorName)}</strong></a>${
                 course.instructorHeadline ? ` · ${Utils.escape(course.instructorHeadline)}` : ""
               }</p>
             </div>

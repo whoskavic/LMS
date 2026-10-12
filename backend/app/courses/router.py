@@ -19,7 +19,9 @@ def catalog(
     db: DB,
     q: str | None = None,
     category: str | None = None,
-    sort: str | None = Query(None, description='"popular" (default, jumlah peserta), "newest", "title", "-title"'),
+    sort: str | None = Query(
+        None, description='"popular" (default, jumlah peserta), "newest", "rating", "title", "-title"'
+    ),
     page: int | None = None,
     page_size: PageSize = None,
 ) -> dict:
@@ -35,6 +37,12 @@ def catalog_detail(id_or_slug: str, db: DB, user: OptionalUser) -> dict:
 
     Bila ada token valid, `viewer` berisi status pengunjung (terdaftar / pemilik) untuk tombol enroll."""
     return service.catalog_detail(db, id_or_slug, user)
+
+
+@router.get("/instructors/{user_id}", tags=["catalog"])
+def instructor_profile(user_id: str, db: DB) -> dict:
+    """Profil publik instructor (tanpa login): headline, bio, statistik, dan course Active."""
+    return service.instructor_profile(db, user_id)
 
 
 # ---------------- Kategori ----------------
