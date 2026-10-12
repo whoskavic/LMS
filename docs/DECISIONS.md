@@ -42,3 +42,9 @@ Perbedaan relasi/representasi:
 - `rejectionReason` di mock → `course_status_logs.note`.
 - Nomor sertifikat di mock diturunkan dari kode course + ID enrollment; di database `certificates.code` acak (tidak bisa ditebak) dengan format `LRN-<KODE>-<acak>`.
 - Aktivitas, notifikasi, status sistem, dan grafik enrollment tidak punya tabel; dihitung dari data yang ada.
+
+## ADR-007 — Deploy demo kuliah di Vercel + Neon
+- **Konteks:** aplikasi harus bisa dibuka dosen kapan saja tanpa biaya. Image Docker (`start.sh`) sudah bisa dipakai di Render/Railway/VPS, tetapi layanan gratis Render tidur saat idle (start lambat) dan Railway tidak punya paket gratis permanen.
+- **Opsi:** (1) Vercel (FastAPI sebagai Vercel Function + frontend statis) + Neon Postgres dari Vercel Marketplace; (2) blueprint Render (`render.yaml`); (3) Railway.
+- **Keputusan:** Vercel + Neon menjadi opsi utama untuk demo kuliah; Docker/Render/Railway tetap didukung tanpa perubahan perilaku. Karena di Vercel tidak ada `start.sh`, migrasi Alembic + seed opsional dijalankan saat build (`backend/vercel_build.py`, memakai koneksi direct `DATABASE_URL_UNPOOLED`). Engine SQLAlchemy memakai `NullPool` saat env `VERCEL` ada, dan prepared statement psycopg dimatikan (`prepare_threshold=None`) di semua environment agar aman di belakang PgBouncer mode transaction.
+- **Konsekuensi:** tidak ada server yang tidur (function dingin hanya menambah latensi singkat); migrasi gagal = deploy gagal; setiap request membuka koneksi baru ke pooler Neon (overhead kecil, diserahkan ke pooler); dependency runtime harus sama di `pyproject.toml` dan `requirements.txt`. Paket Hobby Vercel hanya untuk penggunaan non-komersial — bila Learnova menjadi platform publik berbayar perlu paket Pro atau kembali ke deploy Docker.

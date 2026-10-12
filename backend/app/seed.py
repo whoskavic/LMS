@@ -306,18 +306,28 @@ def seed(db: Session) -> None:
     db.commit()
 
 
+def seed_if_empty() -> bool:
+    """Isi data demo bila tabel users masih kosong. True bila seed dijalankan (dipakai main & vercel_build.py)."""
+    with SessionLocal() as db:
+        if db.scalar(select(func.count()).select_from(User)):
+            return False
+        seed(db)
+        return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed data demo Learnova")
     parser.add_argument("--reset", action="store_true", help="kosongkan semua tabel sebelum seed")
     args = parser.parse_args()
-    with SessionLocal() as db:
-        if args.reset:
+    if args.reset:
+        with SessionLocal() as db:
             reset(db)
-        elif db.scalar(select(func.count()).select_from(User)):
-            print("Data sudah ada — seed dilewati. Pakai --reset untuk mengisi ulang.")
-            return
-        seed(db)
+            seed(db)
         print("Seed selesai.")
+    elif seed_if_empty():
+        print("Seed selesai.")
+    else:
+        print("Data sudah ada — seed dilewati. Pakai --reset untuk mengisi ulang.")
 
 
 if __name__ == "__main__":
