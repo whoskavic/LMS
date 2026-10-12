@@ -14,7 +14,7 @@ def test_register_login_and_me(client):
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["user"]["email"] == "nadia@example.com"
-    assert body["user"]["role"] == "instructor"
+    assert body["user"]["role"] == "student"  # role dari klien diabaikan (ADR-008)
 
     res = client.post("/api/v1/auth/login", json={"email": "nadia@example.com", "password": "secret123"})
     assert res.status_code == 200
@@ -23,13 +23,13 @@ def test_register_login_and_me(client):
     assert me["name"] == "Nadia Putri" and me["status"] == "Active"
 
 
-def test_register_rejects_admin_role_and_duplicate_email(client, db):
+def test_register_ignores_role_and_rejects_duplicate_email(client, db):
     make_user(db, email="taken@test.dev")
     res = client.post(
         "/api/v1/auth/register",
         json={"name": "Eve Admin", "email": "x@test.dev", "password": "secret123", "role": "admin"},
     )
-    assert res.status_code == 400 and "role" in res.json()["error"]["fields"]
+    assert res.status_code == 201 and res.json()["user"]["role"] == "student"
     res = client.post("/api/v1/auth/register", json={"name": "Eve", "email": "taken@test.dev", "password": "secret123"})
     assert res.status_code == 409 and res.json()["error"]["fields"]["email"]
 

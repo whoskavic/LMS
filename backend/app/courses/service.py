@@ -11,6 +11,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.auth.deps import LEARNER_ROLES
 from app.common.errors import ApiError, assert_valid, conflict, forbidden, not_found
 from app.common.grading import average, js_round
 from app.common.pagination import clamp_page, paginate
@@ -209,11 +210,11 @@ def is_enrolled(db: Session, user: User, course: Course) -> bool:
 
 
 def viewable_course(db: Session, user: User, course_id: str) -> Course:
-    """Admin semua; instructor miliknya; student yang terdaftar atau course aktif yang terbuka."""
+    """Admin semua; instructor miliknya; learner (student/instructor) yang terdaftar atau course aktif yang terbuka."""
     course = find_course(db, course_id)
     if user.role == "admin" or is_owner(user, course):
         return course
-    if user.role == "student" and (
+    if user.role in LEARNER_ROLES and (
         is_enrolled(db, user, course) or (course.status == "active" and course.enrollment_open)
     ):
         return course
@@ -517,13 +518,20 @@ def list_courses(
     db: Session, user: User, q, status, category, semester, instructor_id, open_only, sort, page, page_size
 ) -> dict:
     stmt = select(Course)
-    if user.role == "instructor":
-        stmt = stmt.where(Course.instructor_id == user.id)
-    elif user.role == "student":
+    learner_view = user.role == "student" or (user.role == "instructor" and open_only)
+    if learner_view:
+        # Course yang bisa didaftari learner: Active, terbuka, belum diikuti, bukan milik sendiri
         if not open_only:
             raise forbidden("Students can list open courses with ?open=true or their own courses with /me/enrollments.")
         enrolled = select(Enrollment.course_id).where(Enrollment.user_id == user.id)
-        stmt = stmt.where(Course.status == "active", Course.enrollment_open.is_(True), Course.id.not_in(enrolled))
+        stmt = stmt.where(
+            Course.status == "active",
+            Course.enrollment_open.is_(True),
+            Course.id.not_in(enrolled),
+            Course.instructor_id != user.id,
+        )
+    elif user.role == "instructor":
+        stmt = stmt.where(Course.instructor_id == user.id)
     if status:
         stmt = stmt.where(Course.status == STATUS_VALUE.get(status, status.lower()))
     if category:
@@ -542,7 +550,7 @@ def list_courses(
             )
         )
     items = course_views(db, list(db.scalars(stmt).unique()))
-    if user.role == "student":
+    if learner_view:
         items = [c for c in items if not c["maxStudents"] or c["seatsLeft"] > 0]
     return paginate(items, page, page_size, sort, "title")
 

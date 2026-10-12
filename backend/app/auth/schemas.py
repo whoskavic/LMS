@@ -8,10 +8,16 @@ class LoginIn(CamelModel):
 
 
 class RegisterIn(CamelModel):
+    """Registrasi publik selalu membuat akun student (field `role` lama diabaikan)."""
+
     name: str = ""
     email: str = ""
     password: str = ""
-    role: str = "student"
+
+
+class BecomeInstructorIn(CamelModel):
+    headline: str | None = None
+    bio: str | None = None
 
 
 class TokenOut(CamelModel):

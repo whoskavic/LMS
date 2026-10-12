@@ -7,8 +7,6 @@ from app.common.errors import ApiError, assert_valid, conflict
 from app.users import rules
 from app.users.models import User
 
-PUBLIC_ROLES = ("student", "instructor")
-
 
 def login(db: Session, email: str, password: str) -> User:
     email = (email or "").strip().lower()
@@ -33,12 +31,11 @@ def register(db: Session, data: RegisterIn) -> User:
             "name": rules.name_error(name),
             "email": rules.email_error(email),
             "password": rules.password_error(data.password),
-            "role": "" if data.role in PUBLIC_ROLES else "Choose Student or Instructor.",
         }
     )
     if db.scalar(select(User.id).where(func.lower(User.email) == email)):
         raise conflict("CONFLICT", "This email is already registered.", {"email": "This email is already registered."})
-    user = User(name=name, email=email, role=data.role, password_hash=hash_password(data.password), is_active=True)
+    user = User(name=name, email=email, role="student", password_hash=hash_password(data.password), is_active=True)
     db.add(user)
     db.commit()
     return user
@@ -56,3 +53,13 @@ def change_password(db: Session, user: User, data: PasswordChange) -> None:
     assert_valid({"current": current_error, "next": next_error})
     user.password_hash = hash_password(data.next)
     db.commit()
+
+
+def become_instructor(db: Session, user: User) -> User:
+    """ "Mulai Mengajar": student → instructor. Idempoten untuk instructor; admin ditolak."""
+    if user.role == "admin":
+        raise ApiError(403, "FORBIDDEN", "Administrator accounts cannot become instructors.")
+    if user.role != "instructor":
+        user.role = "instructor"
+        db.commit()
+    return user

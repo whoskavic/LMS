@@ -120,6 +120,8 @@ def enroll(db: Session, user, course: Course) -> Enrollment:
     """Daftar sendiri ke course gratis: hanya Active, pendaftaran dibuka, belum terdaftar, masih ada kursi."""
     from app.common.errors import conflict
 
+    if course.instructor_id == user.id:
+        raise conflict("OWN_COURSE", "You cannot enroll in your own course. Manage it from your instructor dashboard.")
     if course.status != "active":
         raise conflict("COURSE_NOT_ACTIVE", "Only approved (active) courses accept new students.")
     if not course.enrollment_open:

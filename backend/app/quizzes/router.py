@@ -2,24 +2,30 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.auth.deps import DB, CurrentUser, require_roles
-from app.courses.service import owned_course, viewable_course
+from app.auth.deps import DB, LEARNER_ROLES, CurrentUser, require_roles
+from app.courses.service import is_owner, owned_course, viewable_course
 from app.quizzes import service
 from app.quizzes.schemas import AnswersIn, QuizIn
 from app.users.models import User
 
 router = APIRouter(tags=["quizzes"])
-Student = Annotated[User, Depends(require_roles("student"))]
+Student = Annotated[User, Depends(require_roles(*LEARNER_ROLES))]
+
+
+def _as_learner(user, course) -> bool:
+    """Learner view (tanpa kunci jawaban): semua selain admin dan instructor pemilik course."""
+    return user.role != "admin" and not is_owner(user, course)
 
 
 @router.get("/courses/{course_id}/quizzes")
 def list_quizzes(course_id: str, user: CurrentUser, db: DB) -> dict:
     """Instructor/admin: lengkap dengan soal & kunci. Student: ringkasan + attempt miliknya (tanpa soal & kunci)."""
     course = viewable_course(db, user, course_id)
-    if user.role == "student":
+    learner = _as_learner(user, course)
+    if learner:
         service.student_enrollment_for_course(db, user, course)
     quizzes = db.scalars(service.select_quizzes(course.id))
-    items = [service.quiz_view(db, q, user) for q in quizzes]
+    items = [service.quiz_view(db, q, user, learner=learner) for q in quizzes]
     return {"items": items, "total": len(items), "page": 1, "pageSize": max(len(items), 1)}
 
 
@@ -32,10 +38,11 @@ def create_quiz(course_id: str, body: QuizIn, user: CurrentUser, db: DB) -> dict
 @router.get("/quizzes/{quiz_id}")
 def get_quiz(quiz_id: str, user: CurrentUser, db: DB) -> dict:
     quiz = service.find_quiz(db, quiz_id)
-    viewable_course(db, user, str(quiz.course_id))
-    if user.role == "student":
+    course = viewable_course(db, user, str(quiz.course_id))
+    learner = _as_learner(user, course)
+    if learner:
         service.student_enrollment(db, user, quiz)
-    return service.quiz_view(db, quiz, user)
+    return service.quiz_view(db, quiz, user, learner=learner)
 
 
 @router.patch("/quizzes/{quiz_id}")

@@ -27,7 +27,7 @@
     </div>
 
     <section class="auth__panel" aria-labelledby="register-title">
-      <h1 class="auth__title" id="register-title">Sign up and start learning — or teaching</h1>
+      <h1 class="auth__title" id="register-title">Sign up and start learning for free</h1>
 
       <form class="form-stack" id="register-form" novalidate>
         <div class="alert alert--danger" id="register-alert" role="alert" hidden>
@@ -60,18 +60,14 @@
           <p class="field__error" id="password-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
         </div>
 
-        <fieldset class="field theme-options" data-field="role">
-          <legend class="field__label">I want to</legend>
-          <label class="theme-option"><input type="radio" name="role" value="student" checked><i data-icon="school"></i>Learn (Student)</label>
-          <label class="theme-option"><input type="radio" name="role" value="instructor"><i data-icon="book"></i>Teach (Instructor)</label>
-          <p class="field__error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
-        </fieldset>
-
         <button class="btn btn--primary btn--block auth__submit" type="submit" id="register-submit">Create account</button>
       </form>
 
+      <p class="field__hint">Every account starts as a learner. Want to teach? Choose <strong>Start teaching</strong> after you sign in.</p>
+
       <div class="auth__box">
         <p>Already have an account? <a class="btn btn--link" href="index.html">Log in</a></p>
+        <p>Just looking? <a class="btn btn--link" href="catalog.html">Browse free courses</a></p>
       </div>
     </section>
   </main>

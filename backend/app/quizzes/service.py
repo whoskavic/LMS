@@ -159,7 +159,7 @@ def _questions_full(quiz: Quiz) -> list[dict]:
     ]
 
 
-def quiz_view(db: Session, quiz: Quiz, user) -> dict:
+def quiz_view(db: Session, quiz: Quiz, user, learner: bool | None = None) -> dict:
     """Student tidak pernah menerima kunci jawaban (soal diambil saat attempt dimulai)."""
     base = {
         "id": str(quiz.id),
@@ -172,7 +172,9 @@ def quiz_view(db: Session, quiz: Quiz, user) -> dict:
         "timeLimit": quiz.duration_minutes,
         "questionCount": len(quiz.questions),
     }
-    if user.role == "student":
+    if learner is None:
+        learner = user.role == "student"
+    if learner:
         enrollment = db.scalar(
             select(Enrollment).where(Enrollment.user_id == user.id, Enrollment.course_id == quiz.course_id)
         )

@@ -3,14 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from app.auth.deps import DB, CurrentUser, require_roles
+from app.auth.deps import DB, LEARNER_ROLES, CurrentUser, require_roles
 from app.common.errors import not_found
 from app.courses.service import find_course, managed_course, owned_course
 from app.enrollments import grades, service
 from app.users.models import User
 
 router = APIRouter(tags=["enrollments"])
-Student = Annotated[User, Depends(require_roles("student"))]
+# Endpoint learner: student dan instructor (instructor boleh belajar di course instructor lain)
+Student = Annotated[User, Depends(require_roles(*LEARNER_ROLES))]
 
 
 class CompleteModuleIn(BaseModel):
