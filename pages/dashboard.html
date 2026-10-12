@@ -31,11 +31,11 @@
           <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
-          <!-- Dosen -->
+          <!-- Instructor -->
           <li data-nav-role="instructor"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
           <li data-nav-role="instructor"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
           <li data-nav-role="instructor"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
-          <!-- Mahasiswa -->
+          <!-- Learner (student / instructor mode Learn) -->
           <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>My Learning</span></a></li>
           <li data-nav-role="student"><a class="nav__link" href="../catalog.html"><i data-icon="search"></i><span>Browse courses</span></a></li>
           <!-- Semua role -->
@@ -103,7 +103,7 @@
             <p class="stat-card__trend"><i data-icon="arrow-up" class="icon--sm"></i><span id="trend-courses"></span></p>
           </article>
           <article class="card stat-card">
-            <p class="stat-card__label">Students</p>
+            <p class="stat-card__label">Learners</p>
             <i data-icon="users" class="stat-card__icon"></i>
             <p class="stat-card__value" id="stat-students">0</p>
             <p class="stat-card__trend"><i data-icon="arrow-up" class="icon--sm"></i><span id="trend-students"></span></p>
@@ -124,7 +124,7 @@
 
         <section class="card mt-5">
           <header class="card__header">
-            <h2 class="card__title">Student enrollment &amp; completion</h2>
+            <h2 class="card__title">Learner enrollment &amp; completion</h2>
             <p class="card__subtitle" id="chart-range">Last 6 months</p>
           </header>
           <div class="chart-box">

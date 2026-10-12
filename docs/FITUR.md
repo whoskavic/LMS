@@ -2,7 +2,7 @@
 
 > **Arah produk (Oktober 2026):** Learnova bergeser dari LMS kampus menjadi **platform kursus publik ala Udemy** dengan semua course gratis. Rencana dan statusnya ada di bagian "Platform kursus publik" di bawah serta [DECISIONS.md](DECISIONS.md) ADR-008 & ADR-009. Isi dokumen lama di bawahnya adalah rekap prototipe tugas kuliah (mock data) dan dipertahankan sebagai arsip.
 
-## Platform kursus publik (rencana transformasi)
+## Platform kursus publik (selesai — PR A–F, Oktober 2026)
 
 | Role | Fitur | PR |
 |---|---|---|

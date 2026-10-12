@@ -67,7 +67,7 @@ App.ready(() => {
     UI.modal({
       title: approve ? "Approve course?" : "Reject course?",
       body: `<p><strong>${Utils.escape(course.title)}</strong> by ${Utils.escape(course.instructorName)}
-             ${approve ? "will be published and visible to students." : "will be returned to the instructor."}</p>
+             ${approve ? "will be published and visible to learners." : "will be returned to the instructor."}</p>
              ${reject ? `<form class="form-stack mt-5" novalidate>${UI.field({ name: "reason", label: "Reason for the instructor", type: "textarea", attrs: 'maxlength="500"' })}</form>` : ""}`,
       confirmText: approve ? "Approve" : "Reject",
       variant: approve ? "primary" : "danger",

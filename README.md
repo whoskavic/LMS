@@ -1,8 +1,8 @@
 # Learnova LMS
 
-Learnova adalah Learning Management System berbasis web. Saat ini project berada di **fase kuliah (final project)**: prototipe frontend vanilla HTML/CSS/JS sudah lengkap dan sedang dihubungkan ke backend Python FastAPI. Arah jangka panjang: platform kursus publik ala Udemy (siapa pun bisa membuat course atau belajar), dengan semua course **gratis** untuk fase ini.
+Learnova adalah **platform kursus online publik ala Udemy**: siapa pun bisa mendaftar untuk belajar, lalu mulai mengajar dengan satu klik. Semua course **gratis** pada fase ini. Frontend vanilla HTML/CSS/JS, backend Python FastAPI + PostgreSQL. Project ini berawal dari final project kuliah (Pemrograman Web 2); halaman wajib tugas (login, layout, dashboard + Chart.js, data master CRUD, form + validasi, laporan + cetak/CSV) tetap ada dan berfungsi.
 
-> **Status:** semua halaman sudah terhubung ke backend FastAPI + PostgreSQL (auth JWT, user, course + approval, katalog publik + search, enrollment + progress, quiz dinilai server, nilai akhir + IPK, sertifikat + verifikasi, laporan + CSV, dashboard per role). Mock data `localStorage` tidak lagi dipakai halaman. Rencana: [docs/BACKEND_PLAN.md](docs/BACKEND_PLAN.md).
+> **Status:** semua halaman terhubung ke backend (auth JWT, model akun learner → instructor, course + approval admin, katalog publik + landing page, enrollment + progress, quiz dinilai server, sertifikat + verifikasi, ulasan + rating, profil instructor publik, laporan + CSV, dashboard per role). Produksi: frontend https://lms-kavic.vercel.app, API `learnova-api` di Vercel + Neon.
 
 ## Fitur
 
@@ -37,7 +37,7 @@ Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 
 Dihapus dari UI & API (ADR-009): IPK, nilai akhir & grade huruf, semester, NIM/NIDN, departemen, kode course, durasi minggu, tanggal mulai, kapasitas, input nilai & batch enroll. Endpoint `/courses/{id}/grades`, `/courses/{id}/candidates`, `/courses/{id}/enrollments/batch`, `DELETE /enrollments/{id}`, dan `/meta/departments` sudah tidak ada (404).
 
-> **Sedang berjalan:** transformasi menjadi platform kursus publik ala Udemy (semua course gratis): registrasi tanpa role + "Start teaching", penghapusan konsep akademik (IPK, semester, NIM, kode course, kapasitas, nilai akhir), My Learning, course landing page, ulasan, dan profil instructor. Rencana per PR: bagian **Roadmap** dan [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
+Alur utama: **Sign up** (selalu learner) → jelajahi katalog → **Enroll for free** → belajar modul & quiz → sertifikat saat progress 100% → tulis ulasan. Dari My Learning atau Profile, **Start teaching** mengubah akun menjadi instructor (tetap bisa belajar); instructor membuat course → submit → admin approve → course tampil di katalog. Keputusan desain: [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
 
 ## Tech stack
 
@@ -74,7 +74,8 @@ LMS/
 │   ├── img/
 │   └── js/
 │       ├── config.js       ← Base URL API & transport (http / local)
-│       ├── domain.js       ← Logika murni (grade, IPK, progress, sertifikat)
+│       ├── domain.js       ← Logika murni (progress, durasi course, label role, sertifikat)
+│       ├── catalog-card.js ← Kartu course publik (katalog & profil instructor)
 │       ├── data.js         ← Mock data prototipe (hanya untuk test kontrak MockServer)
 │       ├── store.js        ← "Database" localStorage prototipe (hanya untuk test kontrak)
 │       ├── main.js         ← Guard, layout, UI helper
@@ -109,7 +110,7 @@ git clone https://github.com/whoskavic/LMS.git && cd LMS
 # 1. Backend + database
 docker compose up -d --build
 docker compose exec api alembic upgrade head      # migrasi
-docker compose exec api python -m app.seed        # data demo: akun, 5 kategori, 13 course + modul, enrollment (--reset untuk mengisi ulang)
+docker compose exec api python -m app.seed        # data demo: akun, 5 kategori, 13 course + modul, enrollment, ulasan (--reset untuk mengisi ulang)
 curl http://localhost:8000/api/v1/health          # {"status":"ok","database":"ok"}
 # Swagger: http://localhost:8000/docs
 
@@ -144,7 +145,7 @@ Backend membaca variabel berikut (lihat `backend/.env.example`):
 | `JWT_EXPIRES_MINUTES` | Masa berlaku token (menit) | `720` |
 | `CORS_ORIGINS` | Origin frontend yang diizinkan, dipisah koma (`*` = semua) | `https://learnova-web.onrender.com` |
 | `PORT` | Port uvicorn di image produksi (diisi otomatis oleh Railway/Render) | `8000` |
-| `SEED_DEMO` | `true` → isi data demo bila database kosong: saat start (image Docker) atau saat build (Vercel) | `true` |
+| `SEED_DEMO` | `true` → isi data demo bila database kosong, atau lengkapi data demo tambahan (headline/bio instructor, ulasan) bila sudah berisi: saat start (image Docker) atau saat build (Vercel) | `true` |
 | `DATABASE_URL_UNPOOLED` | Hanya Vercel + Neon (disuntikkan integrasi Neon): koneksi direct untuk migrasi saat build; `DATABASE_URL` (pooled) dipakai runtime | `postgresql://…@ep-xxx.neon.tech/neondb?sslmode=require` |
 | `VERCEL` | Diset otomatis oleh Vercel; bila ada, engine database memakai `NullPool` (tanpa pool di proses) | `1` |
 
@@ -167,7 +168,7 @@ Akun baru bisa dibuat lewat halaman **Sign up** (`register.html`); semua akun ba
 
 Instructor demo punya headline & bio, dan ada 9 ulasan demo dari Alex, Nadia, dan Marcus. Bila database sudah berisi data (mis. produksi yang di-seed sebelum migrasi `0002`), `python -m app.seed` dan build Vercel dengan `SEED_DEMO=true` hanya **melengkapi** data demo tambahan ini (headline/bio yang masih kosong dan ulasan yang belum ada) tanpa mengubah data lain — idempoten.
 
-Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress, skor quiz, & nilai demo dari prototipe (8 course, IPK 3.67); Nadia dan Marcus masing-masing 4 course. Ada 9 quiz (5 soal, lulus 70, 3 attempt, 10 menit) dari bank soal mock.
+Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress & skor quiz demo dari prototipe (8 course, sebagian selesai dengan sertifikat); Nadia dan Marcus masing-masing 4 course. Ada 9 quiz (5 soal, lulus 70, 3 attempt, 10 menit) dari bank soal mock.
 
 ## API
 
@@ -300,8 +301,26 @@ Import repo, framework preset **Other**, tanpa build command, output directory =
 ### Setelah deploy
 
 - Akun demo (bila `SEED_DEMO=true`): lihat bagian **Akun demo**. Ganti password admin setelah demo.
-- Reset data demo di server: jalankan `python -m app.seed --reset` di shell service API.
 - Swagger produksi: `https://<api>/docs`.
+
+### Data produksi: melengkapi atau me-reset
+
+Migrasi selalu aditif (tidak ada drop kolom/tabel), sehingga data yang sudah ada aman saat deploy. Pilih salah satu:
+
+1. **Melengkapi data demo baru tanpa reset (disarankan).** Dengan `SEED_DEMO=true`, setiap build Vercel menjalankan `alembic upgrade head` lalu seed; bila data sudah ada, seed hanya mengisi headline/bio instructor demo yang masih kosong dan ulasan demo yang belum ada. Cukup **Redeploy** project `learnova-api` (Vercel → Deployments → ⋯ → Redeploy) dan cek log build `[vercel-build]`. Alternatif dari lokal:
+   ```bash
+   cd backend
+   DATABASE_URL="<DATABASE_URL_UNPOOLED dari Neon>" alembic upgrade head
+   DATABASE_URL="<DATABASE_URL_UNPOOLED dari Neon>" python -m app.seed
+   ```
+2. **Reset penuh ke data demo (menghapus SEMUA data, termasuk akun yang mendaftar sendiri).** Opsional: buat backup/branch Neon dulu (Neon Console → Branches → Create branch). Lalu:
+   ```bash
+   cd backend
+   DATABASE_URL="<DATABASE_URL_UNPOOLED dari Neon>" alembic upgrade head
+   DATABASE_URL="<DATABASE_URL_UNPOOLED dari Neon>" python -m app.seed --reset
+   ```
+   Pada image Docker (Render/Railway/VPS) jalankan `python -m app.seed --reset` di shell service API.
+3. **Verifikasi:** `GET /api/v1/health` → `{"status":"ok","database":"ok"}`, katalog menampilkan 9 course dengan rating, login dengan akun demo, dan halaman `instructor.html?id=…` dari nama instructor di landing page.
 
 ## Roadmap dan Known Issues
 
@@ -323,8 +342,8 @@ Transformasi platform kursus publik (Oktober 2026):
 - ✅ C. Hapus konsep akademik dari UI & API; halaman Students read-only; laporan admin tanpa IPK
 - ✅ D. My Learning, katalog sebagai halaman utama publik, course landing page dengan kurikulum & total durasi
 - ✅ E. Ulasan course + profil instructor publik (migrasi aditif: `reviews`, `users.headline`, `users.bio`)
-- F. Polish copywriting, state loading/empty/error, README final
+- ✅ F. Polish copywriting (Learner), state loading/empty/error, README final
 
-Berikutnya: upload thumbnail/video ke object storage, refresh token + rate limiting login, reset password via email, editor bobot soal, course berbayar (kolom `price` sudah ada, saat ini selalu 0), log audit umum, pembersihan kolom akademik lama di database.
+Berikutnya: upload thumbnail/video ke object storage, refresh token + rate limiting login, reset password via email, editor bobot soal, course berbayar (kolom `price` sudah ada, saat ini selalu 0), log audit umum, halaman moderasi ulasan untuk admin, pembersihan kolom akademik lama di database.
 
 Known issues saat ini: upload thumbnail course belum disimpan (hanya preview); aktivitas & notifikasi diturunkan dari data (tidak ada tabel log umum); seed hanya berisi 6 akun demo. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).

@@ -134,7 +134,7 @@ App.ready(() => {
       tbody.removeAttribute("aria-busy");
       setText("report-count", `${res.total} enrollment${res.total === 1 ? "" : "s"}${courseLabel() ? ` in ${courseLabel()}` : ""}`);
       if (!res.items.length) {
-        UI.empty(tbody, { title: courseSelect.value ? "No students in this course" : "No enrollments yet", icon: "users" });
+        UI.empty(tbody, { title: courseSelect.value ? "No learners in this course" : "No enrollments yet", icon: "users" });
         setText("report-summary", "No data");
         return;
       }

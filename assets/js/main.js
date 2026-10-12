@@ -535,7 +535,7 @@ const UI = {
 };
 
 /* =========================================================================
-   Sesi & guard — <body data-role="admin lecturer"> : hanya role tersebut yang boleh masuk
+   Sesi & guard — <body data-role="admin instructor"> : hanya role tersebut yang boleh masuk
    Identitas & role selalu berasal dari Api.auth.me() (data user di server),
    browser hanya menyimpan token sesi.
    ========================================================================= */

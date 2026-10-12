@@ -31,11 +31,11 @@
           <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
-          <!-- Dosen -->
+          <!-- Instructor -->
           <li data-nav-role="instructor"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
           <li data-nav-role="instructor"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
           <li data-nav-role="instructor"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
-          <!-- Mahasiswa -->
+          <!-- Learner (student / instructor mode Learn) -->
           <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>My Learning</span></a></li>
           <li data-nav-role="student"><a class="nav__link" href="../catalog.html"><i data-icon="search"></i><span>Browse courses</span></a></li>
           <!-- Semua role -->
@@ -87,7 +87,7 @@
           <div>
             <p class="page-header__eyebrow">Reports</p>
             <h1 class="page-header__title">Learning Report</h1>
-            <p class="page-header__subtitle">Student progress, quiz scores, and system activity · <span id="report-date"></span></p>
+            <p class="page-header__subtitle">Learner progress, quiz scores, and system activity · <span id="report-date"></span></p>
           </div>
           <div class="page-header__actions no-print">
             <button class="btn btn--outline" type="button" id="export-report"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
@@ -163,7 +163,7 @@
         <section class="card table-card mt-5">
           <header class="card__header card__header--split">
             <div>
-              <h2 class="card__title">Student progress &amp; quiz scores</h2>
+              <h2 class="card__title">Learner progress &amp; quiz scores</h2>
               <p class="card__subtitle" id="report-count"></p>
             </div>
             <div class="no-print">

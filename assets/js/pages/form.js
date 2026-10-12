@@ -37,11 +37,11 @@ App.ready(async (me) => {
     // Course yang sudah diajukan / terbit tidak punya tombol "Save draft" (status hanya berubah lewat transisi)
     if (published || editing.status === "Pending") document.querySelectorAll('[data-action="draft"]').forEach((btn) => btn.remove());
     document.getElementById("approval-note").textContent = {
-      Active: "This course is published. Changes are visible to students immediately.",
+      Active: "This course is published. Changes are visible to learners immediately.",
       Pending: "This course is waiting for administrator approval.",
       Rejected: `This course was rejected${editing.rejectionReason ? `: “${editing.rejectionReason}”` : ""}. Update it and submit again for approval.`,
       Draft: "This course is a draft. Submit it when it is ready for review.",
-      Archived: "This course is archived and hidden from new students.",
+      Archived: "This course is archived and hidden from new learners.",
     }[editing.status];
     ["title", "description", "category", "thumbnailUrl"].forEach(
       (name) => (el[name].value = editing[name] ?? "")
