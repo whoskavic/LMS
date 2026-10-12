@@ -7,25 +7,23 @@ App.ready((me) => {
   const tbody = document.getElementById("user-rows");
   const searchInput = document.getElementById("user-search");
   const globalSearch = document.getElementById("global-search");
-  const departmentSelect = document.getElementById("filter-department");
   const statusSelect = document.getElementById("filter-user-status");
   const summary = document.getElementById("user-summary");
   const paginationNav = document.getElementById("user-pagination");
 
   const ROLE_INFO = {
-    student: { id: "NIM", courses: "Enrolled", label: "student", idHint: "5–10 digits" },
-    instructor: { id: "NIDN", courses: "Teaching", label: "instructor", idHint: "10 digits" },
-    admin: { id: "Staff ID", courses: "Courses", label: "administrator", idHint: "Format ADM-001" },
+    student: { courses: "Enrolled", label: "learner" },
+    instructor: { courses: "Teaching", label: "instructor" },
+    admin: { courses: "Courses", label: "administrator" },
   };
 
-  const state = { role: "student", q: "", department: "", status: "", page: 1, key: "name", dir: "asc" };
+  const state = { role: "student", q: "", status: "", page: 1, key: "name", dir: "asc" };
   let current = { items: [], total: 0 }; // halaman yang sedang tampil
   let requestId = 0;
 
   const query = (extra = {}) => ({
     role: state.role,
     q: state.q,
-    department: state.department,
     status: state.status,
     sort: `${state.dir === "desc" ? "-" : ""}${state.key}`,
     page: state.page,
@@ -33,10 +31,9 @@ App.ready((me) => {
     ...extra,
   });
 
-  /* ---------- Tab, jumlah per role, opsi departemen ---------- */
+  /* ---------- Tab & jumlah per role ---------- */
   async function renderTabs() {
     document.querySelectorAll("[data-role-tab]").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.roleTab === state.role)));
-    document.getElementById("id-header").querySelector(".sort-btn").firstChild.textContent = ROLE_INFO[state.role].id;
     document.getElementById("courses-header").querySelector(".sort-btn").firstChild.textContent = ROLE_INFO[state.role].courses;
 
     document.querySelectorAll("[data-count]").forEach((el) => {
@@ -45,18 +42,6 @@ App.ready((me) => {
         .then((res) => (el.textContent = res.total))
         .catch(() => (el.textContent = "–"));
     });
-
-    try {
-      const departments = await Api.meta.departments(state.role);
-      const selected = departmentSelect.value;
-      departmentSelect.innerHTML =
-        '<option value="">Department: All</option>' +
-        departments.map((d) => `<option value="${Utils.escape(d)}">${Utils.escape(d)}</option>`).join("");
-      departmentSelect.value = departments.includes(selected) ? selected : "";
-      state.department = departmentSelect.value;
-    } catch {
-      // filter departemen opsional — tabel tetap bisa dimuat
-    }
   }
 
   const actionButton = (action, u, icon, label, disabled = false) =>
@@ -74,8 +59,6 @@ App.ready((me) => {
             <span>${Utils.escape(u.name)}${self ? ' <span class="badge badge--primary">You</span>' : ""}<span class="user-cell__email">${Utils.escape(u.email)}</span></span>
           </div>
         </td>
-        <td>${Utils.escape(Utils.orDash(u.idNumber))}</td>
-        <td>${Utils.escape(Utils.orDash(u.department))}</td>
         <td>${u.courses ?? "–"}</td>
         <td>${Utils.statusBadge(u.status)}</td>
         <td>
@@ -101,7 +84,7 @@ App.ready((me) => {
       UI.pagination(paginationNav, state, res.total, PAGE_SIZE, render);
       tbody.removeAttribute("aria-busy");
       if (!res.items.length) {
-        const filtering = state.q || state.department || state.status;
+        const filtering = state.q || state.status;
         UI.empty(tbody, {
           title: filtering ? "No users match your search or filters" : `No ${ROLE_INFO[state.role].label}s yet`,
           icon: "users",
@@ -126,10 +109,9 @@ App.ready((me) => {
   }
 
   /* ---------- Form tambah / edit (modal) — aturan lengkap diputuskan server ---------- */
-  async function openForm(user) {
+  function openForm(user) {
     const role = user?.role || state.role;
     const info = ROLE_INFO[role];
-    const departments = await Api.meta.departments().catch(() => []);
 
     UI.modal({
       title: user ? `Edit ${info.label}` : `Add ${info.label}`,
@@ -142,11 +124,6 @@ App.ready((me) => {
             ${UI.field({ name: "email", label: "Email", type: "email", value: user?.email || "", placeholder: "name@learnova.ac.id" })}
           </div>
           <div class="field-row">
-            ${UI.field({ name: "idNumber", label: info.id, value: user?.idNumber || "", hint: info.idHint })}
-            ${UI.field({ name: "department", label: role === "student" ? "Study program" : "Department", value: user?.department || "", attrs: 'list="department-list" maxlength="60"' })}
-          </div>
-          <datalist id="department-list">${departments.map((d) => `<option value="${Utils.escape(d)}"></option>`).join("")}</datalist>
-          <div class="field-row">
             ${UI.field({ name: "status", label: "Status", value: user?.status || "Active", options: ["Active", "Inactive"] })}
             ${user ? "" : UI.field({ name: "password", label: "Initial password", type: "password", hint: "At least 8 characters, with letters and numbers.", attrs: 'autocomplete="new-password"' })}
           </div>
@@ -154,7 +131,7 @@ App.ready((me) => {
       onConfirm: async (modal) => {
         const form = modal.querySelector("form");
         const v = UI.formValues(form);
-        const required = { name: "Full name is required.", email: "Email is required.", idNumber: `${info.id} is required.`, department: "Department is required." };
+        const required = { name: "Full name is required.", email: "Email is required." };
         if (!user) required.password = "Password is required.";
         const missing = Object.keys(required).filter((name) => !v[name]);
         Object.keys(required).forEach((name) => UI.fieldError(form, name, missing.includes(name) ? required[name] : ""));
@@ -163,7 +140,7 @@ App.ready((me) => {
           return false;
         }
 
-        const data = { name: v.name, email: v.email, idNumber: v.idNumber, department: v.department, status: v.status };
+        const data = { name: v.name, email: v.email, status: v.status };
         try {
           if (user) {
             await Api.users.update(user.id, data);
@@ -204,11 +181,6 @@ App.ready((me) => {
   searchInput.addEventListener("input", (e) => onSearch(e.target.value));
   globalSearch.addEventListener("input", (e) => onSearch(e.target.value));
 
-  departmentSelect.addEventListener("change", () => {
-    state.department = departmentSelect.value;
-    state.page = 1;
-    render();
-  });
   statusSelect.addEventListener("change", () => {
     state.status = statusSelect.value;
     state.page = 1;
@@ -275,8 +247,6 @@ App.ready((me) => {
         res.items.map((u) => ({
           Name: u.name,
           Email: u.email,
-          [ROLE_INFO[state.role].id]: u.idNumber ?? "",
-          Department: u.department ?? "",
           [ROLE_INFO[state.role].courses]: u.courses ?? "",
           Status: u.status,
         }))

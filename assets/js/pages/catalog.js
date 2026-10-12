@@ -55,10 +55,10 @@ document.addEventListener("DOMContentLoaded", () => {
     <article class="card course-card">
       <div class="course-card__body">
         <div class="course-card__thumb" style="background: ${Utils.escape(c.color || "var(--color-primary-soft)")}"></div>
-        <p class="course-card__code">${Utils.escape(Utils.orDash(c.code))} · ${Utils.escape(Utils.orDash(c.category))}</p>
+        <p class="course-card__code">${Utils.escape(Utils.orDash(c.category))}</p>
         <h3 class="course-card__title">${Utils.escape(c.title)}</h3>
         <p class="course-card__instructor">${Utils.escape(c.instructorName)}</p>
-        <p class="course-card__meta">${c.modules} modules · ${c.students} students${c.certificate ? " · certificate" : ""}<br><strong>Free</strong></p>
+        <p class="course-card__meta">${Domain.courseLength(c.modules, c.totalMinutes)} · ${c.students} learners${c.certificate ? " · certificate" : ""}<br><strong>Free</strong></p>
       </div>
       <div class="course-card__footer">
         <a class="btn btn--primary" href="catalog.html?course=${encodeURIComponent(c.slug)}" data-open="${Utils.escape(c.slug)}">View course <i data-icon="arrow-right" class="icon--sm"></i></a>
@@ -100,17 +100,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function enrollAction(course) {
     if (!user) return `<a class="btn btn--primary" href="index.html">Log in to enroll</a> <a class="btn btn--outline" href="register.html">Create a free account</a>`;
     if (user.role !== "student") return `<p class="text-muted">Only student accounts can enroll in courses.</p>`;
-    if (!course.enrollmentOpen) return `<p class="text-muted">Enrollment for this course is currently closed.</p>`;
     return `<button class="btn btn--primary" type="button" id="enroll-btn">Enroll for free</button>`;
   }
 
   function renderDetail(course) {
     document.title = `${course.title} | Learnova LMS`;
-    document.getElementById("detail-crumb").textContent = course.code || course.title;
+    document.getElementById("detail-crumb").textContent = course.title;
     detail.innerHTML = `
       <section class="page-header">
         <div>
-          <p class="page-header__eyebrow">${Utils.escape(Utils.orDash(course.category))} · ${Utils.escape(Utils.orDash(course.code))}</p>
+          <p class="page-header__eyebrow">${Utils.escape(Utils.orDash(course.category))}</p>
           <h1 class="page-header__title">${Utils.escape(course.title)}</h1>
           <p class="page-header__subtitle">by ${Utils.escape(course.instructorName)} · ${course.students} students enrolled</p>
         </div>
@@ -134,10 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="kv-grid">
             ${[
               ["Price", "Free"],
-              ["Semester", Utils.orDash(course.semester)],
-              ["Duration", course.duration ? `${course.duration} weeks` : "–"],
-              ["Start date", Utils.orDash(Utils.formatDate(course.startDate, false))],
-              ["Seats", course.maxStudents ? `${course.seatsLeft} of ${course.maxStudents} left` : "Unlimited"],
+              ["Length", Domain.courseLength(course.modules, course.totalMinutes)],
               ["Certificate", course.certificate ? "Issued on completion" : "Not issued"],
             ]
               .map(([label, value]) => `<div><p class="kv__label">${label}</p><p class="kv__value">${Utils.escape(value)}</p></div>`)

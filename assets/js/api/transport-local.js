@@ -394,7 +394,7 @@ const MockServer = (() => {
   route("GET", "/me/stats", {}, ({ user }) => {
     if (user.role === "student") {
       const enrollments = DB.where("enrollments", (e) => e.studentId === user.id);
-      return { role: "student", courses: enrollments.length, gpa: Domain.gpa(enrollments.map((e) => e.grade)) };
+      return { role: "student", courses: enrollments.length, gpa: LegacyGrades.gpa(enrollments.map((e) => e.grade)) };
     }
     if (user.role === "instructor") return { role: "instructor", coursesTaught: Store.coursesOf(user.id).length };
     return { role: "admin", usersManaged: DB.all("users").length };
@@ -825,7 +825,7 @@ const MockServer = (() => {
     assertValid(fields);
     grades.forEach(({ enrollmentId, finalScore }) => {
       const score = finalScore === null ? null : Number(finalScore);
-      DB.update("enrollments", enrollmentId, { finalScore: score, grade: Domain.gradeFromScore(score) });
+      DB.update("enrollments", enrollmentId, { finalScore: score, grade: LegacyGrades.gradeFromScore(score) });
     });
     log(user, `Updated ${grades.length} final grade${grades.length > 1 ? "s" : ""} in ${course.code}`);
     return all(gradeRows(course.id));

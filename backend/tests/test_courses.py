@@ -10,7 +10,7 @@ def test_instructor_creates_draft_and_submits_admin_approves(client, db):
     res = client.post("/api/v1/courses", json={"title": "Draft only title"}, headers=auth(instructor))
     assert res.status_code == 201, res.text
     draft = res.json()
-    assert draft["status"] == "Draft" and draft["code"] == "" and draft["price"] == 0
+    assert draft["status"] == "Draft" and draft["price"] == 0 and "code" not in draft and "semester" not in draft
 
     # Draft belum lengkap tidak bisa diajukan
     res = client.post(f"/api/v1/courses/{draft['id']}/transitions", json={"action": "submit"}, headers=auth(instructor))
@@ -18,7 +18,7 @@ def test_instructor_creates_draft_and_submits_admin_approves(client, db):
 
     res = client.patch(f"/api/v1/courses/{draft['id']}", json=FULL_COURSE, headers=auth(instructor))
     assert res.status_code == 200, res.text
-    assert res.json()["category"] == "Technology" and res.json()["duration"] == 14
+    assert res.json()["category"] == "Technology" and res.json()["totalMinutes"] == 0
 
     res = client.post(f"/api/v1/courses/{draft['id']}/transitions", json={"action": "submit"}, headers=auth(instructor))
     assert res.json()["status"] == "Pending" and res.json()["submittedAt"]
@@ -59,19 +59,22 @@ def test_reject_stores_note_and_resubmit(client, db):
     assert res.status_code == 409 and res.json()["error"]["code"] == "INVALID_TRANSITION"
 
 
-def test_course_validation_and_unique_code(client, db):
+def test_course_validation_and_academic_fields_ignored(client, db):
     make_category(db)
     instructor = make_user(db, role="instructor")
     res = client.post(
+        "/api/v1/courses", json={**FULL_COURSE, "category": "Nope", "description": "short"}, headers=auth(instructor)
+    )
+    assert res.status_code == 400 and {"category", "description"} <= set(res.json()["error"]["fields"])
+    # field akademik lama diabaikan (ADR-009): tidak divalidasi, tidak disimpan
+    res = client.post(
         "/api/v1/courses",
-        json={**FULL_COURSE, "code": "bad", "startDate": "2000-01-01"},
+        json={**FULL_COURSE, "code": "bad", "startDate": "2000-01-01", "maxStudents": 1, "semester": "Fall 2026"},
         headers=auth(instructor),
     )
-    assert res.status_code == 400
-    assert {"code", "startDate"} <= set(res.json()["error"]["fields"])
-    client.post("/api/v1/courses", json=FULL_COURSE, headers=auth(instructor))
-    res = client.post("/api/v1/courses", json={**FULL_COURSE, "code": "CS-205"}, headers=auth(instructor))
-    assert res.status_code == 409 and "code" in res.json()["error"]["fields"]
+    assert res.status_code == 201
+    body = res.json()
+    assert not {"code", "startDate", "maxStudents", "semester", "seatsLeft", "enrollmentOpen"} & set(body)
 
 
 def test_only_owner_can_edit_and_students_cannot_create(client, db):
@@ -97,10 +100,11 @@ def test_list_courses_scoped_by_role(client, db):
     closed = make_course(db, adam, title="Closed Course", code="ENG104", enrollment_open=False)
     assert client.get("/api/v1/courses", headers=auth(admin)).json()["total"] == 3
     mine = client.get("/api/v1/courses", headers=auth(budi)).json()
-    assert [c["code"] for c in mine["items"]] == ["CS205"]
+    assert [c["title"] for c in mine["items"]] == ["Web Programming"]
     assert client.get("/api/v1/courses", headers=auth(student)).status_code == 403
     open_ = client.get("/api/v1/courses", params={"open": "true"}, headers=auth(student)).json()
-    assert {c["code"] for c in open_["items"]} == {"CS205", "MATH201"}
+    # course Active selalu terbuka (enrollment_open lama diabaikan — ADR-009)
+    assert {c["title"] for c in open_["items"]} == {"Web Programming", "Linear Algebra", "Closed Course"}
     db.add(Enrollment(user_id=student.id, course_id=closed.id))
     db.commit()
     res = client.get("/api/v1/courses", params={"q": "algebra"}, headers=auth(admin)).json()
@@ -211,7 +215,7 @@ def test_public_catalog_search_filter_and_pagination(client, db):
         make_course(db, owner, title=f"Extra Course {i}", code=f"EXT10{i}", category=science)
 
     res = client.get("/api/v1/catalog/courses", params={"q": "JAVASCRIPT"}).json()
-    assert [c["code"] for c in res["items"]] == ["CS205"]  # pending tidak tampil
+    assert [c["title"] for c in res["items"]] == ["Web Programming"]  # pending tidak tampil
     res = client.get("/api/v1/catalog/courses", params={"category": "Science", "pageSize": 2, "page": 2}).json()
     assert res["total"] == 4 and res["page"] == 2 and len(res["items"]) == 2
     res = client.get("/api/v1/catalog/courses", params={"q": "cells"}).json()

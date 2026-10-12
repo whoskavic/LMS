@@ -9,17 +9,11 @@ TYPE_VALUE = {v: k for k, v in TYPE_LABEL.items()}
 
 
 class CourseIn(CamelModel):
-    """Input form course. Semua opsional: Draft cukup judul (aturan lengkap di service)."""
+    """Input form course. Semua opsional: Draft cukup judul. Field akademik lama diabaikan (ADR-009)."""
 
     title: Any = None
     description: Any = None
     category: Any = None
-    semester: Any = None
-    duration: Any = None
-    start_date: Any = None
-    code: Any = None
-    max_students: Any = None
-    enrollment_open: Any = None
     certificate: Any = None
     thumbnail_url: Any = None
 

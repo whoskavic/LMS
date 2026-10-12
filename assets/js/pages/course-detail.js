@@ -1,6 +1,6 @@
 // Detail Course — workspace course untuk admin (lihat & setujui) dan instructor pemilik (kelola isi)
 // File ini mengurus tab, overview, dan aksi status di header. Tab lain ada di course-modules.js,
-// course-quizzes.js, dan course-grades.js yang menunggu CourseDetail.loaded.
+// course-quizzes.js, dan course-students.js yang menunggu CourseDetail.loaded.
 
 const CourseDetail = {
   course: null,
@@ -48,11 +48,11 @@ App.ready(async (me) => {
   /* ---------- Header ---------- */
   function renderHeader() {
     const dash = Utils.orDash;
-    document.title = `${course.code ? `${course.code} · ` : ""}${course.title} | Learnova LMS`;
-    setText("crumb-course", course.code || course.title);
+    document.title = `${course.title} | Learnova LMS`;
+    setText("crumb-course", course.title);
     setText("course-title", course.title);
     document.getElementById("course-status").innerHTML = Utils.statusBadge(course.status);
-    setText("course-meta", `${dash(course.code)} · ${course.instructorName} · ${dash(course.category)} · ${dash(course.semester)}`);
+    setText("course-meta", `${course.instructorName} · ${dash(course.category)} · ${Domain.courseLength(course.modules, course.totalMinutes)} · Free`);
 
     const buttons = [];
     if (me.role === "admin") {
@@ -89,7 +89,7 @@ App.ready(async (me) => {
 
     UI.modal({
       title: cfg.title,
-      body: `<p><strong>${Utils.escape(course.title)}</strong> (${Utils.escape(Utils.orDash(course.code))}) ${cfg.text}</p>${
+      body: `<p><strong>${Utils.escape(course.title)}</strong> ${cfg.text}</p>${
         cfg.reason
           ? `<form class="form-stack mt-5" novalidate>${UI.field({ name: "reason", label: "Reason for the instructor", type: "textarea", attrs: 'maxlength="500"' })}</form>`
           : ""
@@ -110,7 +110,7 @@ App.ready(async (me) => {
           if (!form || !UI.applyFieldErrors(form, err)) UI.toast(err.message, "error");
           throw err;
         }
-        UI.toast(`${course.code || course.title} is now ${course.status.toLowerCase()}.`);
+        UI.toast(`${course.title} is now ${course.status.toLowerCase()}.`);
         renderHeader();
         renderOverview();
       },
@@ -146,13 +146,11 @@ App.ready(async (me) => {
   async function renderOverview() {
     setText("ov-description", course.description || "No description yet.");
     const details = [
-      ["Course code", Utils.orDash(course.code)],
       ["Instructor", course.instructorName],
       ["Category", Utils.orDash(course.category)],
-      ["Semester", Utils.orDash(course.semester)],
-      ["Start date", Utils.orDash(Utils.formatDate(course.startDate, false))],
-      ["Duration", course.duration ? `${course.duration} weeks` : "–"],
-      ["Capacity", course.maxStudents ? `${course.maxStudents} students` : "–"],
+      ["Length", Domain.courseLength(course.modules, course.totalMinutes)],
+      ["Price", "Free"],
+      ["Published", course.publishedAt ? Utils.formatDate(course.publishedAt, false) : "–"],
       ["Certificate", course.certificate ? "Issued on completion" : "Not issued"],
       ...(course.status === "Rejected" && course.rejectionReason ? [["Rejection reason", course.rejectionReason]] : []),
     ];
@@ -170,7 +168,7 @@ App.ready(async (me) => {
     setText("ov-students", stats.students);
     setText(
       "ov-capacity",
-      `${course.maxStudents ? `of ${course.maxStudents} seats` : "capacity not set"} · enrollment ${course.enrollmentOpen ? "open" : "closed"}`
+      course.status === "Active" ? "Open for enrollment" : "Visible after approval"
     );
     setText("ov-progress", `${stats.avgProgress}%`);
     document.getElementById("ov-progress-bar").style.width = `${stats.avgProgress}%`;

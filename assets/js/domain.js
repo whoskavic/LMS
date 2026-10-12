@@ -1,4 +1,5 @@
 // Learnova LMS — logika domain murni (tanpa DOM, tanpa localStorage, tanpa data)
+// Skala nilai & IPK dihapus (ADR-009); salinannya untuk mock lama ada di store.js (LegacyGrades).
 // Dipakai oleh store.js (mock), MockServer, dan halaman. Bisa dites dengan `node --test`.
 //
 // Konvensi waktu:
@@ -7,40 +8,8 @@
 // Konversi ke waktu lokal hanya dilakukan oleh formatDate / formatDateTime (layer tampilan).
 
 const Domain = {
-  /* ---------- Nilai ---------- */
-  GRADE_SCALE: [
-    { min: 85, grade: "A", point: 4.0 },
-    { min: 80, grade: "A-", point: 3.7 },
-    { min: 75, grade: "B+", point: 3.3 },
-    { min: 70, grade: "B", point: 3.0 },
-    { min: 65, grade: "B-", point: 2.7 },
-    { min: 60, grade: "C+", point: 2.3 },
-    { min: 55, grade: "C", point: 2.0 },
-    { min: 45, grade: "D", point: 1.0 },
-    { min: 0, grade: "E", point: 0 },
-  ],
-
-  // Nilai akhir 0–100 → huruf. null bila nilai kosong / tidak valid.
-  gradeFromScore(score) {
-    if (score === null || score === undefined || score === "" || !Number.isFinite(Number(score))) return null;
-    const n = Number(score);
-    if (n < 0 || n > 100) return null;
-    return Domain.GRADE_SCALE.find((g) => n >= g.min).grade;
-  },
-
-  // Huruf → bobot (A = 4.0 … E = 0). null bila huruf tidak dikenal.
-  gradePoint(grade) {
-    return Domain.GRADE_SCALE.find((g) => g.grade === grade)?.point ?? null;
-  },
-
-  // IPK = rata-rata bobot dari daftar huruf; huruf kosong/tidak dikenal diabaikan. null bila tidak ada.
-  gpa(grades) {
-    const points = grades.map((g) => Domain.gradePoint(g)).filter((p) => p !== null);
-    return points.length ? Domain.average(points) : null;
-  },
-
   /* ---------- User ---------- */
-  ROLE_LABELS: { admin: "Administrator", instructor: "Instructor", student: "Student" },
+  ROLE_LABELS: { admin: "Administrator", instructor: "Instructor", student: "Learner" },
 
   roleLabel(role) {
     return Domain.ROLE_LABELS[role] || role;
@@ -48,10 +17,9 @@ const Domain = {
 
   // Keterangan singkat di bawah nama user (sidebar, profil)
   userTitle(user) {
-    // NIM / departemen bisa kosong untuk akun dari registrasi publik
-    if (user.role === "student") return user.idNumber ? `Student · NIM ${user.idNumber}` : "Student";
-    if (user.role === "instructor") return user.department ? `Instructor · ${user.department}` : "Instructor";
-    return "System administrator";
+    if (user.role === "student") return "Learner";
+    if (user.role === "instructor") return "Instructor · Learner";
+    return "Platform administrator";
   },
 
   /* ---------- Angka ---------- */
@@ -63,6 +31,20 @@ const Domain = {
   progressPercent(done, total) {
     if (!total) return 0;
     return Math.round((Math.min(Math.max(done, 0), total) / total) * 100);
+  },
+
+  // Total durasi course dari jumlah menit modul: 200 → "3 hr 20 min", 45 → "45 min", 0 → "0 min"
+  formatDuration(minutes) {
+    const total = Math.max(0, Math.round(Number(minutes) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (!h) return `${m} min`;
+    return m ? `${h} hr ${m} min` : `${h} hr`;
+  },
+
+  // "12 modules · 3 hr 20 min"
+  courseLength(modules, minutes) {
+    return `${modules} module${modules === 1 ? "" : "s"} · ${Domain.formatDuration(minutes)}`;
   },
 
   /* ---------- Sertifikat ---------- */

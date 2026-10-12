@@ -71,7 +71,6 @@ def list_courses(
     q: str | None = None,
     status: str | None = None,
     category: str | None = None,
-    semester: str | None = None,
     instructor_id: Annotated[str | None, Query(alias="instructorId")] = None,
     open: bool = False,
     sort: str | None = None,
@@ -79,7 +78,7 @@ def list_courses(
     page_size: PageSize = None,
 ) -> dict:
     """Admin: semua course · Instructor: miliknya · Student: `open=true` (course yang bisa didaftari)."""
-    return service.list_courses(db, user, q, status, category, semester, instructor_id, open, sort, page, page_size)
+    return service.list_courses(db, user, q, status, category, instructor_id, open, sort, page, page_size)
 
 
 @router.post("/courses", tags=["courses"], status_code=201)

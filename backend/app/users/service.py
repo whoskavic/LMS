@@ -61,7 +61,6 @@ def list_users(
     db: Session,
     role: str | None,
     q: str | None,
-    department: str | None,
     status: str | None,
     sort: str | None,
     page: int | None,
@@ -70,49 +69,37 @@ def list_users(
     stmt = select(User)
     if role:
         stmt = stmt.where(User.role == role)
-    if department:
-        stmt = stmt.where(User.department == department)
     if status in ("Active", "Inactive"):
         stmt = stmt.where(User.is_active == (status == "Active"))
     if q and q.strip():
         needle = f"%{q.strip()}%"
-        stmt = stmt.where(or_(User.name.ilike(needle), User.email.ilike(needle), User.id_number.ilike(needle)))
+        stmt = stmt.where(or_(User.name.ilike(needle), User.email.ilike(needle)))
     users = list(db.scalars(stmt))
     return paginate(user_rows(db, users), page, page_size, sort, "name")
 
 
-def assert_unique(db: Session, email: str, id_number: str | None, role: str, except_id: uuid.UUID | None = None):
-    fields: dict[str, str] = {}
+def assert_unique(db: Session, email: str, except_id: uuid.UUID | None = None):
     base = select(User.id).where(User.id != except_id) if except_id else select(User.id)
     if db.scalar(base.where(func.lower(User.email) == email.lower())):
-        fields["email"] = "This email is already registered."
-    if id_number and db.scalar(base.where(User.id_number == id_number)):
-        fields["idNumber"] = f"This {rules.id_label(role)} is already used."
-    if fields:
-        raise conflict("CONFLICT", "Some values are already in use.", fields)
+        raise conflict("CONFLICT", "Some values are already in use.", {"email": "This email is already registered."})
 
 
 def create_user(db: Session, data: UserCreate) -> User:
     assert_valid({"role": "" if data.role in ROLES else "Choose a valid role."})
     name, email = clean(data.name), clean(data.email).lower()
-    id_number, department = clean(data.id_number), clean(data.department)
     assert_valid(
         {
             "name": rules.name_error(name),
             "email": rules.email_error(email),
-            "idNumber": rules.id_number_error(id_number, data.role),
-            "department": rules.department_error(department),
             "status": "" if data.status in ("Active", "Inactive") else "Choose Active or Inactive.",
             "password": rules.password_error(data.password),
         }
     )
-    assert_unique(db, email, id_number, data.role)
+    assert_unique(db, email)
     user = User(
         role=data.role,
         name=name,
         email=email,
-        id_number=id_number,
-        department=department,
         is_active=data.status == "Active",
         password_hash=hash_password(data.password),
     )
@@ -126,25 +113,15 @@ def update_user(db: Session, actor: User, user_id: str, data: UserUpdate) -> Use
     current_status = "Active" if target.is_active else "Inactive"
     name = clean(data.name if data.name is not None else target.name)
     email = clean(data.email if data.email is not None else target.email).lower()
-    id_number = clean(data.id_number if data.id_number is not None else target.id_number)
-    department = clean(data.department if data.department is not None else target.department)
     status = data.status if data.status is not None else current_status
     status_error = ""
     if status not in ("Active", "Inactive"):
         status_error = "Choose Active or Inactive."
     elif target.id == actor.id and status != "Active":
         status_error = "You cannot deactivate your own account."
-    assert_valid(
-        {
-            "name": rules.name_error(name),
-            "email": rules.email_error(email),
-            "idNumber": rules.id_number_error(id_number, target.role),
-            "department": rules.department_error(department),
-            "status": status_error,
-        }
-    )
-    assert_unique(db, email, id_number, target.role, target.id)
-    target.name, target.email, target.id_number, target.department = name, email, id_number, department
+    assert_valid({"name": rules.name_error(name), "email": rules.email_error(email), "status": status_error})
+    assert_unique(db, email, target.id)
+    target.name, target.email = name, email
     target.is_active = status == "Active"
     db.commit()
     return target
@@ -175,15 +152,7 @@ def delete_user(db: Session, actor: User, user_id: str) -> None:
 
 def update_profile(db: Session, user: User, data: ProfileUpdate) -> User:
     name = clean(data.name if data.name is not None else user.name)
-    department = clean(data.department if data.department is not None else user.department)
-    assert_valid({"name": rules.name_error(name), "department": rules.department_error(department, required=False)})
-    user.name, user.department = name, department or None
+    assert_valid({"name": rules.name_error(name)})
+    user.name = name
     db.commit()
     return user
-
-
-def departments(db: Session, role: str | None) -> list[str]:
-    stmt = select(User.department).where(User.department.is_not(None)).distinct()
-    if role:
-        stmt = stmt.where(User.role == role)
-    return sorted(d for d in db.scalars(stmt) if d)

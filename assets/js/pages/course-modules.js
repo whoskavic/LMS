@@ -130,7 +130,7 @@ App.ready(async () => {
       const module = modules.find((m) => m.id === del.dataset.delete);
       UI.modal({
         title: "Delete module?",
-        body: `<p><strong>${Utils.escape(module.title)}</strong> will be removed from ${Utils.escape(course.code || course.title)}. Students will no longer see it.</p>`,
+        body: `<p><strong>${Utils.escape(module.title)}</strong> will be removed from ${Utils.escape(course.title)}. Students will no longer see it.</p>`,
         confirmText: "Delete",
         variant: "danger",
         onConfirm: async () => {

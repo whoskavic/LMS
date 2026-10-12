@@ -23,9 +23,9 @@ App.ready(async () => {
 
   document.title = `${quiz.title} | Learnova LMS`;
   setText("quiz-title", quiz.title);
-  setText("quiz-meta", [course.code, course.title].filter(Boolean).join(" · "));
+  setText("quiz-meta", [course.title, course.instructorName].filter(Boolean).join(" · "));
   const crumb = document.getElementById("crumb-course");
-  crumb.textContent = course.code || course.title;
+  crumb.textContent = course.title;
   crumb.href = courseUrl;
 
   let attempt = null; // attempt yang sedang dikerjakan (dari server)

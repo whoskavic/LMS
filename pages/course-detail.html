@@ -99,7 +99,7 @@
           <button class="tabs__tab" type="button" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-tab="overview"><i data-icon="grid" class="icon--sm"></i>Overview</button>
           <button class="tabs__tab" type="button" role="tab" id="tab-modules" aria-controls="panel-modules" aria-selected="false" data-tab="modules"><i data-icon="layers" class="icon--sm"></i>Modules <span class="tabs__count" data-count="modules">0</span></button>
           <button class="tabs__tab" type="button" role="tab" id="tab-quizzes" aria-controls="panel-quizzes" aria-selected="false" data-tab="quizzes"><i data-icon="quiz" class="icon--sm"></i>Quizzes <span class="tabs__count" data-count="quizzes">0</span></button>
-          <button class="tabs__tab" type="button" role="tab" id="tab-students" aria-controls="panel-students" aria-selected="false" data-tab="students"><i data-icon="users" class="icon--sm"></i>Students &amp; Grades <span class="tabs__count" data-count="students">0</span></button>
+          <button class="tabs__tab" type="button" role="tab" id="tab-students" aria-controls="panel-students" aria-selected="false" data-tab="students"><i data-icon="users" class="icon--sm"></i>Students <span class="tabs__count" data-count="students">0</span></button>
         </div>
 
         <!-- Tab: Overview -->
@@ -175,34 +175,31 @@
           </article>
         </section>
 
-        <!-- Tab: Students & Grades -->
+        <!-- Tab: Students (read-only) -->
         <section class="tabs__panel" id="panel-students" role="tabpanel" aria-labelledby="tab-students" hidden>
           <article class="card table-card">
             <header class="card__header card__header--split">
               <div>
-                <h2 class="card__title">Students &amp; grades</h2>
-                <p class="card__subtitle" id="grade-hint">Final score is converted to a letter grade automatically.</p>
+                <h2 class="card__title">Students</h2>
+                <p class="card__subtitle">Learners enroll themselves from the catalog. Progress and quiz scores update as they learn.</p>
               </div>
               <div class="page-header__actions">
-                <button class="btn btn--outline" type="button" id="export-grades"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
-                <button class="btn btn--outline" type="button" id="add-students" data-owner-only><i data-icon="plus" class="icon--sm"></i>Add students</button>
-                <button class="btn btn--primary" type="button" id="save-grades" data-owner-only disabled><i data-icon="check" class="icon--sm"></i>Save grades</button>
+                <button class="btn btn--outline" type="button" id="export-students"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
               </div>
             </header>
             <div class="table-wrap">
-              <table class="table table--stack" id="grade-table">
-                <caption class="visually-hidden">Students and grades</caption>
+              <table class="table table--stack" id="student-table">
+                <caption class="visually-hidden">Enrolled learners</caption>
                 <thead>
                   <tr>
-                    <th scope="col" data-sort="name">Student</th>
+                    <th scope="col" data-sort="name">Learner</th>
                     <th scope="col" data-sort="progress">Progress</th>
-                    <th scope="col" data-sort="quiz">Quiz score</th>
-                    <th scope="col" data-sort="finalScore">Final score</th>
-                    <th scope="col" data-sort="grade">Grade</th>
-                    <th scope="col" data-owner-only><span class="visually-hidden">Actions</span></th>
+                    <th scope="col" data-sort="bestQuiz">Best quiz score</th>
+                    <th scope="col" data-sort="completed">Status</th>
+                    <th scope="col" data-sort="enrolledAt">Enrolled</th>
                   </tr>
                 </thead>
-                <tbody id="grade-rows"></tbody>
+                <tbody id="student-rows"></tbody>
               </table>
             </div>
           </article>
@@ -227,6 +224,6 @@
   <script src="../assets/js/pages/course-detail.js"></script>
   <script src="../assets/js/pages/course-modules.js"></script>
   <script src="../assets/js/pages/course-quizzes.js"></script>
-  <script src="../assets/js/pages/course-grades.js"></script>
+  <script src="../assets/js/pages/course-students.js"></script>
 </body>
 </html>

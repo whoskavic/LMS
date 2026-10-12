@@ -22,7 +22,7 @@ App.ready((me) => {
   if (!isAdmin) {
     document.getElementById("page-eyebrow").textContent = "Instructor workspace";
     document.getElementById("page-title").textContent = "My Courses";
-    document.getElementById("page-subtitle").textContent = "Courses you teach — manage modules, quizzes, and grades";
+    document.getElementById("page-subtitle").textContent = "Courses you teach — manage modules, quizzes, and learners";
   }
 
   const state = { q: params.get("q") || "", category: "", status: params.get("status") || "", instructorId: "", page: 1, key: "title", dir: "asc" };
@@ -58,7 +58,7 @@ App.ready((me) => {
   const deletable = (c) => c.status === "Draft" && !c.students;
 
   function actions(c) {
-    const name = c.code || c.title;
+    const name = c.title;
     const view = `<a class="btn btn--link" href="course-detail.html?id=${encodeURIComponent(c.id)}">View</a>`;
     const del = iconButton("delete", c, "trash", deletable(c) ? `Delete ${name}` : "Only drafts without students can be deleted", deletable(c) ? "" : "disabled");
     if (isAdmin) {
@@ -75,10 +75,10 @@ App.ready((me) => {
 
   const rowTemplate = (c) => `
     <tr>
-      <td>${Utils.escape(c.title)}<span class="table__code">${Utils.escape(Utils.orDash(c.code))} · ${Utils.escape(Utils.orDash(c.semester))}</span></td>
+      <td>${Utils.escape(c.title)}<span class="table__code">${Utils.escape(Domain.courseLength(c.modules, c.totalMinutes))}</span></td>
       ${isAdmin ? `<td>${Utils.escape(c.instructorName)}</td>` : ""}
       <td>${Utils.escape(Utils.orDash(c.category))}</td>
-      <td>${c.students} / ${Utils.orDash(c.maxStudents)}</td>
+      <td>${c.students}</td>
       <td>
         <div class="table-progress">
           <div class="progress"><div class="progress__bar" style="width: ${c.avgProgress}%"></div></div>
@@ -162,7 +162,7 @@ App.ready((me) => {
     if (!btn || btn.disabled) return;
     const course = current.items.find((c) => c.id === btn.dataset.id);
     if (!course) return;
-    const label = `<strong>${Utils.escape(course.title)}</strong> (${Utils.escape(Utils.orDash(course.code))})`;
+    const label = `<strong>${Utils.escape(course.title)}</strong>`;
 
     if (btn.dataset.action === "delete") {
       return UI.modal({
@@ -204,7 +204,7 @@ App.ready((me) => {
         }
         try {
           const updated = await Api.courses.transition(course.id, action, reason);
-          UI.toast(`${updated.code || updated.title} is now ${updated.status.toLowerCase()}.`);
+          UI.toast(`${updated.title} is now ${updated.status.toLowerCase()}.`);
         } catch (err) {
           if (!form || !UI.applyFieldErrors(form, err)) UI.toast(err.message, "error");
           throw err;
@@ -222,11 +222,11 @@ App.ready((me) => {
       Utils.downloadCSV(
         "learnova-courses.csv",
         res.items.map((c) => ({
-          Code: c.code,
           Course: c.title,
           Instructor: c.instructorName,
           Category: c.category,
-          Semester: c.semester,
+          Modules: c.modules,
+          "Total minutes": c.totalMinutes,
           Students: c.students,
           "Avg progress": `${c.avgProgress}%`,
           Status: c.status,

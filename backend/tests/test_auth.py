@@ -74,12 +74,20 @@ def test_change_password(client, db):
 
 def test_update_profile_and_stats(client, db):
     user = make_user(db)
-    res = client.patch("/api/v1/me", json={"name": "Alex Mércer", "department": "Design"}, headers=auth(user))
+    res = client.patch("/api/v1/me", json={"name": "Alex Mércer"}, headers=auth(user))
     assert res.status_code == 200 and res.json()["name"] == "Alex Mércer"
     res = client.patch("/api/v1/me", json={"name": "A1"}, headers=auth(user))
     assert res.status_code == 400 and "name" in res.json()["error"]["fields"]
     stats = client.get("/api/v1/me/stats", headers=auth(user)).json()
-    assert stats == {"role": "student", "courses": 0, "gpa": None}
+    assert stats == {
+        "role": "student",
+        "courses": 0,
+        "inProgress": 0,
+        "completed": 0,
+        "certificates": 0,
+        "avgProgress": 0,
+    }
+    assert "gpa" not in stats
     assert client.get("/api/v1/me/stats").status_code == 401
 
 

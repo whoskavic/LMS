@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from app import models  # noqa: F401
 from app.auth.security import hash_password
-from app.common.grading import grade_from_score
 from app.common.util import slugify
 from app.courses.models import Category, Course, CourseStatusLog, Module
 from app.db import Base, SessionLocal
@@ -213,9 +212,6 @@ def seed_enrollments(db: Session, users: dict[str, User], courses: dict[str, Cou
                 # Course selesai: tanggal selesai = akhir course (seperti fallback sertifikat di prototipe)
                 enrollment.completed_at = min(start + timedelta(weeks=course.duration_weeks or 1), datetime.now(UTC))
             apply_progress(db, enrollment)
-            if item.get("finalScore") is not None:
-                enrollment.final_score = item["finalScore"]
-                enrollment.grade_letter = grade_from_score(item["finalScore"])
             enrollments.append(enrollment)
     db.flush()
     return enrollments

@@ -23,14 +23,13 @@ def list_users(
     db: DB,
     role: str | None = None,
     q: str | None = None,
-    department: str | None = None,
     status: str | None = None,
     sort: str | None = None,
     page: int | None = None,
     page_size: Annotated[int | None, Query(alias="pageSize")] = None,
 ):
     """Daftar user (admin) dengan filter role, departemen, status, pencarian, sort, dan pagination."""
-    return service.list_users(db, role, q, department, status, sort, page, page_size)
+    return service.list_users(db, role, q, status, sort, page, page_size)
 
 
 @router.get("/users/{user_id}", response_model=UserRow)
@@ -56,16 +55,8 @@ def delete_user(user_id: str, admin: Admin, db: DB) -> dict:
     return {"id": user_id}
 
 
-@router.get("/meta/departments", response_model=list[str], tags=["meta"])
-def departments(_: Admin, db: DB, role: str | None = None):
-    return service.departments(db, role)
-
-
 @router.get("/meta/instructors", tags=["meta"])
 def instructors(_: Admin, db: DB) -> list[dict]:
     """Daftar instructor untuk filter (admin)."""
     rows = db.scalars(select(User).where(User.role == "instructor").order_by(User.name))
-    return [
-        {"id": str(u.id), "name": u.name, "department": u.department, "status": "Active" if u.is_active else "Inactive"}
-        for u in rows
-    ]
+    return [{"id": str(u.id), "name": u.name, "status": "Active" if u.is_active else "Inactive"} for u in rows]

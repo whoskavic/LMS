@@ -30,7 +30,7 @@ App.ready(async (me) => {
     const published = editing.status === "Active" || editing.status === "Archived";
     document.title = "Edit Course | Learnova LMS";
     document.getElementById("form-title").textContent = "Edit Course";
-    document.getElementById("crumb-current").textContent = `Edit ${editing.code}`;
+    document.getElementById("crumb-current").textContent = `Edit ${editing.title}`;
     if (!["Draft", "Rejected"].includes(editing.status)) {
       document.querySelectorAll("[data-label-edit]").forEach((btn) => (btn.textContent = btn.dataset.labelEdit));
     }
@@ -43,17 +43,14 @@ App.ready(async (me) => {
       Draft: "This course is a draft. Submit it when it is ready for review.",
       Archived: "This course is archived and hidden from new students.",
     }[editing.status];
-    ["title", "description", "category", "semester", "duration", "startDate", "code", "maxStudents"].forEach(
+    ["title", "description", "category", "thumbnailUrl"].forEach(
       (name) => (el[name].value = editing[name] ?? "")
     );
-    el.enrollmentOpen.checked = editing.enrollmentOpen;
     el.certificate.checked = editing.certificate;
   }
 
 
   // --- Aturan validasi ---
-  const today = Domain.todayLocal();
-
   const rules = {
     title: (v) => {
       if (!v) return "Course title is required.";
@@ -66,31 +63,7 @@ App.ready(async (me) => {
       return "";
     },
     category: (v) => (v ? "" : "Please choose a category."),
-    semester: (v) => (v ? "" : "Please choose a semester."),
-    duration: (v) => {
-      const n = Number(v);
-      if (!v) return "Duration is required.";
-      if (!Number.isInteger(n) || n < 1 || n > 52) return "Duration must be a whole number between 1 and 52 weeks.";
-      return "";
-    },
-    startDate: (v) => {
-      if (!v) return "Start date is required.";
-      if (!editing && v < today) return "Start date cannot be in the past.";
-      return "";
-    },
-    code: (v) => {
-      if (!v) return "Course code is required.";
-      if (!/^[A-Z]{2,5}-?\d{3}$/.test(v)) return "Use a format like DES-405 or CS101.";
-      return "";
-    },
-    maxStudents: (v) => {
-      const n = Number(v);
-      if (!v) return "Maximum students is required.";
-      if (!Number.isInteger(n) || n < 1 || n > 500) return "Enter a whole number between 1 and 500.";
-      const enrolled = editing?.students || 0;
-      if (n < enrolled) return `Cannot be lower than current enrollment (${enrolled}).`;
-      return "";
-    },
+    thumbnailUrl: (v) => (!v || /^https?:\/\/\S+$/.test(v) ? "" : "Enter a valid http(s) URL."),
   };
 
   function setError(name, message) {
@@ -111,11 +84,6 @@ App.ready(async (me) => {
     el[name].addEventListener(el[name].tagName === "SELECT" ? "change" : "input", () => {
       if (el[name].getAttribute("aria-invalid") === "true") validate(name);
     });
-  });
-
-  // Kode course otomatis huruf besar
-  el.code.addEventListener("input", () => {
-    el.code.value = el.code.value.toUpperCase().replace(/\s/g, "");
   });
 
   // Penghitung karakter deskripsi
@@ -221,12 +189,7 @@ App.ready(async (me) => {
       title: value("title"),
       description: value("description"),
       category: value("category"),
-      semester: value("semester"),
-      duration: value("duration") === "" ? null : Number(value("duration")),
-      startDate: value("startDate"),
-      code: value("code"), // boleh kosong untuk Draft — ditampilkan "–"
-      maxStudents: value("maxStudents") === "" ? null : Number(value("maxStudents")),
-      enrollmentOpen: el.enrollmentOpen.checked,
+      thumbnailUrl: value("thumbnailUrl"),
       certificate: el.certificate.checked,
     };
 

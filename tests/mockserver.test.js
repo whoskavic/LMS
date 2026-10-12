@@ -1,4 +1,5 @@
-// Kontrak MockServer (assets/js/api/transport-local.js) — spesifikasi yang bisa dijalankan untuk backend.
+// Kontrak MockServer (assets/js/api/transport-local.js) — spesifikasi prototipe (arsip).
+// Route nilai & batch enroll tidak lagi dipakai UI (ADR-009), jadi dipanggil langsung lewat Api.get/put/post/del.
 // Script browser dimuat ke satu vm context (tanpa DOM, tanpa dependency). Jalankan: node --test
 // Skenario berurutan: tiap langkah memakai state dari langkah sebelumnya.
 const vm = require("node:vm");
@@ -155,20 +156,20 @@ test("MockServer — kontrak API (skenario berurutan)", async (t) => {
   assert.ok(badQuiz.fields.title && badQuiz.fields["questions.0"]);
 
   step("grades: invalid → 400 per enrollment, valid → grade huruf");
-  const grades = await Api.grades.list("crs_8");
+  const grades = await Api.get("/courses/crs_8/grades");
   const target = grades.items[0];
-  const gErr = await expectError(Api.grades.save("crs_8", [{ enrollmentId: target.enrollmentId, finalScore: 101 }]), 400, "VALIDATION");
+  const gErr = await expectError(Api.put("/courses/crs_8/grades", { grades: [{ enrollmentId: target.enrollmentId, finalScore: 101 }] }), 400, "VALIDATION");
   assert.ok(gErr.fields[target.enrollmentId]);
-  const saved = await Api.grades.save("crs_8", [{ enrollmentId: target.enrollmentId, finalScore: 86 }]);
+  const saved = await Api.put("/courses/crs_8/grades", { grades: [{ enrollmentId: target.enrollmentId, finalScore: 86 }] });
   assert.equal(saved.items.find((r) => r.enrollmentId === target.enrollmentId).grade, "A");
 
   step("batch enroll: path /enrollments/batch, kapasitas, kandidat tidak valid");
   const freeStudent = DB.all("users").find((u) => u.role === "student" && u.status === "Active" && !DB.all("enrollments").some((e) => e.studentId === u.id && e.courseId === "crs_8"));
-  await expectError(Api.enrollments.addStudents("crs_8", []), 400, "VALIDATION");
-  await expectError(Api.enrollments.addStudents("crs_8", ["usr_2"]), 400, "VALIDATION");
-  const batch = await Api.enrollments.addStudents("crs_8", [freeStudent.id]);
+  await expectError(Api.post("/courses/crs_8/enrollments/batch", { studentIds: [] }), 400, "VALIDATION");
+  await expectError(Api.post("/courses/crs_8/enrollments/batch", { studentIds: ["usr_2"] }), 400, "VALIDATION");
+  const batch = await Api.post("/courses/crs_8/enrollments/batch", { studentIds: [freeStudent.id] });
   assert.equal(batch.total, 1);
-  await Api.enrollments.remove(batch.items[0].id);
+  await Api.del(`/enrollments/${batch.items[0].id}`);
   await Api.auth.logout();
 
   step("mahasiswa: kunci jawaban tidak terkirim; course tidak terlihat → 404; enroll; selesai modul");

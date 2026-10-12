@@ -125,50 +125,18 @@
                     </select>
                     <p class="field__error" id="category-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
                   </div>
-
-                  <div class="field" data-field="semester">
-                    <label class="field__label" for="semester">Semester <span class="required">*</span></label>
-                    <select class="field__input" id="semester" name="semester" aria-describedby="semester-error">
-                      <option value="">Select a semester</option>
-                      <option value="Fall 2026">Fall 2026</option>
-                      <option value="Spring 2027">Spring 2027</option>
-                    </select>
-                    <p class="field__error" id="semester-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
-                  </div>
                 </div>
               </div>
             </section>
 
             <section class="card">
-              <h2 class="card__title card__header">Schedule &amp; delivery</h2>
+              <h2 class="card__title card__header">Course image</h2>
               <div class="form-stack">
-                <div class="field-row">
-                  <div class="field" data-field="duration">
-                    <label class="field__label" for="duration">Duration (weeks) <span class="required">*</span></label>
-                    <input class="field__input" id="duration" name="duration" type="number" min="1" max="52" placeholder="12" aria-describedby="duration-error">
-                    <p class="field__error" id="duration-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
-                  </div>
-
-                  <div class="field" data-field="startDate">
-                    <label class="field__label" for="startDate">Start date <span class="required">*</span></label>
-                    <input class="field__input" id="startDate" name="startDate" type="date" aria-describedby="startDate-error">
-                    <p class="field__error" id="startDate-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
-                  </div>
-                </div>
-
-                <div class="field-row">
-                  <div class="field" data-field="code">
-                    <label class="field__label" for="code">Course code <span class="required">*</span></label>
-                    <input class="field__input" id="code" name="code" type="text" maxlength="9" placeholder="DES-405" aria-describedby="code-hint code-error">
-                    <p class="field__hint" id="code-hint">2–5 letters followed by 3 digits</p>
-                    <p class="field__error" id="code-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
-                  </div>
-
-                  <div class="field" data-field="maxStudents">
-                    <label class="field__label" for="maxStudents">Maximum students <span class="required">*</span></label>
-                    <input class="field__input" id="maxStudents" name="maxStudents" type="number" min="1" max="500" placeholder="60" aria-describedby="maxStudents-error">
-                    <p class="field__error" id="maxStudents-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
-                  </div>
+                <div class="field" data-field="thumbnailUrl">
+                  <label class="field__label" for="thumbnailUrl">Thumbnail URL</label>
+                  <input class="field__input" id="thumbnailUrl" name="thumbnailUrl" type="url" placeholder="https://…/cover.jpg" aria-describedby="thumbnailUrl-hint thumbnailUrl-error">
+                  <p class="field__hint" id="thumbnailUrl-hint">Optional. Shown on the catalog card; without it the course color is used.</p>
+                  <p class="field__error" id="thumbnailUrl-error"><i data-icon="alert" class="icon--sm"></i><span></span></p>
                 </div>
               </div>
             </section>
@@ -192,14 +160,10 @@
 
             <section class="card">
               <h2 class="card__title card__header">Course settings</h2>
-              <p class="field__hint settings-note" id="approval-note">New courses are reviewed by the administrator before they become visible to students.</p>
-              <label class="switch-row">
-                <span><span class="switch-row__title">Enrollment open</span><span class="switch-row__desc">Students can join</span></span>
-                <input class="switch" type="checkbox" name="enrollmentOpen" checked>
-              </label>
+              <p class="field__hint settings-note" id="approval-note">New courses are reviewed by the administrator before they appear in the public catalog. Every course is free.</p>
               <label class="switch-row">
                 <span><span class="switch-row__title">Certificate</span><span class="switch-row__desc">Issue on completion</span></span>
-                <input class="switch" type="checkbox" name="certificate">
+                <input class="switch" type="checkbox" name="certificate" checked>
               </label>
             </section>
           </div>

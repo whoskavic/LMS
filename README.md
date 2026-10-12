@@ -11,24 +11,26 @@ Legenda: ✅ terhubung ke backend
 | Role | Fitur | Status |
 |---|---|---|
 | Admin | Dashboard (statistik, grafik enrollment 6 bulan, pending approvals, status sistem, aktivitas) | ✅ |
-| Admin | Manajemen user (CRUD, aktif/nonaktif, hapus dengan aturan bisnis) | ✅ |
+| Admin | Manajemen user (nama, email, status; tanpa NIM/departemen), aktif/nonaktif, hapus dengan aturan bisnis | ✅ |
 | Admin | Approve / reject (dengan alasan) / archive / restore course, riwayat status | ✅ |
 | Admin | Kategori course (API) | ✅ |
-| Admin | Laporan progress & nilai (filter, sortir, pagination), cetak, export CSV dari server | ✅ |
-| Instructor | Membuat & mengedit course, submit untuk approval | ✅ |
+| Admin | Laporan: total learner/instructor/enrollment, completion rate, rata-rata quiz, course terpopuler, tabel progress (filter, sortir, pagination), cetak, export CSV | ✅ |
+| Instructor | Membuat & mengedit course (judul, deskripsi, kategori, thumbnail URL, sertifikat), submit untuk approval | ✅ |
 | Instructor | Modul materi (urutkan, video URL) | ✅ |
 | Instructor | Quiz pilihan ganda (editor soal, statistik attempt) | ✅ |
 | Instructor | Dashboard (course per status, progress & skor per course, attempt terbaru) | ✅ |
-| Instructor | Students & Grades: tambah/keluarkan student, nilai akhir → grade huruf otomatis, export CSV | ✅ |
-| Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline | ✅ |
-| Student | Enroll course gratis (katalog / dashboard), belajar modul berurutan, progress dihitung server | ✅ |
-| Student | Dashboard: course per semester, progress, nilai akhir, IPK (dihitung saat diminta), unduh sertifikat | ✅ |
+| Instructor | Students (read-only): peserta, progress, skor quiz terbaik, status selesai & sertifikat, export CSV | ✅ |
+| Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline, jumlah modul & total durasi | ✅ |
+| Learner | Enroll course gratis (course Active selalu terbuka), belajar modul berurutan, progress dihitung server | ✅ |
+| Learner | **My Learning**: tab sedang dipelajari / selesai / sertifikat, "Continue learning" ke modul berikutnya, unduh & verifikasi sertifikat | ✅ |
 | Publik | Verifikasi sertifikat berdasarkan nomor (`verify.html`) | ✅ |
-| Student | Quiz: soal tanpa kunci, timer & batas attempt dari server, lanjut setelah refresh, skor & review setelah submit | ✅ |
+| Learner | Quiz: soal tanpa kunci, timer & batas attempt dari server, lanjut setelah refresh, skor & review setelah submit | ✅ |
 | Semua | Login, registrasi publik (selalu learner/student), profil, ganti password, tema terang/gelap | ✅ |
 | Learner → Instructor | "Start teaching" (`POST /me/become-instructor`); instructor tetap bisa belajar di course instructor lain, pengalih mode **Learn / Teach** di sidebar | ✅ |
 
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
+
+Dihapus dari UI & API (ADR-009): IPK, nilai akhir & grade huruf, semester, NIM/NIDN, departemen, kode course, durasi minggu, tanggal mulai, kapasitas, input nilai & batch enroll. Endpoint `/courses/{id}/grades`, `/courses/{id}/candidates`, `/courses/{id}/enrollments/batch`, `DELETE /enrollments/{id}`, dan `/meta/departments` sudah tidak ada (404).
 
 > **Sedang berjalan:** transformasi menjadi platform kursus publik ala Udemy (semua course gratis): registrasi tanpa role + "Start teaching", penghapusan konsep akademik (IPK, semester, NIM, kode course, kapasitas, nilai akhir), My Learning, course landing page, ulasan, dan profil instructor. Rencana per PR: bagian **Roadmap** dan [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
 
@@ -174,17 +176,16 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | PATCH | `/api/v1/me` | login |
 | GET | `/api/v1/me/stats` | login |
 | POST | `/api/v1/me/become-instructor` (`{ headline?, bio? }`) | student / instructor (idempoten), admin → 403 |
-| GET | `/api/v1/users` (`role, q, department, status, sort, page, pageSize`) | admin |
+| GET | `/api/v1/users` (`role, q, status, sort, page, pageSize`) | admin |
 | POST | `/api/v1/users` | admin |
 | GET / PATCH / DELETE | `/api/v1/users/{id}` | admin |
-| GET | `/api/v1/meta/departments` | admin |
 | GET | `/api/v1/meta/notifications` | login |
 | GET | `/api/v1/meta/instructors` | admin |
 | GET | `/api/v1/catalog/courses` (`q, category, sort, page, pageSize`) | publik |
 | GET | `/api/v1/catalog/courses/{id atau slug}` | publik |
 | GET | `/api/v1/categories`, `/api/v1/meta/categories` | publik |
 | POST / PATCH / DELETE | `/api/v1/categories[/{id}]` | admin |
-| GET | `/api/v1/courses` (`q, status, category, semester, instructorId, open, sort, page, pageSize`) | admin (semua), instructor (miliknya), student (`open=true`) |
+| GET | `/api/v1/courses` (`q, status, category, instructorId, open, sort, page, pageSize`) | admin (semua), instructor (miliknya), student (`open=true`) |
 | POST | `/api/v1/courses` | instructor |
 | GET | `/api/v1/courses/{id}` | admin, instructor pemilik, student terdaftar / course terbuka |
 | PATCH | `/api/v1/courses/{id}` | instructor pemilik |
@@ -194,9 +195,9 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET / POST | `/api/v1/courses/{id}/modules` | lihat: yang boleh melihat course · tambah: instructor pemilik |
 | PUT | `/api/v1/courses/{id}/modules/order` | instructor pemilik |
 | PATCH / DELETE | `/api/v1/modules/{id}` | instructor pemilik |
-| POST | `/api/v1/courses/{id}/enrollments` | student / instructor (course Active, pendaftaran dibuka, ada kursi, bukan course milik sendiri → 409 `OWN_COURSE`) |
+| POST | `/api/v1/courses/{id}/enrollments` | student / instructor (course Active, bukan course milik sendiri → 409 `OWN_COURSE`) |
 | GET | `/api/v1/courses/{id}/enrollment` | student (enrollment miliknya di course itu) |
-| GET | `/api/v1/me/enrollments` (`semester, status, q, sort, page, pageSize`) | student / instructor |
+| GET | `/api/v1/me/enrollments` (`status, q, sort, page, pageSize`) | student / instructor |
 | POST | `/api/v1/enrollments/{id}/completed-modules` (`{ moduleId }`) | student pemilik enrollment |
 | GET | `/api/v1/courses/{id}/quizzes` | instructor/admin (dengan kunci) · student terdaftar (tanpa soal & kunci) |
 | POST | `/api/v1/courses/{id}/quizzes` | instructor pemilik |
@@ -205,10 +206,7 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET | `/api/v1/quizzes/{id}/attempts` (riwayat) | student |
 | GET / PATCH | `/api/v1/attempts/{id}` (review / simpan jawaban sementara) | student pemilik |
 | POST | `/api/v1/attempts/{id}/submit` | student pemilik (ditolak 409 bila lewat `expiresAt` + 30 detik) |
-| GET / PUT | `/api/v1/courses/{id}/grades` | GET: admin, instructor pemilik · PUT: instructor pemilik |
-| GET | `/api/v1/courses/{id}/candidates` | instructor pemilik (student yang bisa ditambahkan) |
-| POST | `/api/v1/courses/{id}/enrollments/batch` | instructor pemilik |
-| DELETE | `/api/v1/enrollments/{id}` | instructor pemilik (409 bila sudah bersertifikat) |
+| GET | `/api/v1/courses/{id}/students` (`q, sort, page, pageSize`) | admin, instructor pemilik (read-only) |
 | GET | `/api/v1/certificates/{code}` | publik (verifikasi) |
 | GET | `/api/v1/reports/summary`, `/api/v1/reports/enrollments`, `/api/v1/reports/enrollments.csv` | admin |
 | GET | `/api/v1/activities` | admin |

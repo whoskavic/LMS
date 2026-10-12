@@ -94,7 +94,25 @@
           </div>
         </section>
 
-        <section class="grid grid--3" aria-label="Summary">
+        <section class="grid grid--3" aria-label="Platform totals">
+          <article class="card stat-card">
+            <p class="stat-card__label">Learners</p>
+            <p class="stat-card__value" id="total-learners">–</p>
+            <p class="stat-card__meta">Learner accounts</p>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Instructors</p>
+            <p class="stat-card__value" id="total-instructors">–</p>
+            <p class="stat-card__meta">Accounts teaching courses</p>
+          </article>
+          <article class="card stat-card">
+            <p class="stat-card__label">Enrollments</p>
+            <p class="stat-card__value" id="total-enrollments">–</p>
+            <p class="stat-card__meta">Across all courses</p>
+          </article>
+        </section>
+
+        <section class="grid grid--3 mt-5" aria-label="Summary">
           <article class="card stat-card">
             <p class="stat-card__label">Average progress</p>
             <p class="stat-card__value" id="avg-progress">0%</p>
@@ -133,6 +151,14 @@
           </article>
         </section>
 
+        <section class="card mt-5" aria-labelledby="popular-title">
+          <header class="card__header">
+            <h2 class="card__title" id="popular-title">Most popular courses</h2>
+            <p class="card__subtitle">By number of enrolled learners</p>
+          </header>
+          <ul class="row-list" id="popular-list"></ul>
+        </section>
+
         <section class="card table-card mt-5">
           <header class="card__header card__header--split">
             <div>
@@ -146,14 +172,13 @@
           </header>
           <div class="table-wrap">
             <table class="table table--stack" id="report-table">
-              <caption class="visually-hidden">Student progress and quiz scores</caption>
+              <caption class="visually-hidden">Learner progress and quiz scores</caption>
               <thead>
                 <tr>
-                  <th scope="col" data-sort="name">Student</th>
+                  <th scope="col" data-sort="name">Learner</th>
                   <th scope="col" data-sort="course">Course</th>
                   <th scope="col" data-sort="progress">Progress</th>
-                  <th scope="col" data-sort="quiz">Quiz score</th>
-                  <th scope="col" data-sort="grade">Grade</th>
+                  <th scope="col" data-sort="quiz">Avg quiz</th>
                   <th scope="col" data-sort="status">Status</th>
                 </tr>
               </thead>

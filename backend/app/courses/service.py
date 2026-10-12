@@ -144,36 +144,44 @@ def rejection_reasons(db: Session, courses: list[Course]) -> dict[uuid.UUID, str
     return {log.course_id: log.note for log in logs}
 
 
+def module_totals(db: Session, course_ids: list[uuid.UUID]) -> dict[uuid.UUID, tuple[int, int]]:
+    """(jumlah modul, total menit) per course — durasi course = total modules.minutes."""
+    rows = db.execute(
+        select(Module.course_id, func.count(), func.coalesce(func.sum(Module.minutes), 0))
+        .where(Module.course_id.in_(course_ids))
+        .group_by(Module.course_id)
+    ).all()
+    return {course_id: (int(n), int(minutes)) for course_id, n, minutes in rows}
+
+
 def course_views(db: Session, courses: list[Course]) -> list[dict]:
-    stats = enrollment_stats(db, [c.id for c in courses])
+    ids = [c.id for c in courses]
+    stats = enrollment_stats(db, ids)
+    totals = module_totals(db, ids)
     reasons = rejection_reasons(db, courses)
     views = []
     for c in courses:
         s = stats[c.id]
+        modules, minutes = totals.get(c.id, (0, 0))
         views.append(
             {
                 "id": str(c.id),
                 "slug": c.slug,
-                "code": c.code or "",
                 "title": c.title,
                 "description": c.description or "",
                 "category": c.category.name if c.category else "",
                 "categoryId": str(c.category_id) if c.category_id else None,
-                "semester": c.semester or "",
-                "duration": c.duration_weeks,
-                "startDate": iso(c.start_date) or "",
-                "maxStudents": c.max_students,
                 "color": c.color,
                 "thumbnailUrl": c.thumbnail_url,
                 "price": c.price,
-                "enrollmentOpen": c.enrollment_open,
                 "certificate": c.issues_certificate,
                 "status": STATUS_LABEL[c.status],
                 "instructorId": str(c.instructor_id),
                 "instructorName": c.instructor.name if c.instructor else "Unassigned",
                 "students": s["students"],
                 "avgProgress": s["avgProgress"],
-                "seatsLeft": max(0, c.max_students - s["students"]) if c.max_students else 0,
+                "modules": modules,
+                "totalMinutes": minutes,
                 "rejectionReason": reasons.get(c.id),
                 "submittedAt": iso(c.submitted_at),
                 "publishedAt": iso(c.published_at),
@@ -214,9 +222,7 @@ def viewable_course(db: Session, user: User, course_id: str) -> Course:
     course = find_course(db, course_id)
     if user.role == "admin" or is_owner(user, course):
         return course
-    if user.role in LEARNER_ROLES and (
-        is_enrolled(db, user, course) or (course.status == "active" and course.enrollment_open)
-    ):
+    if user.role in LEARNER_ROLES and (is_enrolled(db, user, course) or course.status == "active"):
         return course
     if user.role == "student":
         raise not_found("Course")
@@ -240,57 +246,23 @@ def managed_course(db: Session, user: User, course_id: str) -> Course:
 # ---------------------------------------------------------------------------
 # Validasi & input course (courseErrors di MockServer)
 # ---------------------------------------------------------------------------
-def normalize_code(code: str) -> str:
-    return code.upper().replace("-", "")
-
-
 def course_input(body: CourseIn) -> dict:
     data = body.model_dump(exclude_unset=True)
-    for key in ("title", "description", "category", "semester", "start_date", "thumbnail_url"):
+    for key in ("title", "description", "category", "thumbnail_url"):
         if key in data:
             data[key] = clean(data[key])
-    if "code" in data:
-        data["code"] = re.sub(r"\s", "", clean(data["code"]).upper())
-    for key in ("duration", "max_students"):
-        if key in data:
-            raw = data[key]
-            data[key] = None if raw in ("", None) else (to_int(raw) if is_int(raw) else raw)
-    for key in ("enrollment_open", "certificate"):
-        if key in data:
-            data[key] = bool(data[key])
+    if "certificate" in data:
+        data["certificate"] = bool(data["certificate"])
     return data
 
 
-def course_errors(db: Session, c: dict, complete: bool, is_new: bool, enrolled: int = 0) -> dict[str, str]:
-    def filled(v) -> bool:
-        return v not in (None, "")
+def course_errors(db: Session, c: dict, complete: bool) -> dict[str, str]:
+    """Draft cukup judul; course yang diajukan/terbit wajib deskripsi & kategori (courseErrors di MockServer,
+    tanpa field akademik — ADR-009)."""
 
     def check(key: str, rule) -> str:
         value = c.get(key)
-        return rule(value) if complete or filled(value) else ""
-
-    def duration(v):
-        if not filled(v):
-            return "Duration is required."
-        if not isinstance(v, int) or v < 1 or v > 52:
-            return "Duration must be a whole number between 1 and 52 weeks."
-        return ""
-
-    def start_date(v):
-        if not v:
-            return "Start date is required."
-        try:
-            parsed = date.fromisoformat(v)
-        except ValueError:
-            return "Use the format YYYY-MM-DD."
-        return "Start date cannot be in the past." if is_new and parsed < date.today() else ""
-
-    def max_students(v):
-        if not filled(v):
-            return "Maximum students is required."
-        if not isinstance(v, int) or v < 1 or v > 500:
-            return "Enter a whole number between 1 and 500."
-        return f"Cannot be lower than current enrollment ({enrolled})." if v < enrolled else ""
+        return rule(value) if complete or value else ""
 
     def category(v):
         if not v:
@@ -298,57 +270,29 @@ def course_errors(db: Session, c: dict, complete: bool, is_new: bool, enrolled: 
         exists = db.scalar(select(Category.id).where(func.lower(Category.name) == v.lower()))
         return "" if exists else "Please choose a category from the list."
 
+    def description(v):
+        if not v:
+            return "Description is required."
+        if len(v) < 20:
+            return f"Description must be at least 20 characters ({len(v)}/20)."
+        return "Description must be at most 500 characters." if len(v) > 500 else ""
+
     title = c.get("title") or ""
+    if not title:
+        title_error = "Course title is required."
+    elif len(title) < 5:
+        title_error = "Title must be at least 5 characters."
+    elif len(title) > 100:
+        title_error = "Title must be at most 100 characters."
+    else:
+        title_error = ""
+    thumbnail = c.get("thumbnail_url")
     return {
-        "title": "Course title is required."
-        if not title
-        else "Title must be at least 5 characters."
-        if len(title) < 5
-        else "Title must be at most 100 characters."
-        if len(title) > 100
-        else "",
-        "description": check(
-            "description",
-            lambda v: (
-                "Description is required."
-                if not v
-                else f"Description must be at least 20 characters ({len(v)}/20)."
-                if len(v) < 20
-                else "Description must be at most 500 characters."
-                if len(v) > 500
-                else ""
-            ),
-        ),
+        "title": title_error,
+        "description": check("description", description),
         "category": check("category", category),
-        "semester": check("semester", lambda v: "" if v else "Please choose a semester."),
-        "duration": check("duration", duration),
-        "startDate": check("start_date", start_date),
-        "code": check(
-            "code",
-            lambda v: (
-                "Course code is required."
-                if not v
-                else ""
-                if CODE_PATTERN.match(v)
-                else "Use a format like DES-405 or CS101."
-            ),
-        ),
-        "maxStudents": check("max_students", max_students),
-        "thumbnailUrl": ""
-        if not c.get("thumbnail_url") or URL_PATTERN.match(c["thumbnail_url"])
-        else "Enter a valid http(s) URL.",
+        "thumbnailUrl": "" if not thumbnail or URL_PATTERN.match(thumbnail) else "Enter a valid http(s) URL.",
     }
-
-
-def assert_code_free(db: Session, code: str | None, except_id: uuid.UUID | None = None) -> None:
-    if not code:
-        return
-    stmt = select(Course.id).where(func.upper(func.replace(Course.code, "-", "")) == normalize_code(code))
-    if except_id:
-        stmt = stmt.where(Course.id != except_id)
-    if db.scalar(stmt):
-        message = "This course code is already used by another course."
-        raise conflict("CONFLICT", message, {"code": message})
 
 
 def enrolled_count(db: Session, course: Course) -> int:
@@ -363,18 +307,6 @@ def _apply(db: Session, course: Course, data: dict) -> None:
     if "category" in data:
         name = data["category"]
         course.category = db.scalar(select(Category).where(func.lower(Category.name) == name.lower())) if name else None
-    if "semester" in data:
-        course.semester = data["semester"] or None
-    if "duration" in data:
-        course.duration_weeks = data["duration"]
-    if "start_date" in data:
-        course.start_date = date.fromisoformat(data["start_date"]) if data["start_date"] else None
-    if "code" in data:
-        course.code = data["code"] or None
-    if "max_students" in data:
-        course.max_students = data["max_students"]
-    if "enrollment_open" in data:
-        course.enrollment_open = data["enrollment_open"]
     if "certificate" in data:
         course.issues_certificate = data["certificate"]
     if "thumbnail_url" in data:
@@ -389,8 +321,7 @@ def log_status(db: Session, course: Course, actor: User, from_status: str | None
 
 def create_course(db: Session, user: User, body: CourseIn) -> Course:
     data = {"title": "", **course_input(body)}
-    assert_valid(course_errors(db, data, complete=False, is_new=True))
-    assert_code_free(db, data.get("code"))
+    assert_valid(course_errors(db, data, complete=False))
     count = db.scalar(select(func.count()).select_from(Course)) or 0
     course = Course(
         instructor_id=user.id,
@@ -399,8 +330,8 @@ def create_course(db: Session, user: User, body: CourseIn) -> Course:
         status="draft",
         price=0,
         color=COURSE_COLORS[count % len(COURSE_COLORS)],
-        enrollment_open=data.get("enrollment_open", True),
-        issues_certificate=data.get("certificate", False),
+        enrollment_open=True,
+        issues_certificate=data.get("certificate", True),
     )
     _apply(db, course, data)
     db.add(course)
@@ -412,14 +343,10 @@ def create_course(db: Session, user: User, body: CourseIn) -> Course:
 
 def update_course(db: Session, user: User, course_id: str, body: CourseIn) -> Course:
     course = owned_course(db, user, course_id)
-    current = course_input_from_model(course)
-    data = {**current, **course_input(body)}
-    errors = course_errors(
-        db, data, complete=course.status != "draft", is_new=False, enrolled=enrolled_count(db, course)
-    )
-    assert_valid(errors)
-    assert_code_free(db, data.get("code"), course.id)
-    _apply(db, course, course_input(body))
+    changes = course_input(body)
+    data = {**course_input_from_model(course), **changes}
+    assert_valid(course_errors(db, data, complete=course.status != "draft"))
+    _apply(db, course, changes)
     db.commit()
     return course
 
@@ -429,11 +356,6 @@ def course_input_from_model(course: Course) -> dict:
         "title": course.title,
         "description": course.description or "",
         "category": course.category.name if course.category else "",
-        "semester": course.semester or "",
-        "duration": course.duration_weeks,
-        "start_date": iso(course.start_date) or "",
-        "code": course.code or "",
-        "max_students": course.max_students,
         "thumbnail_url": course.thumbnail_url or "",
     }
 
@@ -470,13 +392,7 @@ def transition(db: Session, user: User, course_id: str, action: str, reason: str
     if action == "reject" and not note:
         assert_valid({"reason": "Explain why the course is rejected so the instructor can revise it."})
     if action == "submit":
-        errors = course_errors(
-            db,
-            course_input_from_model(course),
-            complete=True,
-            is_new=False,
-            enrolled=enrolled_count(db, course),
-        )
+        errors = course_errors(db, course_input_from_model(course), complete=True)
         if any(errors.values()):
             raise ApiError(
                 400,
@@ -514,30 +430,21 @@ def status_logs(db: Session, course: Course) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Daftar course (login) & katalog publik
 # ---------------------------------------------------------------------------
-def list_courses(
-    db: Session, user: User, q, status, category, semester, instructor_id, open_only, sort, page, page_size
-) -> dict:
+def list_courses(db: Session, user: User, q, status, category, instructor_id, open_only, sort, page, page_size) -> dict:
     stmt = select(Course)
     learner_view = user.role == "student" or (user.role == "instructor" and open_only)
     if learner_view:
-        # Course yang bisa didaftari learner: Active, terbuka, belum diikuti, bukan milik sendiri
+        # Course yang bisa didaftari learner: Active, belum diikuti, bukan milik sendiri (selalu terbuka — ADR-009)
         if not open_only:
             raise forbidden("Students can list open courses with ?open=true or their own courses with /me/enrollments.")
         enrolled = select(Enrollment.course_id).where(Enrollment.user_id == user.id)
-        stmt = stmt.where(
-            Course.status == "active",
-            Course.enrollment_open.is_(True),
-            Course.id.not_in(enrolled),
-            Course.instructor_id != user.id,
-        )
+        stmt = stmt.where(Course.status == "active", Course.id.not_in(enrolled), Course.instructor_id != user.id)
     elif user.role == "instructor":
         stmt = stmt.where(Course.instructor_id == user.id)
     if status:
         stmt = stmt.where(Course.status == STATUS_VALUE.get(status, status.lower()))
     if category:
         stmt = stmt.join(Category, Course.category_id == Category.id).where(Category.name == category)
-    if semester:
-        stmt = stmt.where(Course.semester == semester)
     if instructor_id and parse_uuid(instructor_id):
         stmt = stmt.where(Course.instructor_id == parse_uuid(instructor_id))
     if q and q.strip():
@@ -545,38 +452,35 @@ def list_courses(
         stmt = stmt.where(
             or_(
                 Course.title.ilike(needle),
-                Course.code.ilike(needle),
+                Course.description.ilike(needle),
                 Course.instructor_id.in_(select(User.id).where(User.name.ilike(needle))),
             )
         )
     items = course_views(db, list(db.scalars(stmt).unique()))
-    if learner_view:
-        items = [c for c in items if not c["maxStudents"] or c["seatsLeft"] > 0]
     return paginate(items, page, page_size, sort, "title")
 
 
-def catalog_card(view: dict, modules: int) -> dict:
-    keys = (
-        "id",
-        "slug",
-        "code",
-        "title",
-        "description",
-        "category",
-        "semester",
-        "duration",
-        "color",
-        "thumbnailUrl",
-        "price",
-        "certificate",
-        "enrollmentOpen",
-        "instructorName",
-        "students",
-        "seatsLeft",
-        "maxStudents",
-        "startDate",
-    )
-    return {**{k: view[k] for k in keys}, "modules": modules}
+CATALOG_KEYS = (
+    "id",
+    "slug",
+    "title",
+    "description",
+    "category",
+    "color",
+    "thumbnailUrl",
+    "price",
+    "certificate",
+    "instructorId",
+    "instructorName",
+    "students",
+    "modules",
+    "totalMinutes",
+    "publishedAt",
+)
+
+
+def catalog_card(view: dict) -> dict:
+    return {k: view[k] for k in CATALOG_KEYS}
 
 
 def module_counts(db: Session, course_ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
@@ -610,8 +514,7 @@ def catalog(
         "-title": Course.title.desc(),
     }.get(sort or "", Course.title.asc())
     courses = list(db.scalars(stmt.order_by(order, Course.id).offset((page - 1) * size).limit(size)).unique())
-    counts = module_counts(db, [c.id for c in courses])
-    items = [catalog_card(v, counts.get(c.id, 0)) for c, v in zip(courses, course_views(db, courses), strict=True)]
+    items = [catalog_card(v) for v in course_views(db, courses)]
     return {"items": items, "total": total, "page": page, "pageSize": size}
 
 
@@ -624,7 +527,7 @@ def catalog_detail(db: Session, id_or_slug: str) -> dict:
 
     modules = modules_of(db, course)
     quizzes = db.scalar(select(func.count()).select_from(Quiz).where(Quiz.course_id == course.id)) or 0
-    view = catalog_card(course_view(db, course), len(modules))
+    view = catalog_card(course_view(db, course))
     view["outline"] = [
         {"order": m.position, "title": m.title, "type": TYPE_LABEL[m.type], "minutes": m.minutes} for m in modules
     ]
@@ -653,7 +556,6 @@ def course_stats(db: Session, course: Course) -> dict:
         "avgQuiz": js_round(average(quiz_scores)) if quiz_scores else None,
         "modules": db.scalar(select(func.count()).select_from(Module).where(Module.course_id == course.id)) or 0,
         "quizzes": db.scalar(select(func.count()).select_from(Quiz).where(Quiz.course_id == course.id)) or 0,
-        "capacity": course.max_students,
         "progressDistribution": [{"range": r, "students": buckets[i]} for i, r in enumerate(ranges)],
     }
 
