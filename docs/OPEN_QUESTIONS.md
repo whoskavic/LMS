@@ -29,3 +29,9 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 23 | Mode mock `local` | Setelah semua halaman dimigrasi, `data.js`, `store.js`, dan `transport-local.js` tidak lagi dimuat halaman. File tetap disimpan sebagai spesifikasi kontrak yang diuji `node --test`. | Diputuskan (PR 7) |
 | 24 | Keluarkan student bersertifikat | `certificates.enrollment_id` RESTRICT → enrollment yang sudah bersertifikat tidak bisa dihapus (409 `ENROLLMENT_CERTIFIED`). | Diputuskan (PR 7) |
 | 25 | Tautan verifikasi di sertifikat | PNG sertifikat menuliskan nomor + URL `verify.html` dari origin frontend saat diunduh. | Diputuskan (PR 7) |
+| 26 | Nomor ADR rencana Udemy | Rencana menyebut "ADR-005 (model akun)" dan "ADR-006 (konsep akademik)"; nomor itu sudah dipakai, sehingga dicatat sebagai ADR-008 dan ADR-009. | Diputuskan |
+| 27 | Bahasa UI | Rencana memakai istilah Indonesia ("Belajar", "Mengajar", "Lanjutkan belajar", "Enroll gratis"). UI tetap berbahasa Inggris seperti sekarang ("Learn", "Teach", "Continue learning", "Enroll for free"); istilah Indonesia hanya di dokumen. | Diputuskan |
+| 28 | Nomor sertifikat | Kode course tidak lagi diisi untuk course baru; prefix sertifikat memakai kode lama bila ada, selain itu `COURSE`. | Diputuskan |
+| 29 | Kolom akademik lama | Tidak di-drop di fase ini (ADR-009); API tidak lagi mengirim/menerima kolom tersebut. Data lama tetap di database. | Diputuskan |
+| 30 | Instructor yang belajar | Course milik sendiri tidak bisa di-enroll (409 `OWN_COURSE`) dan tidak bisa diulas. | Diputuskan |
+| 31 | Nilai akhir di laporan | Laporan admin & CSV tidak lagi memuat grade/nilai akhir; status belajar (Completed / On track / At risk) tetap memakai rumus prototipe tanpa nilai akhir. | Diputuskan |

@@ -29,6 +29,8 @@ Legenda: ✅ terhubung ke backend
 
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 
+> **Sedang berjalan:** transformasi menjadi platform kursus publik ala Udemy (semua course gratis): registrasi tanpa role + "Start teaching", penghapusan konsep akademik (IPK, semester, NIM, kode course, kapasitas, nilai akhir), My Learning, course landing page, ulasan, dan profil instructor. Rencana per PR: bagian **Roadmap** dan [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
+
 ## Tech stack
 
 - **Frontend:** HTML5, CSS3, JavaScript murni (classic script, tanpa framework/bundler), Chart.js 4 (lokal di `assets/js/vendor/`).
@@ -301,6 +303,15 @@ Roadmap integrasi backend (satu PR per fase):
 7. ✅ Nilai akhir, IPK, sertifikat, laporan, dashboard
 8. ✅ Siap deploy
 
-Berikutnya (menuju platform kursus publik): upload thumbnail/video ke object storage, refresh token + rate limiting login, reset password via email, editor bobot soal, course berbayar (kolom `price` sudah ada, saat ini selalu 0), log audit umum.
+Transformasi platform kursus publik (Oktober 2026):
+
+- A. Dokumentasi rencana (ADR-008 model akun, ADR-009 penghapusan konsep akademik)
+- B. Model akun: registrasi tanpa role, `POST /me/become-instructor`, instructor bisa belajar, pengalih mode Learn/Teach
+- C. Hapus konsep akademik dari UI & API; halaman Students read-only; laporan admin tanpa IPK
+- D. My Learning, katalog sebagai halaman utama publik, course landing page dengan kurikulum & total durasi
+- E. Ulasan course + profil instructor publik (migrasi aditif: `reviews`, `users.headline`, `users.bio`)
+- F. Polish copywriting, state loading/empty/error, README final
+
+Berikutnya: upload thumbnail/video ke object storage, refresh token + rate limiting login, reset password via email, editor bobot soal, course berbayar (kolom `price` sudah ada, saat ini selalu 0), log audit umum, pembersihan kolom akademik lama di database.
 
 Known issues saat ini: upload thumbnail course belum disimpan (hanya preview); aktivitas & notifikasi diturunkan dari data (tidak ada tabel log umum); seed hanya berisi 6 akun demo. Pertanyaan terbuka: [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).

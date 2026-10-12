@@ -48,3 +48,27 @@ Perbedaan relasi/representasi:
 - **Opsi:** (1) Vercel (FastAPI sebagai Vercel Function + frontend statis) + Neon Postgres dari Vercel Marketplace; (2) blueprint Render (`render.yaml`); (3) Railway.
 - **Keputusan:** Vercel + Neon menjadi opsi utama untuk demo kuliah; Docker/Render/Railway tetap didukung tanpa perubahan perilaku. Karena di Vercel tidak ada `start.sh`, migrasi Alembic + seed opsional dijalankan saat build (`backend/vercel_build.py`, memakai koneksi direct `DATABASE_URL_UNPOOLED`). Engine SQLAlchemy memakai `NullPool` saat env `VERCEL` ada, dan prepared statement psycopg dimatikan (`prepare_threshold=None`) di semua environment agar aman di belakang PgBouncer mode transaction.
 - **Konsekuensi:** tidak ada server yang tidur (function dingin hanya menambah latensi singkat); migrasi gagal = deploy gagal; setiap request membuka koneksi baru ke pooler Neon (overhead kecil, diserahkan ke pooler); dependency runtime harus sama di `pyproject.toml` dan `requirements.txt`. Paket Hobby Vercel hanya untuk penggunaan non-komersial — bila Learnova menjadi platform publik berbayar perlu paket Pro atau kembali ke deploy Docker.
+
+## ADR-008 — Model akun platform publik (learner → instructor)
+> Disebut "ADR-005 (model akun)" di rencana transformasi; nomor 005 sudah dipakai, jadi dicatat sebagai ADR-008.
+- **Konteks:** Learnova bergeser dari LMS kampus ke platform kursus publik ala Udemy. Memilih role saat registrasi membingungkan pengguna baru, dan pengajar juga ingin belajar.
+- **Keputusan:**
+  - Registrasi publik selalu membuat akun `student` (di UI disebut "Learner"). Tidak ada pilihan role di form.
+  - `POST /api/v1/me/become-instructor` ("Mulai Mengajar") mengubah `student` → `instructor` (body opsional `headline`, `bio`); idempoten untuk instructor, 403 untuk admin.
+  - Instructor adalah superset student: boleh enroll & belajar di course instructor lain (course miliknya sendiri → 409 `OWN_COURSE`). Endpoint learner (enrollment, modul, quiz attempt, sertifikat, ulasan) menerima `student` dan `instructor`.
+  - UI instructor punya pengalih mode "Belajar" / "Mengajar"; mode terakhir disimpan di `localStorage` sebagai preferensi UI.
+  - Admin tetap moderator terpisah (user, kategori, approval, laporan) dan hanya dibuat lewat seed.
+  - Kolom `users.role` tetap tiga nilai; tidak ada migrasi role.
+- **Konsekuensi:** pemeriksaan role di backend memakai himpunan "learner" (`student`, `instructor`); halaman learner terbuka untuk instructor; home setelah login = My Learning untuk student, sesuai mode terakhir untuk instructor.
+
+## ADR-009 — Penghapusan konsep akademik
+> Disebut "ADR-006" di rencana transformasi; dicatat sebagai ADR-009.
+- **Konteks:** IPK, semester, NIM/NIDN, departemen, kode course, durasi minggu, tanggal mulai, kapasitas, dan nilai akhir dosen tidak relevan untuk platform kursus publik gratis.
+- **Keputusan:**
+  - Dihapus dari UI dan API: IPK/GPA, grade letter & nilai akhir, semester, NIM/NIDN (`id_number`), departemen, kode course, durasi minggu, tanggal mulai, `max_students`, `enrollment_open`, input nilai oleh instructor, batch enroll & kandidat student.
+  - Pengganti: progress %, jumlah course selesai, jumlah sertifikat, skor quiz terbaik; filter status belajar (sedang berjalan / selesai); durasi course = total `modules.minutes`.
+  - Halaman nilai instructor menjadi "Students" read-only (peserta, progress, skor quiz terbaik, status selesai). Learner enroll sendiri; course Active selalu bisa di-enroll.
+  - Sertifikat: progress 100% pada course dengan `issues_certificate = true`.
+  - Endpoint nilai & batch enroll dihapus (404).
+- **Pembersihan skema ditunda:** kolom `final_score`, `grade_letter`, `code`, `semester`, `duration_weeks`, `start_date`, `max_students`, `enrollment_open`, `id_number`, `department` **tidak di-drop** di fase ini (semua nullable/berdefault aman) agar migrasi aditif dan aman untuk database produksi. Drop kolom dilakukan di fase berikutnya setelah tidak ada kode yang membacanya.
+- **Konsekuensi:** halaman wajib tugas kuliah (`index.html`, `layout.html`, `dashboard.html`, `data-master.html`, `form.html`, `laporan.html`) tetap ada; hanya isinya yang disesuaikan.

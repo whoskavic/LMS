@@ -1,5 +1,26 @@
 # 📗 Rekap Fitur — Learnova LMS
 
+> **Arah produk (Oktober 2026):** Learnova bergeser dari LMS kampus menjadi **platform kursus publik ala Udemy** dengan semua course gratis. Rencana dan statusnya ada di bagian "Platform kursus publik" di bawah serta [DECISIONS.md](DECISIONS.md) ADR-008 & ADR-009. Isi dokumen lama di bawahnya adalah rekap prototipe tugas kuliah (mock data) dan dipertahankan sebagai arsip.
+
+## Platform kursus publik (rencana transformasi)
+
+| Role | Fitur | PR |
+|---|---|---|
+| Learner (student) | Registrasi tanpa pilihan role; **My Learning** (sedang dipelajari / selesai / sertifikat, "Continue learning" ke modul berikutnya) | B, D |
+| Learner | Katalog publik sebagai halaman utama: search, chip kategori, sort (terpopuler, terbaru, rating), kartu dengan rating, peserta, modul + total durasi, label "Free" | D, E |
+| Learner | Course landing page: kurikulum accordion, instructor, rating & ulasan, tombol enroll sesuai status | D, E |
+| Learner | Ulasan course (rating 1–5 + komentar), satu per enrollment | E |
+| Learner → Instructor | "Start teaching" (`become-instructor`), pengalih mode Learn / Teach; instructor boleh belajar di course instructor lain | B |
+| Instructor | Course, modul, quiz (tanpa kode, semester, kapasitas, tanggal mulai); halaman **Students** read-only (progress, skor quiz terbaik, status selesai) | C |
+| Instructor | Profil publik (`instructor.html`): headline, bio, statistik, daftar course | E |
+| Admin | User (tanpa NIM/departemen), kategori, approval course, laporan (learner, instructor, enrollment, completion rate, rata-rata quiz, course terpopuler), cetak & CSV | C |
+
+Konsep akademik yang dihapus dari UI/API: IPK, nilai akhir & grade huruf, semester, NIM/NIDN, departemen, kode course, durasi minggu, tanggal mulai, kapasitas, input nilai & batch enroll oleh instructor.
+
+Halaman wajib tugas kuliah tetap ada: `index.html` (login), `pages/layout.html`, `pages/dashboard.html`, `pages/data-master.html`, `pages/form.html`, `pages/laporan.html`, beserta sidebar toggle, modal konfirmasi, validasi form, dark/light mode, dan tampilan responsif.
+
+---
+
 Dokumen ini merangkum semua fitur yang sudah diimplementasikan pada Admin Panel **Learnova** (Tugas Pemrograman Web 2 — Client-Side Programming). Rancangan awal ada di [PERANCANGAN.md](PERANCANGAN.md).
 
 ---
