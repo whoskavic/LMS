@@ -21,7 +21,7 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 15 | Edit course Pending | Status hanya berubah lewat `/transitions`; course Pending tetap Pending saat diedit (tombol *Save draft* disembunyikan). | Diputuskan (PR 4) |
 | 16 | Progress setelah modul ditambah | Progress dihitung ulang saat modul ditambah/dihapus; status `completed` tetap (tidak kembali ke `active`) agar sertifikat yang sudah terbit tetap sah. | Diputuskan (PR 5) |
 | 17 | Video materi | `modules.video_url` berupa URL; URL YouTube di-embed, URL lain ditampilkan sebagai tautan. Modul Lecture tanpa URL tetap memakai simulasi video 3 detik seperti prototipe. | Diputuskan (PR 5) |
-| 18 | Kapasitas & pendaftaran | Aturan prototipe dipertahankan: `enrollment_open` dan `max_students` tetap berlaku untuk course gratis. | Diputuskan (PR 5) |
+| 18 | Kapasitas & pendaftaran | Aturan prototipe dipertahankan: `enrollment_open` dan `max_students` tetap berlaku untuk course gratis. | Diganti ADR-009: course Active selalu terbuka, tanpa kapasitas |
 | 19 | Sertifikat | Diterbitkan otomatis saat progress 100% bila course menerbitkan sertifikat; nomor acak `LRN-<KODE>-<12 karakter>`. Endpoint verifikasi publik ditambahkan di PR 7. | Diputuskan (PR 5) |
 | 20 | Attempt kedaluwarsa | Attempt yang lewat `expires_at + 30 detik` ditandai `expired`, tidak dinilai (skor kosong), dan tetap dihitung sebagai attempt (keputusan produk #3: attempt dihitung saat Start). | Diputuskan (PR 6) |
 | 21 | Edit quiz yang sudah dikerjakan | Soal diperbarui di tempat (ID soal/opsi tetap) sehingga riwayat jawaban tetap terhubung; menghapus soal ikut menghapus jawaban soal tersebut. Skor attempt lama tidak dihitung ulang. | Diputuskan (PR 6) |
@@ -40,3 +40,11 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 34 | Test kontrak MockServer | Route nilai & batch enroll di MockServer lama tetap diuji sebagai arsip, dipanggil langsung lewat `Api.get/put/post/del` karena service UI-nya dihapus. | Diputuskan |
 | 35 | Halaman utama publik | `index.html` tetap halaman login (wajib tugas kuliah); katalog menjadi halaman utama publik lewat tautan di login/register dan menu learner "Browse courses". Kunjungan `/` tetap ke login. | Diputuskan |
 | 36 | Redirect setelah login | `?next=` hanya menerima halaman internal (`catalog.html…` atau `pages/*.html`) untuk mencegah open redirect. | Diputuskan |
+| 37 | Kapan boleh mengulas | Learner boleh mengulas kapan saja setelah enroll (tidak menunggu progress tertentu); satu ulasan per enrollment, bisa diedit/dihapus. | Diputuskan (PR E) |
+| 38 | Batas bio instructor | Spesifikasi hanya menyebut `text`; API membatasi 2000 karakter (headline 120 sesuai kolom). | Diputuskan (PR E) |
+| 39 | Profil instructor publik | `GET /instructors/{id}` → 404 untuk user non-instructor atau nonaktif; hanya course Active yang ditampilkan. Rating profil = rata-rata tertimbang semua ulasan course Active. | Diputuskan (PR E) |
+| 40 | Data demo baru di produksi | `seed_extras()` dijalankan juga ketika database sudah berisi data (`python -m app.seed`, build Vercel dengan `SEED_DEMO=true`): hanya mengisi headline/bio akun instructor demo yang masih kosong dan ulasan demo yang belum ada. Data lain tidak diubah. | Diputuskan (PR E) |
+| 41 | Istilah "Learner" vs "Students" | Label role & teks UI memakai "Learner(s)"; tab instructor tetap bernama **Students** (istilah umum di sisi pengajar, seperti Udemy). | Diputuskan (PR F) |
+| 42 | MockServer & fitur baru | Route ulasan dan profil instructor tidak ditambahkan ke MockServer arsip (`transport-local.js`); kontraknya diuji di `backend/tests/test_reviews.py`. | Diputuskan (PR F) |
+| 43 | Moderasi ulasan | Admin hanya bisa menghapus ulasan dari landing page; belum ada halaman moderasi/laporan ulasan tersendiri. | Terbuka (fase berikutnya) |
+| 44 | Pembersihan skema | Kolom akademik lama (`final_score`, `grade_letter`, `code`, `semester`, `duration_weeks`, `start_date`, `max_students`, `enrollment_open`, `id_number`, `department`) masih ada di database; drop dilakukan lewat migrasi terpisah setelah dipastikan tidak dipakai. | Terbuka (fase berikutnya) |

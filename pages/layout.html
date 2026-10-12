@@ -14,7 +14,7 @@
 <!--
   TEMPLATE MASTER (Milestone 2)
   Salin file ini untuk membuat halaman baru, lalu ganti isi <main class="content">.
-  - data-role pada <body>      : role yang boleh membuka halaman (admin / lecturer / student, pisahkan dengan spasi)
+  - data-role pada <body>      : role yang boleh membuka halaman (admin / instructor / student, pisahkan dengan spasi)
   - data-nav-role pada <li>    : menu hanya tampil untuk role tersebut
   - data-nav-active pada <body>: menu yang disorot untuk halaman yang tidak ada di menu
   - Script halaman ditulis di dalam App.ready((user) => { ... }) — dijalankan setelah sesi terverifikasi.
@@ -40,11 +40,11 @@
           <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
           <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
-          <!-- Dosen -->
+          <!-- Instructor -->
           <li data-nav-role="instructor"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
           <li data-nav-role="instructor"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
           <li data-nav-role="instructor"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
-          <!-- Mahasiswa -->
+          <!-- Learner (student / instructor mode Learn) -->
           <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>My Learning</span></a></li>
           <li data-nav-role="student"><a class="nav__link" href="../catalog.html"><i data-icon="search"></i><span>Browse courses</span></a></li>
           <!-- Semua role -->

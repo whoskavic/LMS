@@ -20,7 +20,7 @@ App.ready(async () => {
     if (!quizzes.length) {
       UI.empty(list, {
         title: "No quizzes yet",
-        text: canEdit ? "Create a multiple-choice quiz for your students." : "The instructor has not created any quizzes.",
+        text: canEdit ? "Create a multiple-choice quiz for your learners." : "The instructor has not created any quizzes.",
         icon: "quiz",
         action: canEdit ? { label: "New quiz", onClick: () => openEditor(null) } : undefined,
       });
@@ -36,7 +36,7 @@ App.ready(async () => {
               <div class="row-list__main">
                 <p class="row-list__title">${Utils.escape(q.title)}</p>
                 <p class="row-list__meta">${q.questions.length} questions · pass ${q.passingScore} · ${q.timeLimit} min · max ${q.maxAttempts} attempts</p>
-                <p class="row-list__meta">${s.takers} students · ${s.attempts} attempts${s.avg !== null ? ` · average best score ${s.avg}` : ""}</p>
+                <p class="row-list__meta">${s.takers} learners · ${s.attempts} attempts${s.avg !== null ? ` · average best score ${s.avg}` : ""}</p>
               </div>
               ${
                 canEdit
@@ -92,7 +92,7 @@ App.ready(async () => {
       confirmText: quiz ? "Save quiz" : "Create quiz",
       body: `
         <form class="form-stack" novalidate>
-          ${hasAttempts ? '<p class="alert alert--danger"><i data-icon="alert" class="icon--sm"></i><span>Students have already taken this quiz. Their previous scores are kept.</span></p>' : ""}
+          ${hasAttempts ? '<p class="alert alert--danger"><i data-icon="alert" class="icon--sm"></i><span>Learners have already taken this quiz. Their previous scores are kept.</span></p>' : ""}
           ${UI.field({ name: "title", label: "Quiz title", value: quiz?.title || `Quiz ${quizzes.length + 1}`, attrs: 'maxlength="80"' })}
           <div class="field-row">
             ${UI.field({ name: "passingScore", label: "Passing score", type: "number", value: quiz?.passingScore ?? 70, attrs: 'min="1" max="100"' })}
@@ -210,7 +210,7 @@ App.ready(async () => {
     const { attempts } = quizStats(quiz);
     UI.modal({
       title: "Delete quiz?",
-      body: `<p><strong>${Utils.escape(quiz.title)}</strong> will be removed${attempts ? ` together with ${attempts} student attempts` : ""}. This action cannot be undone.</p>`,
+      body: `<p><strong>${Utils.escape(quiz.title)}</strong> will be removed${attempts ? ` together with ${attempts} learner attempts` : ""}. This action cannot be undone.</p>`,
       confirmText: "Delete",
       variant: "danger",
       onConfirm: async () => {

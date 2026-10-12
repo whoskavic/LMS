@@ -74,9 +74,9 @@ App.ready(async (me) => {
   }
 
   const TRANSITION_TEXT = {
-    approve: { title: "Approve course?", text: "will be published and visible to students.", button: "Approve" },
+    approve: { title: "Approve course?", text: "will be published and visible to learners.", button: "Approve" },
     reject: { title: "Reject course?", text: "will be returned to the instructor for revision.", button: "Reject", danger: true, reason: true },
-    archive: { title: "Archive course?", text: "will be hidden from new students.", button: "Archive", danger: true },
+    archive: { title: "Archive course?", text: "will be hidden from new learners.", button: "Archive", danger: true },
     restore: { title: "Restore course?", text: "will become active again.", button: "Restore" },
     submit: { title: "Submit for approval?", text: "will be sent to the administrator for review.", button: "Submit" },
   };
@@ -180,7 +180,7 @@ App.ready(async (me) => {
     if (!stats.students) {
       canvas.hidden = true;
       if (!canvas.parentElement.querySelector(".state")) canvas.insertAdjacentHTML("afterend", "<div></div>");
-      UI.empty(canvas.nextElementSibling, { title: "No students yet", text: "The chart appears once students enroll.", icon: "users" });
+      UI.empty(canvas.nextElementSibling, { title: "No learners yet", text: "The chart appears once learners enroll.", icon: "users" });
       return;
     }
     const buckets = stats.progressDistribution.map((b) => b.students);
@@ -189,7 +189,7 @@ App.ready(async (me) => {
       type: "bar",
       data: {
         labels: stats.progressDistribution.map((b) => b.range),
-        datasets: [{ label: "Students", data: buckets, backgroundColor: [p.warning, p.warning, p.primary, p.primary, p.success], borderRadius: 6, maxBarThickness: 36 }],
+        datasets: [{ label: "Learners", data: buckets, backgroundColor: [p.warning, p.warning, p.primary, p.primary, p.success], borderRadius: 6, maxBarThickness: 36 }],
       },
       options: Charts.barOptions({
         plugins: { legend: { display: false } },

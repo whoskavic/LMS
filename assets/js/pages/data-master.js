@@ -60,7 +60,7 @@ App.ready((me) => {
   function actions(c) {
     const name = c.title;
     const view = `<a class="btn btn--link" href="course-detail.html?id=${encodeURIComponent(c.id)}">View</a>`;
-    const del = iconButton("delete", c, "trash", deletable(c) ? `Delete ${name}` : "Only drafts without students can be deleted", deletable(c) ? "" : "disabled");
+    const del = iconButton("delete", c, "trash", deletable(c) ? `Delete ${name}` : "Only drafts without learners can be deleted", deletable(c) ? "" : "disabled");
     if (isAdmin) {
       return [
         view,
@@ -151,9 +151,9 @@ App.ready((me) => {
 
   // --- Aksi baris ---
   const CONFIRM = {
-    approve: { title: "Approve course?", text: "will be published and visible to students.", button: "Approve", variant: "primary" },
+    approve: { title: "Approve course?", text: "will be published and visible to learners.", button: "Approve", variant: "primary" },
     reject: { title: "Reject course?", text: "will be returned to the instructor for revision.", button: "Reject", variant: "danger", reason: true },
-    archive: { title: "Archive course?", text: "will be hidden from new students. Existing records are kept.", button: "Archive", variant: "danger" },
+    archive: { title: "Archive course?", text: "will be hidden from new learners. Existing records are kept.", button: "Archive", variant: "danger" },
     restore: { title: "Restore course?", text: "will become active again.", button: "Restore", variant: "primary" },
   };
 
@@ -227,7 +227,7 @@ App.ready((me) => {
           Category: c.category,
           Modules: c.modules,
           "Total minutes": c.totalMinutes,
-          Students: c.students,
+          Learners: c.students,
           "Avg progress": `${c.avgProgress}%`,
           Status: c.status,
         }))

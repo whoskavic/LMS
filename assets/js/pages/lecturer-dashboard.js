@@ -15,6 +15,7 @@ App.ready(async () => {
       d = await Api.dashboard.instructor();
     } catch (err) {
       UI.error(courseList, err, load, { title: "Could not load your dashboard" });
+      attemptList.removeAttribute("aria-busy");
       attemptList.innerHTML = "";
       return;
     }
@@ -27,7 +28,7 @@ App.ready(async () => {
     setText("stat-progress", `${d.avgProgress}%`);
     document.getElementById("stat-progress-bar").style.width = `${d.avgProgress}%`;
     setText("stat-quiz", d.avgQuiz ?? "–");
-    setText("meta-quiz", `${d.quizTakers} students attempted a quiz`);
+    setText("meta-quiz", `${d.quizTakers} learners attempted a quiz`);
 
     // --- Grafik progress & skor quiz per course aktif ---
     const active = d.perCourse.filter((c) => c.status === "Active");
