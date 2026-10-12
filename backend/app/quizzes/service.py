@@ -30,6 +30,15 @@ def best_scores(db: Session, enrollment_ids: list[uuid.UUID]) -> dict[tuple[uuid
     return best
 
 
+def best_quiz_score_by_enrollment(db: Session, course_id: uuid.UUID) -> dict[uuid.UUID, int | None]:
+    """Skor quiz terbaik (tertinggi dari semua quiz & attempt submitted) per enrollment di course."""
+    enrollment_ids = list(db.scalars(select(Enrollment.id).where(Enrollment.course_id == course_id)))
+    best: dict[uuid.UUID, int | None] = dict.fromkeys(enrollment_ids)
+    for (eid, _qid), score in best_scores(db, enrollment_ids).items():
+        best[eid] = max(best[eid] or 0, js_round(score))
+    return best
+
+
 def quiz_average_by_enrollment(db: Session, course_id: uuid.UUID) -> dict[uuid.UUID, int | None]:
     """Rata-rata skor terbaik dari semua quiz course yang sudah dikerjakan (averageQuiz di prototipe)."""
     enrollment_ids = list(db.scalars(select(Enrollment.id).where(Enrollment.course_id == course_id)))

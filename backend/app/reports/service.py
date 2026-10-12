@@ -54,14 +54,11 @@ def report_rows(db: Session, instructor_id=None) -> list[dict]:
             {
                 "enrollmentId": str(e.id),
                 "name": e.user.name,
-                "nim": e.user.id_number or "",
+                "email": e.user.email,
                 "courseId": str(e.course_id),
-                "course": e.course.code or e.course.title,
-                "courseTitle": e.course.title,
+                "course": e.course.title,
                 "progress": progress,
                 "quiz": quiz,
-                "finalScore": js_round(float(e.final_score)) if e.final_score is not None else None,
-                "grade": e.grade_letter,
                 "status": report_status(progress, quiz),
             }
         )
@@ -75,7 +72,7 @@ def filter_rows(rows: list[dict], course_id, status, q) -> list[dict]:
         rows = [r for r in rows if r["status"] == status]
     if q and q.strip():
         needle = q.strip().lower()
-        rows = [r for r in rows if any(needle in (r[k] or "").lower() for k in ("name", "nim", "course"))]
+        rows = [r for r in rows if any(needle in (r[k] or "").lower() for k in ("name", "email", "course"))]
     return rows
 
 
@@ -88,8 +85,17 @@ def summary(db: Session) -> dict:
         .join(Course, Course.category_id == Category.id)
         .group_by(Category.name)
     ).all()
-    codes = sorted({r["course"] for r in with_quiz})
+    titles = sorted({r["course"] for r in with_quiz})
+    popular: dict[str, dict] = {}
+    for r in rows:
+        item = popular.setdefault(
+            r["courseId"], {"courseId": r["courseId"], "title": r["course"], "students": 0, "completed": 0}
+        )
+        item["students"] += 1
+        item["completed"] += r["status"] == "Completed"
     return {
+        "learners": db.scalar(select(func.count()).select_from(User).where(User.role == "student")) or 0,
+        "instructors": db.scalar(select(func.count()).select_from(User).where(User.role == "instructor")) or 0,
         "enrollments": len(rows),
         "completed": completed,
         "atRisk": sum(1 for r in rows if r["status"] == "At risk"),
@@ -98,9 +104,10 @@ def summary(db: Session) -> dict:
         "avgQuiz": js_round(average([r["quiz"] for r in with_quiz])) if with_quiz else None,
         "coursesByCategory": [{"category": name, "courses": n} for name, n in sorted(categories)],
         "quizByCourse": [
-            {"course": code, "avgQuiz": js_round(average([r["quiz"] for r in with_quiz if r["course"] == code]))}
-            for code in codes
+            {"course": title, "avgQuiz": js_round(average([r["quiz"] for r in with_quiz if r["course"] == title]))}
+            for title in titles
         ],
+        "popularCourses": sorted(popular.values(), key=lambda c: (-c["students"], c["title"]))[:5],
     }
 
 
@@ -114,17 +121,15 @@ def enrollments_csv(db: Session, course_id, status, q, sort) -> str:
     rows = sort_items(filter_rows(report_rows(db), course_id, status, q), sort or "name")
     out = io.StringIO()
     writer = csv.writer(out)
-    writer.writerow(["Student", "NIM", "Course", "Progress", "Quiz", "Final score", "Grade", "Status"])
+    writer.writerow(["Learner", "Email", "Course", "Progress", "Avg quiz", "Status"])
     for r in rows:
         writer.writerow(
             [
                 r["name"],
-                r["nim"],
+                r["email"],
                 r["course"],
                 f"{r['progress']}%",
                 r["quiz"] if r["quiz"] is not None else "",
-                r["finalScore"] if r["finalScore"] is not None else "",
-                r["grade"] or "",
                 r["status"],
             ]
         )
@@ -139,11 +144,11 @@ def activities(db: Session, limit: int = 20) -> list[dict]:
     for log in db.scalars(select(CourseStatusLog).order_by(CourseStatusLog.created_at.desc()).limit(limit)):
         course = db.get(Course, log.course_id)
         verb = VERB.get((log.to_status, log.from_status), f"Changed status to {STATUS_LABEL[log.to_status]}")
-        label = f"{course.code} {course.title}".strip() if course.code else course.title
+        label = course.title
         note = f" — {log.note}" if log.note else ""
         items.append({"time": log.created_at, "actor": log.actor.name, "action": f"{verb} {label}{note}"})
     for e in db.scalars(select(Enrollment).order_by(Enrollment.enrolled_at.desc()).limit(limit)):
-        label = f"{e.course.code} {e.course.title}".strip() if e.course.code else e.course.title
+        label = e.course.title
         items.append({"time": e.enrolled_at, "actor": e.user.name, "action": f"Enrolled in {label}"})
         if e.completed_at:
             items.append({"time": e.completed_at, "actor": e.user.name, "action": f"Completed all modules of {label}"})
@@ -201,18 +206,13 @@ def admin_dashboard(db: Session) -> dict:
         "students": count(select(func.count()).select_from(User).where(User.role == "student")),
         "enrollments": count(select(func.count()).select_from(Enrollment)),
         "instructors": count(select(func.count()).select_from(User).where(User.role == "instructor")),
-        "departments": count(
-            select(func.count(func.distinct(User.department))).where(
-                User.role == "instructor", User.department.is_not(None)
-            )
-        ),
+        "completed": count(select(func.count()).select_from(Enrollment).where(Enrollment.status == "completed")),
         "pending": len(pending),
         "pendingCourses": [
             {
                 "id": str(c.id),
-                "code": c.code or "",
                 "title": c.title,
-                "semester": c.semester or "",
+                "category": c.category.name if c.category else "",
                 "instructorName": c.instructor.name,
                 "submittedAt": iso(c.submitted_at),
             }
@@ -239,7 +239,6 @@ def instructor_dashboard(db: Session, user: User) -> dict:
         per_course.append(
             {
                 "id": str(c.id),
-                "code": c.code or "",
                 "title": c.title,
                 "status": STATUS_LABEL[c.status],
                 "color": c.color,
@@ -265,7 +264,7 @@ def instructor_dashboard(db: Session, user: User) -> dict:
         recent.append(
             {
                 "student": enrollment.user.name,
-                "course": enrollment.course.code or enrollment.course.title,
+                "course": enrollment.course.title,
                 "quiz": quiz.title,
                 "score": score,
                 "passed": score >= quiz.passing_score,
@@ -275,7 +274,7 @@ def instructor_dashboard(db: Session, user: User) -> dict:
     return {
         "courses": len(courses),
         "byStatus": by_status,
-        "students": len({r["name"] + r["nim"] for r in active_rows}),
+        "students": len({r["email"] for r in active_rows}),
         "avgProgress": js_round(average([r["progress"] for r in active_rows])),
         "avgQuiz": js_round(average(quiz_scores)) if quiz_scores else None,
         "quizTakers": len(quiz_scores),

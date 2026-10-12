@@ -37,7 +37,7 @@ App.ready(async () => {
       Charts.create(chartCanvas, (p) => ({
         type: "bar",
         data: {
-          labels: active.map((c) => c.code || c.title),
+          labels: active.map((c) => (c.title.length > 18 ? `${c.title.slice(0, 17)}…` : c.title)),
           datasets: [
             { label: "Avg progress (%)", data: active.map((c) => c.avgProgress), backgroundColor: p.primary, borderRadius: 6, maxBarThickness: 32 },
             { label: "Avg quiz score", data: active.map((c) => c.avgQuiz ?? 0), backgroundColor: p.success, borderRadius: 6, maxBarThickness: 32 },
@@ -56,10 +56,10 @@ App.ready(async () => {
         .map(
           (c) => `
         <li>
-          <span class="row-list__order" style="background: ${Utils.escape(c.color || "var(--color-primary-soft)")}; color: var(--color-on-pastel)">${Utils.escape((c.code || "–").slice(0, 3))}</span>
+          <span class="row-list__order" style="background: ${Utils.escape(c.color || "var(--color-primary-soft)")}; color: var(--color-on-pastel)">${Utils.escape(Utils.initials(c.title))}</span>
           <div class="row-list__main">
             <a class="row-list__title" href="course-detail.html?id=${encodeURIComponent(c.id)}">${Utils.escape(c.title)}</a>
-            <p class="row-list__meta">${Utils.escape(Utils.orDash(c.code))} · ${c.students} students · ${c.modules} modules · ${c.quizzes} quizzes</p>
+            <p class="row-list__meta">${c.students} learners · ${c.modules} modules · ${c.quizzes} quizzes</p>
           </div>
           ${Utils.statusBadge(c.status)}
         </li>`

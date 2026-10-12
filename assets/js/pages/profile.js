@@ -12,7 +12,6 @@ App.ready((me) => {
   const infoForm = document.getElementById("info-form");
   const passwordForm = document.getElementById("password-form");
   const details = document.getElementById("profile-details");
-  const ID_LABEL = { student: "NIM", instructor: "NIDN", admin: "Staff ID" };
 
   /* ---------- Ringkasan profil ---------- */
   // Nama, keterangan, dan avatar ikut diperbarui di sidebar & topbar
@@ -25,13 +24,17 @@ App.ready((me) => {
   }
 
   function renderDetails(stats) {
-    const extra =
+    const learner = [
+      ["Courses enrolled", stats.courses],
+      ["Completed", stats.completed],
+      ["Certificates", stats.certificates],
+    ];
+    const rows =
       stats.role === "student"
-        ? [["Courses", stats.courses], ["GPA", stats.gpa === null ? "–" : stats.gpa.toFixed(2)]]
+        ? learner
         : stats.role === "instructor"
-          ? [["Courses taught", stats.coursesTaught]]
+          ? [["Courses taught", stats.coursesTaught], ...learner]
           : [["Users managed", stats.usersManaged]];
-    const rows = [[ID_LABEL[me.role], Utils.orDash(me.idNumber)], ["Department", Utils.orDash(me.department)], ...extra];
     details.innerHTML = `<dl class="detail-list">${rows
       .map(([label, value]) => `<dt>${Utils.escape(label)}</dt><dd>${Utils.escape(value)}</dd>`)
       .join("")}</dl>`;
@@ -42,21 +45,19 @@ App.ready((me) => {
   /* ---------- Data diri ---------- */
   infoForm.elements.name.value = me.name;
   infoForm.elements.email.value = me.email;
-  infoForm.elements.department.value = me.department ?? "";
 
   infoForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const v = UI.formValues(infoForm);
     const rules = {
       name: v.name ? "" : "Full name is required.",
-      department: v.department || me.role !== "admin" ? "" : "Department is required.",
     };
     Object.entries(rules).forEach(([name, message]) => UI.fieldError(infoForm, name, message));
     const invalid = Object.keys(rules).find((name) => rules[name]);
     if (invalid) return infoForm.elements[invalid].focus();
 
     try {
-      const user = await UI.busy(infoForm.querySelector('[type="submit"]'), Api.profile.update({ name: v.name, department: v.department }));
+      const user = await UI.busy(infoForm.querySelector('[type="submit"]'), Api.profile.update({ name: v.name }));
       Object.assign(me, user);
       renderIdentity(me);
       loadDetails();
@@ -111,7 +112,7 @@ App.ready((me) => {
   document.getElementById("reset-demo")?.addEventListener("click", () => {
     UI.modal({
       title: "Reset demo data?",
-      body: "<p>All courses, users, progress, quiz attempts, and grades will return to the original mock data. You will be signed out.</p>",
+      body: "<p>All courses, users, progress, quiz attempts, and certificates will return to the original mock data. You will be signed out.</p>",
       confirmText: "Reset data",
       variant: "danger",
       onConfirm: async () => {

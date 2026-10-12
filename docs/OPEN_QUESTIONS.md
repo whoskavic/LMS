@@ -35,3 +35,6 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 29 | Kolom akademik lama | Tidak di-drop di fase ini (ADR-009); API tidak lagi mengirim/menerima kolom tersebut. Data lama tetap di database. | Diputuskan |
 | 30 | Instructor yang belajar | Course milik sendiri tidak bisa di-enroll (409 `OWN_COURSE`) dan tidak bisa diulas. | Diputuskan |
 | 31 | Nilai akhir di laporan | Laporan admin & CSV tidak lagi memuat grade/nilai akhir; status belajar (Completed / On track / At risk) tetap memakai rumus prototipe tanpa nilai akhir. | Diputuskan |
+| 32 | My Learning di PR C | Halaman `student-dashboard.html` penuh semester & IPK, sehingga langsung ditulis ulang menjadi My Learning di PR C (tab In progress / Completed / Certificates). PR D melengkapi katalog & landing page. | Diputuskan |
+| 33 | Status belajar di laporan | "At risk" tetap memakai rumus prototipe (progress < 40 atau rata-rata quiz < 65) karena tidak bergantung nilai akhir. | Diputuskan |
+| 34 | Test kontrak MockServer | Route nilai & batch enroll di MockServer lama tetap diuji sebagai arsip, dipanggil langsung lewat `Api.get/put/post/del` karena service UI-nya dihapus. | Diputuskan |

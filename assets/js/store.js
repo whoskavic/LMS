@@ -2,6 +2,31 @@
 // Semua data (user, course, modul, quiz, enrollment, aktivitas) dirakit dari SEED lalu disimpan
 // dalam satu key. Halaman membaca/menulis lewat DB (CRUD generik) dan Store (logika domain).
 
+// Skala nilai & IPK prototipe — hanya dipakai mock lama (MockServer & test kontrak), tidak lagi di UI (ADR-009)
+const LegacyGrades = {
+  SCALE: [
+    { min: 85, grade: "A", point: 4.0 },
+    { min: 80, grade: "A-", point: 3.7 },
+    { min: 75, grade: "B+", point: 3.3 },
+    { min: 70, grade: "B", point: 3.0 },
+    { min: 65, grade: "B-", point: 2.7 },
+    { min: 60, grade: "C+", point: 2.3 },
+    { min: 55, grade: "C", point: 2.0 },
+    { min: 45, grade: "D", point: 1.0 },
+    { min: 0, grade: "E", point: 0 },
+  ],
+  gradeFromScore(score) {
+    if (score === null || score === undefined || score === "" || !Number.isFinite(Number(score))) return null;
+    const n = Number(score);
+    if (n < 0 || n > 100) return null;
+    return LegacyGrades.SCALE.find((g) => n >= g.min).grade;
+  },
+  gpa(grades) {
+    const points = grades.map((g) => LegacyGrades.SCALE.find((s) => s.grade === g)?.point).filter((p) => p !== undefined);
+    return points.length ? Domain.average(points) : null;
+  },
+};
+
 const STORAGE_KEYS = {
   db: "learnova.db",
   session: "learnova.session",
@@ -154,7 +179,7 @@ function buildDatabase() {
       completedModules: done == null ? total : Math.min(done, total),
       attempts,
       finalScore: finalScore ?? null,
-      grade: finalScore != null ? Domain.gradeFromScore(finalScore) : null,
+      grade: finalScore != null ? LegacyGrades.gradeFromScore(finalScore) : null,
     });
   };
 
@@ -453,11 +478,11 @@ const Store = {
 
   /* ---------- Nilai ---------- */
   gradeFromScore(score) {
-    return Domain.gradeFromScore(score);
+    return LegacyGrades.gradeFromScore(score);
   },
 
   gpa(studentId) {
-    return Domain.gpa(DB.where("enrollments", (e) => e.studentId === String(studentId)).map((e) => e.grade));
+    return LegacyGrades.gpa(DB.where("enrollments", (e) => e.studentId === String(studentId)).map((e) => e.grade));
   },
 
   /* ---------- Aktivitas & demo ---------- */

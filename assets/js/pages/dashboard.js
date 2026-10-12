@@ -16,7 +16,7 @@ App.ready(() => {
       setText("stat-students", Utils.number(d.students));
       setText("trend-students", `${d.enrollments} enrollments`);
       setText("stat-lecturers", Utils.number(d.instructors));
-      setText("trend-lecturers", `${d.departments} departments`);
+      setText("trend-lecturers", `${d.completed} completed enrollments`);
       setText("stat-pending", d.pending);
       return d;
     } catch (err) {
@@ -38,7 +38,7 @@ App.ready(() => {
       <li>
         <div class="row-list__main">
           <a class="row-list__title" href="course-detail.html?id=${encodeURIComponent(c.id)}">${Utils.escape(c.title)}</a>
-          <p class="row-list__meta">${Utils.escape(Utils.orDash(c.code))} · ${Utils.escape(c.instructorName)} · ${Utils.escape(Utils.orDash(c.semester))}</p>
+          <p class="row-list__meta">${Utils.escape(c.instructorName)} · ${Utils.escape(Utils.orDash(c.category))}</p>
         </div>
         <div class="row-list__actions">
           <button class="btn btn--outline" type="button" data-reject="${Utils.escape(c.id)}">Reject</button>
@@ -66,7 +66,7 @@ App.ready(() => {
 
     UI.modal({
       title: approve ? "Approve course?" : "Reject course?",
-      body: `<p><strong>${Utils.escape(course.title)}</strong> (${Utils.escape(Utils.orDash(course.code))}) by ${Utils.escape(course.instructorName)}
+      body: `<p><strong>${Utils.escape(course.title)}</strong> by ${Utils.escape(course.instructorName)}
              ${approve ? "will be published and visible to students." : "will be returned to the instructor."}</p>
              ${reject ? `<form class="form-stack mt-5" novalidate>${UI.field({ name: "reason", label: "Reason for the instructor", type: "textarea", attrs: 'maxlength="500"' })}</form>` : ""}`,
       confirmText: approve ? "Approve" : "Reject",
@@ -84,7 +84,7 @@ App.ready(() => {
           if (!form || !UI.applyFieldErrors(form, err)) UI.toast(err.message, "error");
           throw err;
         }
-        UI.toast(`${course.code || course.title} ${approve ? "approved" : "rejected"}.`);
+        UI.toast(`${course.title} ${approve ? "approved" : "rejected"}.`);
         refreshTop();
         loadActivity();
       },

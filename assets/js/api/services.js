@@ -28,23 +28,23 @@ Object.assign(Api, {
   },
 
   profile: {
-    update: (patch) => Api.patch("/me", patch), // { name, department }
+    update: (patch) => Api.patch("/me", patch), // { name }
     stats: () => Api.get("/me/stats"),
     /** "Start teaching": student → instructor ({ headline?, bio? }) */
     becomeInstructor: (data = {}) => Api.post("/me/become-instructor", data),
   },
 
   users: {
-    list: (query) => Api.get("/users", query), // { role, q, department, status, sort, page, pageSize }
+    list: (query) => Api.get("/users", query), // { role, q, status, sort, page, pageSize }
     get: (id) => Api.get(apiPath`/users/${id}`),
-    create: (data) => Api.post("/users", data), // { role, name, email, idNumber, department, status, password }
+    create: (data) => Api.post("/users", data), // { role, name, email, status, password }
     update: (id, patch) => Api.patch(apiPath`/users/${id}`, patch),
     setStatus: (id, status) => Api.patch(apiPath`/users/${id}`, { status }),
     remove: (id) => Api.del(apiPath`/users/${id}`),
   },
 
   courses: {
-    list: (query) => Api.get("/courses", query), // { q, status, category, semester, instructorId, open, sort, page, pageSize }
+    list: (query) => Api.get("/courses", query), // { q, status, category, instructorId, open, sort, page, pageSize }
     get: (id) => Api.get(apiPath`/courses/${id}`),
     stats: (id) => Api.get(apiPath`/courses/${id}/stats`),
     create: (data) => Api.post("/courses", data),
@@ -53,6 +53,8 @@ Object.assign(Api, {
     /** action: "submit" | "approve" | "reject" | "archive" | "restore" */
     transition: (id, action, reason) => Api.post(apiPath`/courses/${id}/transitions`, { action, ...(reason ? { reason } : {}) }),
     statusLogs: (id) => Api.get(apiPath`/courses/${id}/status-logs`),
+    /** Peserta course (read-only): progress, skor quiz terbaik, status selesai */
+    students: (id, query) => Api.get(apiPath`/courses/${id}/students`, query),
   },
 
   // Katalog publik (tanpa login): hanya course Active
@@ -95,22 +97,14 @@ Object.assign(Api, {
   },
 
   enrollments: {
-    mine: (query) => Api.get("/me/enrollments", query), // { semester, status, q, sort }
+    mine: (query) => Api.get("/me/enrollments", query), // { status, q, sort }
     open: (query) => Api.get("/courses", { ...query, open: true }),
     enroll: (courseId) => Api.post(apiPath`/courses/${courseId}/enrollments`),
     /** Enrollment student yang login di course tertentu (+ completedModuleIds) */
     forCourse: (courseId) => Api.get(apiPath`/courses/${courseId}/enrollment`),
-    addStudents: (courseId, studentIds) => Api.post(apiPath`/courses/${courseId}/enrollments/batch`, { studentIds }),
-    candidates: (courseId, q) => Api.get(apiPath`/courses/${courseId}/candidates`, { q }),
-    remove: (id) => Api.del(apiPath`/enrollments/${id}`),
     completeModule: (enrollmentId, moduleId) => Api.post(apiPath`/enrollments/${enrollmentId}/completed-modules`, { moduleId }),
   },
 
-  grades: {
-    list: (courseId, query) => Api.get(apiPath`/courses/${courseId}/grades`, query),
-    /** grades: [{ enrollmentId, finalScore: number | null }] */
-    save: (courseId, grades) => Api.put(apiPath`/courses/${courseId}/grades`, { grades }),
-  },
 
   reports: {
     summary: () => Api.get("/reports/summary"),
@@ -143,7 +137,6 @@ Object.assign(Api, {
 
   meta: {
     categories: () => Api.get("/meta/categories"),
-    departments: (role) => Api.get("/meta/departments", { role }),
     instructors: () => Api.get("/meta/instructors"),
     notifications: () => Api.get("/meta/notifications"),
     systemStatus: () => Api.get("/meta/system-status"),

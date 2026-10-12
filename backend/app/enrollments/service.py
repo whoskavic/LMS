@@ -67,8 +67,16 @@ def enrollment_view(db: Session, e: Enrollment, quiz_average: int | None = None,
     from app.enrollments.models import Certificate
 
     course = e.course
-    total = db.scalar(select(func.count()).select_from(Module).where(Module.course_id == course.id)) or 0
+    modules = list(
+        db.execute(
+            select(Module.id, Module.minutes).where(Module.course_id == course.id).order_by(Module.position, Module.id)
+        ).all()
+    )
+    total = len(modules)
     done_ids = completed_module_ids(db, e)
+    done_set = set(done_ids)
+    # Modul berikutnya yang belum selesai (tombol "Continue learning")
+    next_index = next((i for i, (mid, _) in enumerate(modules) if str(mid) not in done_set), None)
     progress = js_round(float(e.progress_pct))
     certificate = db.scalar(select(Certificate).where(Certificate.enrollment_id == e.id))
     view = {
@@ -77,22 +85,22 @@ def enrollment_view(db: Session, e: Enrollment, quiz_average: int | None = None,
         "courseId": str(course.id),
         "course": {
             "id": str(course.id),
-            "code": course.code or "",
             "title": course.title,
             "slug": course.slug,
-            "semester": course.semester or "",
             "status": course.status.title(),
             "color": course.color,
+            "thumbnailUrl": course.thumbnail_url,
             "certificate": course.issues_certificate,
-            "duration": course.duration_weeks,
+            "totalMinutes": sum(m or 0 for _, m in modules),
+            "instructorId": str(course.instructor_id),
             "instructorName": course.instructor.name if course.instructor else "Unassigned",
         },
         "completedModules": min(len(done_ids), total),
         "totalModules": total,
         "progress": progress,
         "learningStatus": "Completed" if e.status == "completed" or (total and progress >= 100) else "Active",
-        "finalScore": float(e.final_score) if e.final_score is not None else None,
-        "grade": e.grade_letter,
+        "nextModuleId": str(modules[next_index][0]) if next_index is not None else None,
+        "nextModuleNumber": next_index + 1 if next_index is not None else None,
         "quizAverage": quiz_average,
         "certificate": {"number": certificate.code, "date": _iso(certificate.issued_at)} if certificate else None,
         "enrolledAt": _iso(e.enrolled_at),
@@ -117,36 +125,21 @@ def find_enrollment(db: Session, user_id, course_id) -> Enrollment | None:
 
 
 def enroll(db: Session, user, course: Course) -> Enrollment:
-    """Daftar sendiri ke course gratis: hanya Active, pendaftaran dibuka, belum terdaftar, masih ada kursi."""
+    """Daftar sendiri ke course gratis: Active, belum terdaftar, bukan milik sendiri (selalu terbuka — ADR-009)."""
     from app.common.errors import conflict
 
     if course.instructor_id == user.id:
         raise conflict("OWN_COURSE", "You cannot enroll in your own course. Manage it from your instructor dashboard.")
     if course.status != "active":
         raise conflict("COURSE_NOT_ACTIVE", "Only approved (active) courses accept new students.")
-    if not course.enrollment_open:
-        raise conflict("ENROLLMENT_CLOSED", "Enrollment for this course is closed.")
     if find_enrollment(db, user.id, course.id):
         raise conflict("ALREADY_ENROLLED", "You are already enrolled in this course.")
-    assert_seats(db, course, 1)
     enrollment = Enrollment(user_id=user.id, course_id=course.id)
     db.add(enrollment)
     db.flush()
     apply_progress(db, enrollment)
     db.commit()
     return enrollment
-
-
-def assert_seats(db: Session, course: Course, count: int) -> None:
-    from app.common.errors import conflict
-
-    if not course.max_students:
-        return
-    taken = db.scalar(select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course.id)) or 0
-    seats = max(0, course.max_students - taken)
-    if count > seats:
-        s = "" if seats == 1 else "s"
-        raise conflict("COURSE_FULL", f"Only {seats} seat{s} left in this course." if seats else "This course is full.")
 
 
 def complete_module(db: Session, user, enrollment_id: str, module_id: str) -> Enrollment:
@@ -179,13 +172,11 @@ def complete_module(db: Session, user, enrollment_id: str, module_id: str) -> En
     return enrollment
 
 
-def my_enrollments(db: Session, user, semester, status, q, sort, page, page_size) -> dict:
+def my_enrollments(db: Session, user, status, q, sort, page, page_size) -> dict:
     from app.common.pagination import paginate
 
     enrollments = list(db.scalars(select(Enrollment).where(Enrollment.user_id == user.id)))
     items = enrollment_views(db, enrollments)
-    if semester:
-        items = [e for e in items if e["course"]["semester"] == semester]
     if status:
         items = [e for e in items if e["learningStatus"] == status]
     if q and q.strip():
@@ -193,9 +184,6 @@ def my_enrollments(db: Session, user, semester, status, q, sort, page, page_size
         items = [
             e
             for e in items
-            if any(
-                needle in (v or "").lower()
-                for v in (e["course"]["title"], e["course"]["code"], e["course"]["instructorName"])
-            )
+            if any(needle in (v or "").lower() for v in (e["course"]["title"], e["course"]["instructorName"]))
         ]
     return paginate([{**e, "title": e["course"]["title"]} for e in items], page, page_size, sort, "title")

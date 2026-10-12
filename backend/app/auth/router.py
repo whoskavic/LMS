@@ -5,10 +5,8 @@ from app.auth import service
 from app.auth.deps import DB, CurrentUser
 from app.auth.schemas import BecomeInstructorIn, LoginIn, PasswordChange, RegisterIn, TokenOut
 from app.auth.security import create_token
-from app.common.grading import gpa
 from app.common.schemas import Ok
 from app.courses.models import Course
-from app.enrollments.models import Enrollment
 from app.users.models import User
 from app.users.schemas import ProfileUpdate, UserOut
 from app.users.service import update_profile
@@ -63,8 +61,9 @@ def become_instructor(user: CurrentUser, db: DB, body: BecomeInstructorIn | None
 @router.get("/me/stats", tags=["users"])
 def my_stats(user: CurrentUser, db: DB) -> dict:
     if user.role in ("student", "instructor"):
-        grades = list(db.scalars(select(Enrollment.grade_letter).where(Enrollment.user_id == user.id)))
-        stats = {"role": user.role, "courses": len(grades), "gpa": gpa(grades)}
+        from app.reports.router import learner_stats
+
+        stats = {"role": user.role, **learner_stats(db, user)}
         if user.role == "instructor":
             stats["coursesTaught"] = db.scalar(
                 select(func.count()).select_from(Course).where(Course.instructor_id == user.id)

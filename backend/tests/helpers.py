@@ -42,12 +42,6 @@ FULL_COURSE = {
     "title": "Web Programming",
     "description": "Client-side development with HTML5, CSS3, and JavaScript.",
     "category": "Technology",
-    "semester": "Fall 2026",
-    "duration": 14,
-    "startDate": "2099-09-01",
-    "code": "CS205",
-    "maxStudents": 60,
-    "enrollmentOpen": True,
     "certificate": True,
 }
 

@@ -19,7 +19,8 @@ def test_student_enrolls_and_lists_courses(client, db):
     res = client.post(f"/api/v1/courses/{course.id}/enrollments", headers=auth(student))
     assert res.status_code == 409 and res.json()["error"]["code"] == "ALREADY_ENROLLED"
     mine = client.get("/api/v1/me/enrollments", headers=auth(student)).json()
-    assert mine["total"] == 1 and mine["items"][0]["course"]["code"] == "CS205"
+    item = mine["items"][0]
+    assert mine["total"] == 1 and item["nextModuleNumber"] == 1 and "grade" not in item and "code" not in item["course"]
     # course yang sudah diikuti tidak muncul lagi di daftar "open"
     assert client.get("/api/v1/courses", params={"open": True}, headers=auth(student)).json()["total"] == 0
 
@@ -32,11 +33,11 @@ def test_enroll_rules(client, db):
     full = make_course(db, instructor, title="Full course", max_students=1)
     db.add(Enrollment(user_id=make_user(db).id, course_id=full.id))
     db.commit()
-    codes = [
-        client.post(f"/api/v1/courses/{c.id}/enrollments", headers=auth(student)).json()["error"]["code"]
-        for c in (pending, closed, full)
-    ]
-    assert codes == ["COURSE_NOT_ACTIVE", "ENROLLMENT_CLOSED", "COURSE_FULL"]
+    res = client.post(f"/api/v1/courses/{pending.id}/enrollments", headers=auth(student))
+    assert res.status_code == 409 and res.json()["error"]["code"] == "COURSE_NOT_ACTIVE"
+    # enrollment_open & kapasitas lama diabaikan: course Active selalu bisa di-enroll (ADR-009)
+    for c in (closed, full):
+        assert client.post(f"/api/v1/courses/{c.id}/enrollments", headers=auth(student)).status_code == 201
     res = client.post(f"/api/v1/courses/{closed.id}/enrollments", headers=auth(instructor))
     assert res.status_code == 409 and res.json()["error"]["code"] == "OWN_COURSE"
     assert (
@@ -82,11 +83,12 @@ def test_complete_module_authorization_and_archived(client, db):
 
 
 def test_course_enrollment_endpoint_and_student_can_read_modules(client, db):
-    _, course, _ = setup_course(db, enrollment_open=False)
+    _, course, _ = setup_course(db, status="draft")
     student = make_user(db)
     assert client.get(f"/api/v1/courses/{course.id}/enrollment", headers=auth(student)).status_code == 404
     assert client.get(f"/api/v1/courses/{course.id}/modules", headers=auth(student)).status_code == 404
     db.add(Enrollment(user_id=student.id, course_id=course.id))
+    course.status = "active"
     db.commit()
     res = client.get(f"/api/v1/courses/{course.id}/enrollment", headers=auth(student)).json()
     assert res["completedModuleIds"] == []

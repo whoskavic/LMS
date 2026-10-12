@@ -55,10 +55,10 @@ App.ready(async (me) => {
   /* ---------- Header & progress ---------- */
   function renderHeader() {
     const progress = enrollment.progress;
-    document.title = `${course.code ? `${course.code} · ` : ""}${course.title} | Learnova LMS`;
-    setText("crumb-course", course.code || course.title);
+    document.title = `${course.title} | Learnova LMS`;
+    setText("crumb-course", course.title);
     setText("course-title", course.title);
-    setText("course-meta", [course.code, course.instructorName, course.semester, archived ? "Archived (read-only)" : ""].filter(Boolean).join(" · "));
+    setText("course-meta", [course.instructorName, course.category, Domain.courseLength(course.modules, course.totalMinutes), archived ? "Archived (read-only)" : ""].filter(Boolean).join(" · "));
     setText("course-progress", `${progress}%`);
     setText("course-modules", `${done()}/${modules.length} modules`);
     document.getElementById("course-progress-bar").style.width = `${progress}%`;
@@ -288,7 +288,7 @@ App.ready(async (me) => {
             UI.modal({
               title: "Course completed!",
               body: `<p>Congratulations — you finished all ${modules.length} modules of <strong>${Utils.escape(course.title)}</strong>.
-                     Your final grade will be published by your instructor.</p>
+                     Keep your skills sharp by revisiting the modules anytime.</p>
                      ${hasCertificate ? "<p>Your certificate of completion is ready to download.</p>" : ""}`,
               confirmText: hasCertificate ? "Download certificate" : "Back to dashboard",
               cancelText: hasCertificate ? "Close" : "Stay here",

@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("reset-demo")?.addEventListener("click", () => {
     UI.modal({
       title: "Reset demo data?",
-      body: "<p>All courses, users, progress, quiz attempts, and grades will return to the original mock data.</p>",
+      body: "<p>All courses, users, progress, quiz attempts, and certificates will return to the original mock data.</p>",
       confirmText: "Reset data",
       variant: "danger",
       onConfirm: async () => {

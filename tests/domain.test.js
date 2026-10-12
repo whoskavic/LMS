@@ -5,35 +5,22 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const Domain = require("../assets/js/domain.js");
 
-test("gradeFromScore memakai batas bawah setiap huruf", () => {
-  const cases = [
-    [100, "A"], [85, "A"], [84, "A-"], [80, "A-"], [79, "B+"], [75, "B+"], [70, "B"],
-    [65, "B-"], [60, "C+"], [55, "C"], [54, "D"], [45, "D"], [44, "E"], [0, "E"],
-  ];
-  for (const [score, grade] of cases) assert.equal(Domain.gradeFromScore(score), grade, `score ${score}`);
+test("formatDuration menampilkan jam & menit dari total menit modul", () => {
+  assert.equal(Domain.formatDuration(200), "3 hr 20 min");
+  assert.equal(Domain.formatDuration(45), "45 min");
+  assert.equal(Domain.formatDuration(120), "2 hr");
+  assert.equal(Domain.formatDuration(0), "0 min");
+  assert.equal(Domain.formatDuration(null), "0 min");
 });
 
-test("gradeFromScore mengembalikan null untuk nilai kosong atau di luar 0–100", () => {
-  for (const value of [null, undefined, "", "abc", -1, 101, NaN]) {
-    assert.equal(Domain.gradeFromScore(value), null, `value ${value}`);
-  }
-  assert.equal(Domain.gradeFromScore("90"), "A");
+test("courseLength menggabungkan jumlah modul & durasi", () => {
+  assert.equal(Domain.courseLength(12, 200), "12 modules · 3 hr 20 min");
+  assert.equal(Domain.courseLength(1, 15), "1 module · 15 min");
 });
 
-test("gradePoint mengikuti skala FITUR.md §6", () => {
-  assert.equal(Domain.gradePoint("A"), 4.0);
-  assert.equal(Domain.gradePoint("B+"), 3.3);
-  assert.equal(Domain.gradePoint("E"), 0);
-  assert.equal(Domain.gradePoint("Z"), null);
-  assert.equal(Domain.gradePoint(null), null);
-});
-
-test("gpa merata-rata bobot dan mengabaikan nilai kosong", () => {
-  assert.equal(Domain.gpa(["A", "B"]), 3.5);
-  assert.equal(Domain.gpa(["A", null, undefined, "B"]), 3.5);
-  assert.equal(Domain.gpa(["E"]), 0);
-  assert.equal(Domain.gpa([]), null);
-  assert.equal(Domain.gpa([null]), null);
+test("skala nilai & IPK tidak lagi ada di Domain (ADR-009)", () => {
+  assert.equal(Domain.gpa, undefined);
+  assert.equal(Domain.gradeFromScore, undefined);
 });
 
 test("average mengembalikan 0 untuk daftar kosong", () => {
@@ -94,7 +81,8 @@ test("formatDate & formatDateTime mengembalikan nilai asli bila tidak valid", ()
 test("roleLabel & userTitle untuk tampilan user", () => {
   assert.equal(Domain.roleLabel("instructor"), "Instructor");
   assert.equal(Domain.roleLabel("unknown"), "unknown");
-  assert.equal(Domain.userTitle({ role: "student", idNumber: "40992" }), "Student · NIM 40992");
-  assert.equal(Domain.userTitle({ role: "instructor", department: "Informatics" }), "Instructor · Informatics");
-  assert.equal(Domain.userTitle({ role: "admin" }), "System administrator");
+  assert.equal(Domain.roleLabel("student"), "Learner");
+  assert.equal(Domain.userTitle({ role: "student" }), "Learner");
+  assert.equal(Domain.userTitle({ role: "instructor" }), "Instructor · Learner");
+  assert.equal(Domain.userTitle({ role: "admin" }), "Platform administrator");
 });

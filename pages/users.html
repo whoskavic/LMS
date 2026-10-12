@@ -86,7 +86,7 @@
           <div>
             <p class="page-header__eyebrow">User management</p>
             <h1 class="page-header__title">Users</h1>
-            <p class="page-header__subtitle">Manage student, instructor, and administrator accounts</p>
+            <p class="page-header__subtitle">Manage learner, instructor, and administrator accounts</p>
           </div>
           <div class="page-header__actions">
             <button class="btn btn--outline" type="button" id="export-users"><i data-icon="download" class="icon--sm"></i>Export CSV</button>
@@ -95,7 +95,7 @@
         </section>
 
         <div class="tabs__list" role="tablist" aria-label="User roles">
-          <button class="tabs__tab" type="button" role="tab" aria-selected="true" data-role-tab="student">Students <span class="tabs__count" data-count="student">0</span></button>
+          <button class="tabs__tab" type="button" role="tab" aria-selected="true" data-role-tab="student">Learners <span class="tabs__count" data-count="student">0</span></button>
           <button class="tabs__tab" type="button" role="tab" aria-selected="false" data-role-tab="instructor">Instructors <span class="tabs__count" data-count="instructor">0</span></button>
           <button class="tabs__tab" type="button" role="tab" aria-selected="false" data-role-tab="admin">Admins <span class="tabs__count" data-count="admin">0</span></button>
         </div>
@@ -106,10 +106,8 @@
               <div class="search">
                 <i data-icon="search" class="icon--sm"></i>
                 <label class="visually-hidden" for="user-search">Search users</label>
-                <input class="search__input" id="user-search" type="search" placeholder="Search by name, email, or ID number..." autocomplete="off">
+                <input class="search__input" id="user-search" type="search" placeholder="Search by name or email..." autocomplete="off">
               </div>
-              <label class="visually-hidden" for="filter-department">Department</label>
-              <select class="field__input" id="filter-department"><option value="">Department: All</option></select>
               <label class="visually-hidden" for="filter-user-status">Status</label>
               <select class="field__input" id="filter-user-status">
                 <option value="">Status: All</option>
@@ -126,8 +124,6 @@
                 <thead>
                   <tr>
                     <th scope="col" data-sort="name">User</th>
-                    <th scope="col" data-sort="idNumber" id="id-header">NIM</th>
-                    <th scope="col" data-sort="department">Department</th>
                     <th scope="col" data-sort="courses" id="courses-header">Courses</th>
                     <th scope="col" data-sort="status">Status</th>
                     <th scope="col">Actions</th>

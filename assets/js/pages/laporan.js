@@ -18,6 +18,24 @@ App.ready(() => {
       setText("completion-meta", err.message);
       return;
     }
+    setText("total-learners", Utils.number(s.learners));
+    setText("total-instructors", Utils.number(s.instructors));
+    setText("total-enrollments", Utils.number(s.enrollments));
+    const popular = document.getElementById("popular-list");
+    if (!s.popularCourses.length) UI.empty(popular, { title: "No enrollments yet", icon: "book" });
+    else
+      popular.innerHTML = s.popularCourses
+        .map(
+          (c, i) => `
+        <li>
+          <span class="row-list__order">${i + 1}</span>
+          <div class="row-list__main">
+            <a class="row-list__title" href="course-detail.html?id=${encodeURIComponent(c.courseId)}">${Utils.escape(c.title)}</a>
+            <p class="row-list__meta">${c.students} learners · ${c.completed} completed</p>
+          </div>
+        </li>`
+        )
+        .join("");
     setText("avg-progress", `${s.avgProgress}%`);
     document.getElementById("avg-progress-bar").style.width = `${s.avgProgress}%`;
     setText("avg-quiz", s.avgQuiz !== null ? `${s.avgQuiz} / 100` : "–");
@@ -70,11 +88,11 @@ App.ready(() => {
   let requestId = 0;
 
   Api.courses
-    .list({ pageSize: 200, sort: "code" })
+    .list({ pageSize: 200, sort: "title" })
     .then((res) =>
       courseSelect.insertAdjacentHTML(
         "beforeend",
-        res.items.map((c) => `<option value="${Utils.escape(c.id)}">${Utils.escape(c.code || c.title)}</option>`).join("")
+        res.items.map((c) => `<option value="${Utils.escape(c.id)}">${Utils.escape(c.title)}</option>`).join("")
       )
     )
     .catch(() => {});
@@ -89,7 +107,7 @@ App.ready(() => {
 
   const rowTemplate = (r) => `
     <tr>
-      <td>${Utils.escape(r.name)}<span class="table__code">${r.nim ? `NIM ${Utils.escape(r.nim)}` : ""}</span></td>
+      <td>${Utils.escape(r.name)}<span class="table__code">${Utils.escape(r.email)}</span></td>
       <td>${Utils.escape(r.course)}</td>
       <td>
         <div class="table-progress">
@@ -100,7 +118,6 @@ App.ready(() => {
         </div>
       </td>
       <td class="${r.quiz !== null && r.quiz < 65 ? "text-danger" : ""}">${r.quiz ?? "–"}</td>
-      <td>${r.grade ? `<strong>${Utils.escape(r.grade)}</strong>` : "–"}</td>
       <td><span class="badge badge--${VARIANT[r.status]}">${r.status}</span></td>
     </tr>`;
 
@@ -162,7 +179,7 @@ App.ready(() => {
   document.getElementById("print-report").addEventListener("click", async (e) => {
     try {
       const res = await UI.busy(e.currentTarget, Api.reports.enrollments(query({ page: 1, pageSize: 200 })));
-      tbody.innerHTML = res.items.map(rowTemplate).join("") || '<tr><td class="table__empty" colspan="6">No data</td></tr>';
+      tbody.innerHTML = res.items.map(rowTemplate).join("") || '<tr><td class="table__empty" colspan="5">No data</td></tr>';
       setTimeout(() => {
         window.print();
         renderTable();

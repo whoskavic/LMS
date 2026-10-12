@@ -93,7 +93,7 @@ App.ready(async () => {
       body: `
         <form class="form-stack" novalidate>
           ${hasAttempts ? '<p class="alert alert--danger"><i data-icon="alert" class="icon--sm"></i><span>Students have already taken this quiz. Their previous scores are kept.</span></p>' : ""}
-          ${UI.field({ name: "title", label: "Quiz title", value: quiz?.title || `${course.code || "Course"} Quiz ${quizzes.length + 1}`, attrs: 'maxlength="80"' })}
+          ${UI.field({ name: "title", label: "Quiz title", value: quiz?.title || `Quiz ${quizzes.length + 1}`, attrs: 'maxlength="80"' })}
           <div class="field-row">
             ${UI.field({ name: "passingScore", label: "Passing score", type: "number", value: quiz?.passingScore ?? 70, attrs: 'min="1" max="100"' })}
             ${UI.field({ name: "maxAttempts", label: "Maximum attempts", type: "number", value: quiz?.maxAttempts ?? 3, attrs: 'min="1" max="5"' })}

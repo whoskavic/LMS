@@ -6,8 +6,6 @@ NEW_STUDENT = {
     "role": "student",
     "name": "Siti Rahma",
     "email": "siti@test.dev",
-    "idNumber": "40139",
-    "department": "Mathematics",
     "status": "Active",
     "password": "secret123",
 }
@@ -19,7 +17,7 @@ def test_admin_crud_users(client, db):
     res = client.post("/api/v1/users", json=NEW_STUDENT, headers=headers)
     assert res.status_code == 201, res.text
     created = res.json()
-    assert created["courses"] == 0 and created["idNumber"] == "40139"
+    assert created["courses"] == 0 and "idNumber" not in created and "department" not in created
 
     res = client.get("/api/v1/users", params={"role": "student", "q": "siti"}, headers=headers).json()
     assert res["total"] == 1 and res["items"][0]["email"] == "siti@test.dev"
@@ -36,12 +34,12 @@ def test_admin_crud_users(client, db):
 def test_create_user_validation_and_uniqueness(client, db):
     admin = make_user(db, role="admin")
     headers = auth(admin)
-    res = client.post("/api/v1/users", json={**NEW_STUDENT, "idNumber": "12"}, headers=headers)
-    assert res.status_code == 400 and "idNumber" in res.json()["error"]["fields"]
+    res = client.post("/api/v1/users", json={**NEW_STUDENT, "email": "not-an-email"}, headers=headers)
+    assert res.status_code == 400 and "email" in res.json()["error"]["fields"]
     client.post("/api/v1/users", json=NEW_STUDENT, headers=headers)
     res = client.post("/api/v1/users", json=NEW_STUDENT, headers=headers)
     assert res.status_code == 409
-    assert set(res.json()["error"]["fields"]) == {"email", "idNumber"}
+    assert set(res.json()["error"]["fields"]) == {"email"}
 
 
 def test_non_admin_cannot_manage_users(client, db):
@@ -76,12 +74,9 @@ def test_delete_user_with_courses_or_enrollments_conflicts(client, db):
     assert rows[0]["courses"] == 1
 
 
-def test_departments_meta(client, db):
-    admin = make_user(db, role="admin", department="Ops")
-    make_user(db, department="Design")
-    assert client.get("/api/v1/meta/departments", params={"role": "student"}, headers=auth(admin)).json() == ["Design"]
-    student = make_user(db)
-    assert client.get("/api/v1/meta/departments", headers=auth(student)).status_code == 403
+def test_departments_meta_removed(client, db):
+    admin = make_user(db, role="admin")
+    assert client.get("/api/v1/meta/departments", headers=auth(admin)).status_code == 404
 
 
 def test_seed_creates_demo_accounts(client, db):
@@ -95,7 +90,7 @@ def test_seed_creates_demo_accounts(client, db):
     admin = client.get(
         "/api/v1/courses", params={"status": "Pending"}, headers={"Authorization": f"Bearer {res.json()['token']}"}
     )
-    assert [c["code"] for c in admin.json()["items"]] == ["MOB301"]
+    assert [c["title"] for c in admin.json()["items"]] == ["Mobile Programming"]
 
 
 def test_notifications_for_admin_list_pending_courses(client, db):
@@ -112,6 +107,6 @@ def test_notifications_for_admin_list_pending_courses(client, db):
     )
     db.commit()
     items = client.get("/api/v1/meta/notifications", headers=auth(admin)).json()
-    assert items[0]["text"] == "MOB301 Mobile Programming is waiting for approval"
+    assert items[0]["text"] == "Mobile Programming is waiting for approval"
     assert client.get("/api/v1/meta/notifications", headers=auth(instructor)).json()[0]["time"] == "Pending"
     assert client.get("/api/v1/meta/notifications").status_code == 401

@@ -71,10 +71,9 @@
               ${[
                 ["Certificate number", c.number],
                 ["Awarded to", c.studentName],
-                ["Course", [c.course.code, c.course.title].filter(Boolean).join(" · ")],
+                ["Course", c.course.title],
                 ["Instructor", c.course.instructorName],
                 ["Date of completion", Utils.formatDate(c.issuedAt, false)],
-                ["Final grade", c.grade || "–"],
               ]
                 .map(([label, value]) => `<div><p class="kv__label">${label}</p><p class="kv__value">${Utils.escape(value)}</p></div>`)
                 .join("")}

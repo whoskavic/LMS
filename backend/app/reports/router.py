@@ -2,12 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.auth.deps import DB, LEARNER_ROLES, CurrentUser, require_roles
-from app.common.grading import gpa, js_round
+from app.common.grading import js_round
 from app.courses.models import Course
-from app.enrollments.models import Enrollment
+from app.enrollments.models import Certificate, Enrollment
 from app.reports import service
 from app.users.models import User
 
@@ -23,9 +23,7 @@ def notifications(user: CurrentUser, db: DB) -> list[dict]:
     items: list[dict] = []
     if user.role == "admin":
         pending = db.scalars(select(Course).where(Course.status == "pending").order_by(Course.submitted_at.desc()))
-        items = [
-            {"text": f"{c.code or ''} {c.title} is waiting for approval".strip(), "time": "Pending"} for c in pending
-        ]
+        items = [{"text": f"{c.title} is waiting for approval", "time": "Pending"} for c in pending]
     elif user.role == "instructor":
         mine = db.scalars(
             select(Course)
@@ -36,13 +34,14 @@ def notifications(user: CurrentUser, db: DB) -> list[dict]:
             state = "is waiting for admin approval" if c.status == "pending" else "was rejected — revise and resubmit"
             items.append({"text": f"{c.title} {state}", "time": c.status.title()})
     else:
-        graded = db.scalars(
-            select(Enrollment).where(Enrollment.user_id == user.id, Enrollment.grade_letter.is_not(None)).limit(3)
+        certified = db.scalars(
+            select(Enrollment)
+            .join(Certificate, Certificate.enrollment_id == Enrollment.id)
+            .where(Enrollment.user_id == user.id)
+            .order_by(Certificate.issued_at.desc())
+            .limit(3)
         )
-        items = [
-            {"text": f"Final grade for {e.course.code or e.course.title} is available", "time": e.grade_letter}
-            for e in graded
-        ]
+        items = [{"text": f"Your certificate for {e.course.title} is ready", "time": "Certificate"} for e in certified]
     return items[:5]
 
 
@@ -74,7 +73,7 @@ def report_enrollments(
     page: int | None = None,
     page_size: PageSize = None,
 ) -> dict:
-    """Satu baris per enrollment: progress, quiz, grade, status (Completed / At risk / On track)."""
+    """Satu baris per enrollment: progress, rata-rata quiz, status (Completed / At risk / On track)."""
     return service.enrollments_report(db, course_id, status, q, sort, page, page_size)
 
 
@@ -114,12 +113,23 @@ def instructor_dashboard(user: Instructor, db: DB) -> dict:
 
 @router.get("/dashboard/student", tags=["dashboard"])
 def student_dashboard(user: Annotated[User, Depends(require_roles(*LEARNER_ROLES))], db: DB) -> dict:
-    """Ringkasan student: jumlah course, selesai, rata-rata progress, IPK (dihitung saat diminta)."""
+    """Ringkasan learner: course diikuti, selesai, sertifikat, rata-rata progress."""
+    return learner_stats(db, user)
+
+
+def learner_stats(db, user: User) -> dict:
     enrollments = list(db.scalars(select(Enrollment).where(Enrollment.user_id == user.id)))
     progress = [float(e.progress_pct) for e in enrollments]
+    certificates = db.scalar(
+        select(func.count())
+        .select_from(Certificate)
+        .join(Enrollment, Enrollment.id == Certificate.enrollment_id)
+        .where(Enrollment.user_id == user.id)
+    )
     return {
         "courses": len(enrollments),
+        "inProgress": sum(1 for e in enrollments if e.status != "completed"),
         "completed": sum(1 for e in enrollments if e.status == "completed"),
+        "certificates": certificates or 0,
         "avgProgress": js_round(sum(progress) / len(progress)) if progress else 0,
-        "gpa": gpa(e.grade_letter for e in enrollments),
     }
