@@ -47,7 +47,7 @@ def main() -> int:
         from app.seed import seed_if_empty
 
         log("SEED_DEMO=true → menjalankan seed demo…")
-        log("Seed selesai." if seed_if_empty() else "Data sudah ada — seed dilewati.")
+        log("Seed selesai." if seed_if_empty() else "Data sudah ada — hanya data demo tambahan yang dilengkapi.")
     else:
         log("SEED_DEMO tidak aktif — seed dilewati.")
     return 0

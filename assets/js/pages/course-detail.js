@@ -15,6 +15,10 @@ const CourseDetail = {
     try {
       const stats = await Api.courses.stats(this.course.id);
       this.stats = stats;
+      if (this.course.modules !== stats.modules) {
+        this.course.modules = stats.modules;
+        document.dispatchEvent(new CustomEvent("course:modules-changed"));
+      }
       ["modules", "quizzes", "students"].forEach((key) => {
         document.querySelector(`[data-count="${key}"]`).textContent = stats[key];
       });
@@ -67,6 +71,10 @@ App.ready(async (me) => {
         buttons.push('<button class="btn btn--primary" type="button" data-transition="submit">Submit for approval</button>');
       }
       buttons.push(`<a class="btn btn--outline" href="form.html?id=${encodeURIComponent(course.id)}"><i data-icon="edit" class="icon--sm"></i>Edit course</a>`);
+      // Aturan server: course tanpa modul ditolak (COURSE_HAS_NO_MODULES) — beri petunjuk sebelum menekan submit
+      if (["Draft", "Rejected"].includes(course.status) && !course.modules) {
+        buttons.push('<p class="field__hint course-actions__hint" id="submit-hint"><i data-icon="alert" class="icon--sm"></i>Add at least one module before submitting for approval. <a href="#modules">Add a module</a></p>');
+      }
     }
     const actions = document.getElementById("course-actions");
     actions.innerHTML = buttons.join("");
@@ -108,6 +116,11 @@ App.ready(async (me) => {
           CourseDetail.course = course;
         } catch (err) {
           if (!form || !UI.applyFieldErrors(form, err)) UI.toast(err.message, "error");
+          // Belum ada modul: tutup modal dan buka tab Modules agar instructor bisa langsung menambah modul
+          if (err.code === "COURSE_HAS_NO_MODULES") {
+            location.hash = "modules";
+            return;
+          }
           throw err;
         }
         UI.toast(`${course.title} is now ${course.status.toLowerCase()}.`);
@@ -198,6 +211,7 @@ App.ready(async (me) => {
     }));
   }
 
+  document.addEventListener("course:modules-changed", renderHeader);
   renderHeader();
   await renderOverview();
   // Tab awal dari hash URL (#modules, #quizzes, #students); ikut berubah bila hash diganti

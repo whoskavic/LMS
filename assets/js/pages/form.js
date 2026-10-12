@@ -43,6 +43,9 @@ App.ready(async (me) => {
       Draft: "This course is a draft. Submit it when it is ready for review.",
       Archived: "This course is archived and hidden from new learners.",
     }[editing.status];
+    if (["Draft", "Rejected"].includes(editing.status) && !editing.modules) {
+      document.getElementById("approval-note").textContent += " Add at least one module before submitting for approval.";
+    }
     ["title", "description", "category", "thumbnailUrl"].forEach(
       (name) => (el[name].value = editing[name] ?? "")
     );
@@ -210,6 +213,13 @@ App.ready(async (me) => {
       UI.flash(`"${saved.title}" ${note}.`);
       location.href = `course-detail.html?id=${encodeURIComponent(saved.id)}`;
     } catch (err) {
+      // Tersimpan sebagai Draft tetapi belum punya modul → lanjutkan ke tab Modules
+      if (err.code === "COURSE_HAS_NO_MODULES" && editing) {
+        dirty = false;
+        UI.flash(`"${editing.title}" was saved as a draft. ${err.message}`, "error");
+        location.href = `course-detail.html?id=${encodeURIComponent(editing.id)}#modules`;
+        return;
+      }
       // Error per field dari server (mis. kode course sudah dipakai, data belum lengkap)
       Object.entries(err.fields || {}).forEach(([name, message]) => form.querySelector(`[data-field="${name}"]`) && setError(name, message));
       UI.toast(err.message, "error");
