@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="assets/css/style.css">
   <script src="assets/js/theme.js"></script>
 </head>
-<body class="auth catalog-page">
+<body class="auth catalog-page" data-catalog-shell="public">
   <header class="auth-nav">
     <a class="auth-nav__brand" href="catalog.html">
       <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
@@ -19,19 +19,15 @@
     </a>
     <p class="auth-nav__tagline">Free courses for everyone</p>
     <div class="catalog-nav">
-      <a class="btn btn--outline" href="index.html" id="nav-account">Log in</a>
-      <a class="btn btn--primary" href="register.html" id="nav-signup">Sign up</a>
+      <a class="btn btn--outline" href="index.html">Log in</a>
+      <a class="btn btn--primary" href="register.html">Sign up</a>
       <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
     </div>
   </header>
 
   <main class="content catalog" id="main">
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-      <a href="catalog.html">Courses</a>
-      <span aria-hidden="true">/</span>
-      <span id="instructor-crumb" aria-current="page">Instructor</span>
-    </nav>
-    <div id="instructor-view" class="mt-5" aria-live="polite"></div>
+    <!-- Dirender oleh assets/js/catalog-view.js (shell publik). User yang login dialihkan ke pages/browse.html -->
+    <div id="catalog-root"></div>
   </main>
 
   <script src="assets/js/domain.js"></script>
@@ -40,7 +36,6 @@
   <script src="assets/js/api/transport-http.js"></script>
   <script src="assets/js/api/services.js"></script>
   <script src="assets/js/main.js"></script>
-  <script src="assets/js/catalog-card.js"></script>
-  <script src="assets/js/pages/instructor.js"></script>
+  <script src="assets/js/catalog-view.js"></script>
 </body>
 </html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse courses | Learnova LMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <script src="../assets/js/theme.js"></script>
+</head>
+<body data-role="admin instructor student" data-search="catalog" data-catalog-shell="app">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar__brand">
+        <span class="brand-logo"><i data-icon="graduation-cap"></i></span>
+        <span class="brand-name">Learnova</span>
+        <button class="icon-btn sidebar__close" type="button" data-sidebar-close aria-label="Close menu"><i data-icon="x"></i></button>
+      </div>
+
+      <p class="sidebar__label">Workspace</p>
+      <nav aria-label="Main menu">
+        <ul class="nav">
+          <!-- Admin (operator) -->
+          <li data-nav-role="admin"><a class="nav__link" href="dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="users.html"><i data-icon="users"></i><span>Users</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>Courses</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="laporan.html"><i data-icon="report"></i><span>Reports</span></a></li>
+          <li data-nav-role="admin"><a class="nav__link" href="browse.html"><i data-icon="search"></i><span>Catalog</span></a></li>
+          <!-- Instructor -->
+          <li data-nav-role="instructor"><a class="nav__link" href="lecturer-dashboard.html"><i data-icon="grid"></i><span>Dashboard</span></a></li>
+          <li data-nav-role="instructor"><a class="nav__link" href="data-master.html"><i data-icon="book"></i><span>My Courses</span></a></li>
+          <li data-nav-role="instructor"><a class="nav__link" href="form.html"><i data-icon="square-plus"></i><span>New Course</span></a></li>
+          <!-- Learner (student / instructor mode Learn) -->
+          <li data-nav-role="student"><a class="nav__link" href="student-dashboard.html"><i data-icon="school"></i><span>My Learning</span></a></li>
+          <li data-nav-role="student"><a class="nav__link" href="browse.html"><i data-icon="search"></i><span>Browse courses</span></a></li>
+          <!-- Semua role -->
+          <li data-nav-role="admin instructor student"><a class="nav__link" href="profile.html"><i data-icon="settings"></i><span>Profile</span></a></li>
+        </ul>
+      </nav>
+
+      <div class="sidebar__user">
+        <span class="avatar avatar--dark" aria-hidden="true" data-avatar></span>
+        <div class="user-meta">
+          <p class="user-meta__name" data-user-name>User</p>
+          <p class="user-meta__role" data-user-title></p>
+        </div>
+        <button class="icon-btn icon-btn--danger" type="button" data-logout aria-label="Sign out" title="Sign out"><i data-icon="logout"></i></button>
+      </div>
+    </aside>
+
+    <div class="overlay" data-sidebar-close></div>
+
+    <!-- ============ AREA UTAMA ============ -->
+    <div class="main">
+
+      <!-- Header / Topbar -->
+      <header class="topbar">
+        <button class="icon-btn topbar__menu" type="button" data-sidebar-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu"><i data-icon="menu"></i></button>
+
+        <form class="search" role="search">
+          <i data-icon="search" class="icon--sm"></i>
+          <label class="visually-hidden" for="global-search">Search</label>
+          <input class="search__input" id="global-search" type="search" placeholder="Search courses..." autocomplete="off">
+        </form>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle dark mode"><i data-icon="moon"></i></button>
+          <div class="dropdown">
+            <button class="icon-btn" type="button" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications"><i data-icon="bell"></i><span class="dot"></span></button>
+            <div class="dropdown__menu" hidden>
+              <p class="dropdown__title">Notifications</p>
+              <ul data-notifications></ul>
+            </div>
+          </div>
+          <span class="topbar__user" data-user-name>User</span>
+          <a class="avatar" href="profile.html" aria-label="Open profile" data-avatar></a>
+        </div>
+      </header>
+
+      <main class="content catalog-app" id="main">
+        <!-- Katalog di dalam aplikasi: daftar (?q, category, sort, page), landing page (?course=),
+             profil instructor (?instructor=). Dirender oleh assets/js/catalog-view.js (shell aplikasi). -->
+        <div id="catalog-root"></div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p>&copy; 2026 Learnova LMS</p>
+        <p>Pemrograman Web 2 &middot; FastAPI + PostgreSQL</p>
+      </footer>
+    </div>
+  </div>
+  <script src="../assets/js/domain.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/api/client.js"></script>
+  <script src="../assets/js/api/transport-http.js"></script>
+  <script src="../assets/js/api/services.js"></script>
+  <script src="../assets/js/main.js"></script>
+  <script src="../assets/js/catalog-view.js"></script>
+  <script src="../assets/js/pages/course-reviews.js"></script>
+</body>
+</html>

@@ -25,6 +25,7 @@ Legenda: ✅ terhubung ke backend
 | Publik | **Ulasan course**: ringkasan rating + distribusi bintang, daftar ulasan terbaru ("Show more") | ✅ |
 | Learner | Menulis satu ulasan per course yang diikuti (rating 1–5 + komentar opsional), edit & hapus ulasan sendiri; admin bisa menghapus ulasan apa pun | ✅ |
 | Publik | **Profil instructor** (`instructor.html?id=`): headline, bio, statistik (course, learner, ulasan, rating), daftar course Active | ✅ |
+| Semua (login) | **Katalog di dalam aplikasi** (`pages/browse.html`): katalog, landing page (`?course=`), dan profil instructor (`?instructor=`) dengan sidebar & header aplikasi; search header mencari katalog | ✅ |
 | Instructor | Headline & bio profil publik (diisi saat "Start teaching" atau di Profile) | ✅ |
 | Learner | Enroll course gratis (course Active selalu terbuka), belajar modul berurutan, progress dihitung server | ✅ |
 | Learner | **My Learning**: tab sedang dipelajari / selesai / sertifikat, "Continue learning" ke modul berikutnya, unduh & verifikasi sertifikat | ✅ |
@@ -36,6 +37,8 @@ Legenda: ✅ terhubung ke backend
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 
 Dihapus dari UI & API (ADR-009): IPK, nilai akhir & grade huruf, semester, NIM/NIDN, departemen, kode course, durasi minggu, tanggal mulai, kapasitas, input nilai & batch enroll. Endpoint `/courses/{id}/grades`, `/courses/{id}/candidates`, `/courses/{id}/enrollments/batch`, `DELETE /enrollments/{id}`, dan `/meta/departments` sudah tidak ada (404).
+
+Navigasi katalog memakai **satu renderer, dua shell** (`assets/js/catalog-view.js`): guest melihat `catalog.html` / `instructor.html` (header publik dengan Log in / Sign up), sedangkan user yang login memakai `pages/browse.html` (sidebar + header aplikasi). User login yang membuka halaman publik dialihkan ke `pages/browse.html` dengan query setara (`instructor.html?id=X` → `browse.html?instructor=X`). Menu sidebar: **Browse courses** untuk learner dan instructor mode Learn, **Catalog** untuk admin. Guest yang menekan **Enroll for free** login lalu kembali ke `pages/browse.html?course=…`.
 
 Alur utama: **Sign up** (selalu learner) → jelajahi katalog → **Enroll for free** → belajar modul & quiz → sertifikat saat progress 100% → tulis ulasan. Dari My Learning atau Profile, **Start teaching** mengubah akun menjadi instructor (tetap bisa belajar); instructor membuat course → menambah minimal satu modul → submit → admin approve → course tampil di katalog. Keputusan desain: [docs/DECISIONS.md](docs/DECISIONS.md) ADR-008/009.
 
@@ -65,17 +68,17 @@ Backend adalah modular monolith: satu folder per domain (`auth`, `users`, `cours
 LMS/
 ├── index.html              ← Login
 ├── register.html           ← Registrasi publik
-├── catalog.html            ← Katalog course publik + course landing page (tanpa login)
-├── instructor.html         ← Profil publik instructor (tanpa login)
+├── catalog.html            ← Katalog + course landing page, shell publik (guest; user login dialihkan ke pages/browse.html)
+├── instructor.html         ← Profil instructor, shell publik (guest)
 ├── verify.html             ← Verifikasi sertifikat publik
-├── pages/                  ← Halaman aplikasi per role
+├── pages/                  ← Halaman aplikasi per role (browse.html = katalog di dalam aplikasi)
 ├── assets/
 │   ├── css/style.css
 │   ├── img/
 │   └── js/
 │       ├── config.js       ← Base URL API & transport (http / local)
 │       ├── domain.js       ← Logika murni (progress, durasi course, label role, sertifikat)
-│       ├── catalog-card.js ← Kartu course publik (katalog & profil instructor)
+│       ├── catalog-view.js ← Renderer katalog, landing page & profil instructor untuk dua shell (publik / aplikasi)
 │       ├── data.js         ← Mock data prototipe (hanya untuk test kontrak MockServer)
 │       ├── store.js        ← "Database" localStorage prototipe (hanya untuk test kontrak)
 │       ├── main.js         ← Guard, layout, UI helper
@@ -320,7 +323,7 @@ Migrasi selalu aditif (tidak ada drop kolom/tabel), sehingga data yang sudah ada
    DATABASE_URL="<DATABASE_URL_UNPOOLED dari Neon>" python -m app.seed --reset
    ```
    Pada image Docker (Render/Railway/VPS) jalankan `python -m app.seed --reset` di shell service API.
-3. **Verifikasi:** `GET /api/v1/health` → `{"status":"ok","database":"ok"}`, katalog menampilkan 9 course dengan rating, login dengan akun demo, dan halaman `instructor.html?id=…` dari nama instructor di landing page.
+3. **Verifikasi:** `GET /api/v1/health` → `{"status":"ok","database":"ok"}`, katalog menampilkan 9 course dengan rating, login dengan akun demo, dan profil instructor dari nama instructor di landing page (guest: `instructor.html?id=…`, login: `pages/browse.html?instructor=…`).
 
 ## Roadmap dan Known Issues
 
