@@ -40,6 +40,9 @@ def get_optional_user(db: DB, authorization: Annotated[str | None, Header()] = N
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+# Role yang boleh belajar: instructor adalah superset student (ADR-008)
+LEARNER_ROLES = ("student", "instructor")
 OptionalUser = Annotated[User | None, Depends(get_optional_user)]
 
 

@@ -25,7 +25,8 @@ Legenda: ✅ terhubung ke backend
 | Student | Dashboard: course per semester, progress, nilai akhir, IPK (dihitung saat diminta), unduh sertifikat | ✅ |
 | Publik | Verifikasi sertifikat berdasarkan nomor (`verify.html`) | ✅ |
 | Student | Quiz: soal tanpa kunci, timer & batas attempt dari server, lanjut setelah refresh, skor & review setelah submit | ✅ |
-| Semua | Login, registrasi publik (student/instructor), profil, ganti password, tema terang/gelap | ✅ |
+| Semua | Login, registrasi publik (selalu learner/student), profil, ganti password, tema terang/gelap | ✅ |
+| Learner → Instructor | "Start teaching" (`POST /me/become-instructor`); instructor tetap bisa belajar di course instructor lain, pengalih mode **Learn / Teach** di sidebar | ✅ |
 
 Rincian fitur prototipe ada di [docs/FITUR.md](docs/FITUR.md).
 
@@ -154,7 +155,7 @@ Hasil `python -m app.seed`:
 | Student | Nadia Putri | nadia@learnova.ac.id | student123 |
 | Student | Marcus Chen | marcus@learnova.ac.id | student123 |
 
-Akun baru juga bisa dibuat lewat halaman **Sign up** (`register.html`) sebagai student atau instructor.
+Akun baru bisa dibuat lewat halaman **Sign up** (`register.html`); semua akun baru adalah learner (student) dan bisa menjadi instructor lewat tombol **Start teaching** di My Learning atau Profile.
 
 Seed juga membuat 5 kategori dan 13 course dari mock data prototipe (9 Active, 2 Draft, 1 Pending `MOB301`, 1 Archived) beserta modulnya, dibagi ke Dr. Budi Santoso (Technology/Design) dan Dr. Adam Miller. Alex Mercer memakai progress, skor quiz, & nilai demo dari prototipe (8 course, IPK 3.67); Nadia dan Marcus masing-masing 4 course. Ada 9 quiz (5 soal, lulus 70, 3 attempt, 10 menit) dari bank soal mock.
 
@@ -165,13 +166,14 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | Method | Path | Role |
 |---|---|---|
 | GET | `/api/v1/health` | publik |
-| POST | `/api/v1/auth/register` | publik (role student/instructor) |
+| POST | `/api/v1/auth/register` | publik (selalu membuat akun student) |
 | POST | `/api/v1/auth/login` | publik |
 | POST | `/api/v1/auth/logout` | publik (JWT stateless) |
 | GET | `/api/v1/auth/me` | login |
 | POST | `/api/v1/auth/password` | login |
 | PATCH | `/api/v1/me` | login |
 | GET | `/api/v1/me/stats` | login |
+| POST | `/api/v1/me/become-instructor` (`{ headline?, bio? }`) | student / instructor (idempoten), admin → 403 |
 | GET | `/api/v1/users` (`role, q, department, status, sort, page, pageSize`) | admin |
 | POST | `/api/v1/users` | admin |
 | GET / PATCH / DELETE | `/api/v1/users/{id}` | admin |
@@ -192,9 +194,9 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET / POST | `/api/v1/courses/{id}/modules` | lihat: yang boleh melihat course · tambah: instructor pemilik |
 | PUT | `/api/v1/courses/{id}/modules/order` | instructor pemilik |
 | PATCH / DELETE | `/api/v1/modules/{id}` | instructor pemilik |
-| POST | `/api/v1/courses/{id}/enrollments` | student (course Active, pendaftaran dibuka, ada kursi) |
+| POST | `/api/v1/courses/{id}/enrollments` | student / instructor (course Active, pendaftaran dibuka, ada kursi, bukan course milik sendiri → 409 `OWN_COURSE`) |
 | GET | `/api/v1/courses/{id}/enrollment` | student (enrollment miliknya di course itu) |
-| GET | `/api/v1/me/enrollments` (`semester, status, q, sort, page, pageSize`) | student |
+| GET | `/api/v1/me/enrollments` (`semester, status, q, sort, page, pageSize`) | student / instructor |
 | POST | `/api/v1/enrollments/{id}/completed-modules` (`{ moduleId }`) | student pemilik enrollment |
 | GET | `/api/v1/courses/{id}/quizzes` | instructor/admin (dengan kunci) · student terdaftar (tanpa soal & kunci) |
 | POST | `/api/v1/courses/{id}/quizzes` | instructor pemilik |

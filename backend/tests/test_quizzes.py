@@ -124,7 +124,10 @@ def test_quiz_authorization(client, db):
     outsider = make_user(db)
     other_instructor = make_user(db, role="instructor")
     assert client.post(f"/api/v1/quizzes/{quiz['id']}/attempts", headers=auth(outsider)).status_code == 404
-    assert client.post(f"/api/v1/quizzes/{quiz['id']}/attempts", headers=auth(instructor)).status_code == 403
+    # instructor pemilik tidak terdaftar di course-nya sendiri → tidak bisa mengerjakan
+    assert client.post(f"/api/v1/quizzes/{quiz['id']}/attempts", headers=auth(instructor)).status_code == 404
+    admin = make_user(db, role="admin")
+    assert client.post(f"/api/v1/quizzes/{quiz['id']}/attempts", headers=auth(admin)).status_code == 403
     assert (
         client.patch(
             f"/api/v1/quizzes/{quiz['id']}", json={"title": "Hijack quiz"}, headers=auth(other_instructor)

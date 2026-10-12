@@ -538,9 +538,35 @@ const UI = {
    Identitas & role selalu berasal dari Api.auth.me() (data user di server),
    browser hanya menyimpan token sesi.
    ========================================================================= */
+/* ---------- Mode instructor: "learn" (My Learning) atau "teach" (dashboard instructor) ----------
+   Preferensi UI saja (bukan data bisnis), disimpan di localStorage. Instructor adalah superset student. */
+const Mode = {
+  KEY: "learnova.mode",
+  LEARN_PAGES: ["student-dashboard.html", "course.html", "quiz.html"],
+  get() {
+    try {
+      return localStorage.getItem(this.KEY) === "learn" ? "learn" : "teach";
+    } catch {
+      return "teach";
+    }
+  },
+  set(mode) {
+    try {
+      localStorage.setItem(this.KEY, mode);
+    } catch {}
+  },
+  // Mode yang berlaku di halaman ini: halaman belajar → learn, halaman instructor → teach, lainnya → preferensi
+  forPage(page = location.pathname.split("/").pop()) {
+    if (this.LEARN_PAGES.includes(page)) return "learn";
+    if (["lecturer-dashboard.html", "data-master.html", "form.html", "course-detail.html"].includes(page)) return "teach";
+    return this.get();
+  },
+};
+
 // Halaman awal sesuai role (path relatif dari folder pages/)
 function homeFor(role) {
-  return { admin: "dashboard.html", instructor: "lecturer-dashboard.html", student: "student-dashboard.html" }[role] || "../index.html";
+  if (role === "instructor") return Mode.get() === "learn" ? "student-dashboard.html" : "lecturer-dashboard.html";
+  return { admin: "dashboard.html", student: "student-dashboard.html" }[role] || "../index.html";
 }
 
 const App = {
@@ -621,10 +647,64 @@ function showBootError(err) {
    Layout: sidebar, menu aktif, info user, notifikasi, logout, search
    ========================================================================= */
 
+// Pengalih mode Learn / Teach untuk instructor (disisipkan di sidebar, di atas kartu user)
+function renderModeSwitch(mode) {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar || sidebar.querySelector(".mode-switch")) return;
+  const box = document.createElement("div");
+  box.className = "mode-switch";
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", "Switch mode");
+  box.innerHTML = `
+    <a class="mode-switch__btn ${mode === "learn" ? "is-active" : ""}" href="student-dashboard.html" data-mode="learn" ${mode === "learn" ? 'aria-current="true"' : ""}><i data-icon="school" class="icon--sm"></i>Learn</a>
+    <a class="mode-switch__btn ${mode === "teach" ? "is-active" : ""}" href="lecturer-dashboard.html" data-mode="teach" ${mode === "teach" ? 'aria-current="true"' : ""}><i data-icon="book" class="icon--sm"></i>Teach</a>`;
+  box.addEventListener("click", (e) => {
+    const link = e.target.closest("[data-mode]");
+    if (link) Mode.set(link.dataset.mode);
+  });
+  sidebar.querySelector(".sidebar__user")?.before(box);
+  renderIcons(box);
+}
+
+// "Start teaching": student → instructor lewat API, lalu buka dashboard instructor
+function startTeaching() {
+  UI.modal({
+    title: "Start teaching on Learnova",
+    size: "lg",
+    confirmText: "Become an instructor",
+    body: `
+      <p class="text-muted">Create free courses for everyone. You keep your learner account — switch between <strong>Learn</strong> and <strong>Teach</strong> at any time.</p>
+      <form class="form-stack mt-5" novalidate>
+        ${UI.field({ name: "headline", label: "Headline", required: false, placeholder: "e.g. Web developer & teacher", attrs: 'maxlength="120"' })}
+        ${UI.field({ name: "bio", label: "About you", type: "textarea", required: false, placeholder: "Tell learners about your experience", attrs: 'maxlength="1000"' })}
+      </form>`,
+    onConfirm: async (modal) => {
+      const v = UI.formValues(modal.querySelector("form"));
+      try {
+        await Api.profile.becomeInstructor({ headline: v.headline || null, bio: v.bio || null });
+      } catch (err) {
+        UI.toast(err.message, "error");
+        throw err;
+      }
+      Mode.set("teach");
+      UI.flash("You are now an instructor. Create your first course!");
+      location.href = "lecturer-dashboard.html";
+    },
+  });
+}
+
 // Bagian layout yang bergantung pada user yang login
 function applyUserToLayout(user) {
+  // Instructor di mode "learn" melihat menu learner; mode disimpan saat membuka halaman belajar/mengajar
+  let navRole = user.role;
+  if (user.role === "instructor") {
+    const mode = Mode.forPage();
+    Mode.set(mode);
+    navRole = mode === "learn" ? "student" : "instructor";
+    renderModeSwitch(mode);
+  }
   document.querySelectorAll(".nav [data-nav-role]").forEach((item) => {
-    if (!item.dataset.navRole.split(" ").includes(user.role)) item.remove();
+    if (!item.dataset.navRole.split(" ").includes(navRole)) item.remove();
   });
   // Elemen konten khusus role tertentu (tombol, kolom tabel, filter)
   document.querySelectorAll("[data-show-role]").forEach((el) => {
@@ -729,6 +809,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") setOpen(false);
     });
+  });
+
+  // --- "Start teaching" (student → instructor) ---
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-start-teaching]")) startTeaching();
   });
 
   // --- Logout dengan konfirmasi ---

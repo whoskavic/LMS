@@ -37,7 +37,12 @@ def test_enroll_rules(client, db):
         for c in (pending, closed, full)
     ]
     assert codes == ["COURSE_NOT_ACTIVE", "ENROLLMENT_CLOSED", "COURSE_FULL"]
-    assert client.post(f"/api/v1/courses/{closed.id}/enrollments", headers=auth(instructor)).status_code == 403
+    res = client.post(f"/api/v1/courses/{closed.id}/enrollments", headers=auth(instructor))
+    assert res.status_code == 409 and res.json()["error"]["code"] == "OWN_COURSE"
+    assert (
+        client.post(f"/api/v1/courses/{closed.id}/enrollments", headers=auth(make_user(db, role="admin"))).status_code
+        == 403
+    )
     assert client.post(f"/api/v1/courses/{closed.id}/enrollments").status_code == 401
 
 

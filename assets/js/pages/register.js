@@ -1,4 +1,4 @@
-// Halaman registrasi publik — student atau instructor. Aturan lengkap divalidasi server (POST /auth/register).
+// Halaman registrasi publik — semua akun baru adalah learner (student). Aturan lengkap divalidasi server.
 
 document.addEventListener("DOMContentLoaded", () => {
   // Sudah login → langsung ke dashboard
@@ -24,14 +24,13 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     alertBox.hidden = true;
     const v = UI.formValues(form);
-    v.role = form.querySelector('input[name="role"]:checked')?.value || "student";
     const errors = Object.fromEntries(Object.entries(rules).map(([name, rule]) => [name, rule(v[name] || "")]));
     Object.entries(errors).forEach(([name, message]) => UI.fieldError(form, name, message));
     const invalid = Object.keys(errors).find((name) => errors[name]);
     if (invalid) return form.elements[invalid].focus();
 
     try {
-      const { user } = await UI.busy(submitBtn, Api.auth.register({ name: v.name, email: v.email, password: v.password, role: v.role }));
+      const { user } = await UI.busy(submitBtn, Api.auth.register({ name: v.name, email: v.email, password: v.password }));
       UI.flash(`Welcome to Learnova, ${user.name}!`);
       location.href = `pages/${homeFor(user.role)}`;
     } catch (err) {

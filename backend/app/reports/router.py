@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 
-from app.auth.deps import DB, CurrentUser, require_roles
+from app.auth.deps import DB, LEARNER_ROLES, CurrentUser, require_roles
 from app.common.grading import gpa, js_round
 from app.courses.models import Course
 from app.enrollments.models import Enrollment
@@ -113,7 +113,7 @@ def instructor_dashboard(user: Instructor, db: DB) -> dict:
 
 
 @router.get("/dashboard/student", tags=["dashboard"])
-def student_dashboard(user: Annotated[User, Depends(require_roles("student"))], db: DB) -> dict:
+def student_dashboard(user: Annotated[User, Depends(require_roles(*LEARNER_ROLES))], db: DB) -> dict:
     """Ringkasan student: jumlah course, selesai, rata-rata progress, IPK (dihitung saat diminta)."""
     enrollments = list(db.scalars(select(Enrollment).where(Enrollment.user_id == user.id)))
     progress = [float(e.progress_pct) for e in enrollments]

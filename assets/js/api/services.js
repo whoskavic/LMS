@@ -30,6 +30,8 @@ Object.assign(Api, {
   profile: {
     update: (patch) => Api.patch("/me", patch), // { name, department }
     stats: () => Api.get("/me/stats"),
+    /** "Start teaching": student → instructor ({ headline?, bio? }) */
+    becomeInstructor: (data = {}) => Api.post("/me/become-instructor", data),
   },
 
   users: {

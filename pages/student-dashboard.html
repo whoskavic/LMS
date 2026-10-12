@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="../assets/css/style.css">
   <script src="../assets/js/theme.js"></script>
 </head>
-<body data-role="student" data-search="local">
+<body data-role="student instructor" data-search="local">
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="app">
 
@@ -89,6 +89,7 @@
             <p class="page-header__subtitle">Welcome back, <span data-user-name>Student</span></p>
           </div>
           <div class="page-header__actions">
+            <button class="btn btn--outline" type="button" data-start-teaching data-show-role="student"><i data-icon="book" class="icon--sm"></i>Start teaching</button>
             <label class="visually-hidden" for="semester">Semester</label>
             <select class="field__input field__input--auto" id="semester">
               <option value="Fall 2026">Semester: Fall 2026</option>
