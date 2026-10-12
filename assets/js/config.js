@@ -9,7 +9,7 @@
 // Nilai di bawah hanya contoh; ganti setelah URL backend diketahui.
 // transport: "http" (backend FastAPI). MockServer lama (transport-local.js) tidak lagi dimuat halaman;
 // file tersebut disimpan sebagai spesifikasi kontrak yang diuji `node --test`.
-const PRODUCTION_API_URL = "https://learnova-api.onrender.com/api/v1";
+const PRODUCTION_API_URL = "https://learnova-api-beta.vercel.app/api/v1";
 
 const AppConfig = (() => {
   const local = typeof location === "undefined" || location.protocol === "file:" || ["localhost", "127.0.0.1", ""].includes(location.hostname);
