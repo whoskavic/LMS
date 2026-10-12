@@ -20,7 +20,8 @@ Legenda: ✅ terhubung ke backend
 | Instructor | Quiz pilihan ganda (editor soal, statistik attempt) | ✅ |
 | Instructor | Dashboard (course per status, progress & skor per course, attempt terbaru) | ✅ |
 | Instructor | Students (read-only): peserta, progress, skor quiz terbaik, status selesai & sertifikat, export CSV | ✅ |
-| Publik | Katalog course gratis: cari (judul & deskripsi), filter kategori, pagination, detail + outline, jumlah modul & total durasi | ✅ |
+| Publik | **Katalog** (halaman utama publik): cari, chip kategori, sort (terpopuler / terbaru / judul), pagination; kartu dengan instructor, jumlah learner, modul + total durasi, label Free | ✅ |
+| Publik | **Course landing page**: deskripsi, instructor, kurikulum accordion (ikon kunci sebelum enroll), tombol sesuai status: Enroll for free (belum login → login lalu kembali), Continue learning, Manage course | ✅ |
 | Learner | Enroll course gratis (course Active selalu terbuka), belajar modul berurutan, progress dihitung server | ✅ |
 | Learner | **My Learning**: tab sedang dipelajari / selesai / sertifikat, "Continue learning" ke modul berikutnya, unduh & verifikasi sertifikat | ✅ |
 | Publik | Verifikasi sertifikat berdasarkan nomor (`verify.html`) | ✅ |
@@ -181,8 +182,8 @@ Swagger UI: `http://localhost:8000/docs` · OpenAPI: `http://localhost:8000/open
 | GET / PATCH / DELETE | `/api/v1/users/{id}` | admin |
 | GET | `/api/v1/meta/notifications` | login |
 | GET | `/api/v1/meta/instructors` | admin |
-| GET | `/api/v1/catalog/courses` (`q, category, sort, page, pageSize`) | publik |
-| GET | `/api/v1/catalog/courses/{id atau slug}` | publik |
+| GET | `/api/v1/catalog/courses` (`q, category, sort=popular|newest|title, page, pageSize`) | publik |
+| GET | `/api/v1/catalog/courses/{id atau slug}` | publik (dengan token: `viewer` = status enroll/pemilik) |
 | GET | `/api/v1/categories`, `/api/v1/meta/categories` | publik |
 | POST / PATCH / DELETE | `/api/v1/categories[/{id}]` | admin |
 | GET | `/api/v1/courses` (`q, status, category, instructorId, open, sort, page, pageSize`) | admin (semua), instructor (miliknya), student (`open=true`) |

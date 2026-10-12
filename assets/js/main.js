@@ -563,6 +563,13 @@ const Mode = {
   },
 };
 
+// Tujuan setelah login/registrasi dari ?next= (hanya halaman internal: katalog atau pages/…), selain itu home role
+function nextAfterLogin(role) {
+  const next = new URLSearchParams(location.search).get("next");
+  if (next && /^(catalog\.html|pages\/[\w-]+\.html)(\?[^#]*)?$/.test(next)) return next;
+  return `pages/${homeFor(role)}`;
+}
+
 // Halaman awal sesuai role (path relatif dari folder pages/)
 function homeFor(role) {
   if (role === "instructor") return Mode.get() === "learn" ? "student-dashboard.html" : "lecturer-dashboard.html";

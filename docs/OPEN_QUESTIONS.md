@@ -38,3 +38,5 @@ Daftar ambiguitas kecil yang diputuskan dengan asumsi paling sederhana. Sinkron 
 | 32 | My Learning di PR C | Halaman `student-dashboard.html` penuh semester & IPK, sehingga langsung ditulis ulang menjadi My Learning di PR C (tab In progress / Completed / Certificates). PR D melengkapi katalog & landing page. | Diputuskan |
 | 33 | Status belajar di laporan | "At risk" tetap memakai rumus prototipe (progress < 40 atau rata-rata quiz < 65) karena tidak bergantung nilai akhir. | Diputuskan |
 | 34 | Test kontrak MockServer | Route nilai & batch enroll di MockServer lama tetap diuji sebagai arsip, dipanggil langsung lewat `Api.get/put/post/del` karena service UI-nya dihapus. | Diputuskan |
+| 35 | Halaman utama publik | `index.html` tetap halaman login (wajib tugas kuliah); katalog menjadi halaman utama publik lewat tautan di login/register dan menu learner "Browse courses". Kunjungan `/` tetap ke login. | Diputuskan |
+| 36 | Redirect setelah login | `?next=` hanya menerima halaman internal (`catalog.html…` atau `pages/*.html`) untuk mencegah open redirect. | Diputuskan |
